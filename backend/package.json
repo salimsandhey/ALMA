@@ -7,7 +7,7 @@
     "dev": "nodemon",
     "build": "tsc",
     "start": "node dist/index.js",
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node --transpile-only --compiler-options '{\"module\":\"CommonJS\",\"lib\":[\"ES2020\"]}' prisma/seed.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",
