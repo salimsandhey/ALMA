@@ -14,7 +14,15 @@
           "photosPermission": "Allow ALMA to access your photos for profile picture."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ],
     "ios": {
       "supportsTablet": false,
@@ -30,8 +38,7 @@
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.salimsandhey.almaapp",
-      "usesCleartextTraffic": true
+      "package": "com.salimsandhey.almaapp"
     },
     "extra": {
       "router": {},
