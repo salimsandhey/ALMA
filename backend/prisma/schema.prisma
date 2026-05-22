@@ -246,6 +246,27 @@ model Feedback {
 }
 
 // ─────────────────────────────────────────────
+// SONG
+// ─────────────────────────────────────────────
+
+model Song {
+  id          String   @id @default(cuid())
+  title       String
+  artist      String
+  genre       String
+  emoji       String
+  youtubeUrl  String
+  lyrics      String[]
+  isPublished Boolean  @default(true)
+  orderIndex  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isPublished])
+  @@index([orderIndex])
+}
+
+// ─────────────────────────────────────────────
 // AI USAGE LOG
 // ─────────────────────────────────────────────
 

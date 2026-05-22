@@ -20,6 +20,7 @@ import adminOverviewRouter from './routes/admin/overview'
 import adminStudentsRouter from './routes/admin/students'
 import adminModulesRouter from './routes/admin/modules'
 import adminContentRouter from './routes/admin/content'
+import musicRouter from './routes/music'
 
 const app = express()
 
@@ -42,6 +43,7 @@ app.use('/api/admin/overview', adminOverviewRouter)
 app.use('/api/admin/students', adminStudentsRouter)
 app.use('/api/admin/modules', adminModulesRouter)
 app.use('/api/admin/content', adminContentRouter)
+app.use('/api/music', musicRouter)
 
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date() })

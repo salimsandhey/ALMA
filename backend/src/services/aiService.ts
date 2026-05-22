@@ -137,40 +137,50 @@ function levenshteinSimilarity(a: string, b: string): number {
   return Math.round((1 - matrix[bL.length][aL.length] / maxLen) * 100)
 }
 
+function isContentPolicyError(err: any): boolean {
+  return err?.status === 400 || err?.message?.toLowerCase().includes('content') || err?.message?.toLowerCase().includes('policy')
+}
+
 export async function streamCoachResponse(userId: string, messages: Array<{ role: string; content: string }>, res: any): Promise<void> {
   res.setHeader('Content-Type', 'text/event-stream')
   res.setHeader('Cache-Control', 'no-cache')
   res.setHeader('Connection', 'keep-alive')
 
-  const stream = await anthropic.messages.stream({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 400,
-    system: COACH_SYSTEM_PROMPT,
-    messages: messages.slice(-20) as any,
-  })
+  try {
+    const stream = await anthropic.messages.stream({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 400,
+      system: COACH_SYSTEM_PROMPT,
+      messages: messages.slice(-20) as any,
+    })
 
-  for await (const chunk of stream) {
-    if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-      res.write(`data: ${JSON.stringify({ delta: chunk.delta.text })}\n\n`)
+    for await (const chunk of stream) {
+      if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+        res.write(`data: ${JSON.stringify({ delta: chunk.delta.text })}\n\n`)
+      }
     }
+
+    await logAIUsage(userId, 'coach')
+  } catch (err: any) {
+    const fallback = isContentPolicyError(err)
+      ? "I'm not able to respond to that. Let's try a different topic!"
+      : "I'm having trouble connecting right now. Please try again."
+    res.write(`data: ${JSON.stringify({ delta: fallback })}\n\n`)
   }
 
   res.write('data: [DONE]\n\n')
   res.end()
-
-  await logAIUsage(userId, 'coach')
 }
 
 export async function checkGrammar(text: string): Promise<{ hasError: boolean; correctedText: string; explanation: string; errorType: string | null }> {
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 200,
-    system: GRAMMAR_CHECK_SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: text }],
-  })
-
-  const raw = response.content[0].type === 'text' ? response.content[0].text : '{}'
   try {
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 200,
+      system: GRAMMAR_CHECK_SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: text }],
+    })
+    const raw = response.content[0].type === 'text' ? response.content[0].text : '{}'
     return JSON.parse(raw)
   } catch {
     return { hasError: false, correctedText: text, explanation: '', errorType: null }
@@ -225,19 +235,18 @@ export async function scorePronunciation(userId: string, targetText: string, spo
     }
   }
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 150,
-    system: PRONUNCIATION_SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: JSON.stringify({ targetText, spokenText }) }],
-  })
-
-  const raw = response.content[0].type === 'text' ? response.content[0].text : '{}'
-
   let parsed: { score?: number; passed?: boolean; feedback?: string } = {}
   try {
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 150,
+      system: PRONUNCIATION_SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: JSON.stringify({ targetText, spokenText }) }],
+    })
+    const raw = response.content[0].type === 'text' ? response.content[0].text : '{}'
     parsed = JSON.parse(raw)
   } catch {
+    // fall back to local levenshtein score on any AI failure
     parsed = {}
   }
 
@@ -261,17 +270,20 @@ export async function scorePronunciation(userId: string, targetText: string, spo
 }
 
 export async function getHint(userId: string, gameType: string, cardContent: Record<string, any>): Promise<string> {
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 100,
-    system: HINT_SYSTEM_PROMPT,
-    messages: [{
-      role: 'user',
-      content: `Game type: ${gameType}\nCard content: ${JSON.stringify(cardContent)}\nPlease give a helpful hint.`,
-    }],
-  })
-
-  const hint = response.content[0].type === 'text' ? response.content[0].text : 'Think carefully about the context!'
-  await logAIUsage(userId, 'hint')
-  return hint
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 100,
+      system: HINT_SYSTEM_PROMPT,
+      messages: [{
+        role: 'user',
+        content: `Game type: ${gameType}\nCard content: ${JSON.stringify(cardContent)}\nPlease give a helpful hint.`,
+      }],
+    })
+    const hint = response.content[0].type === 'text' ? response.content[0].text : 'Think carefully about the context!'
+    await logAIUsage(userId, 'hint')
+    return hint
+  } catch {
+    return 'Think carefully about the context and what you have learned so far!'
+  }
 }
