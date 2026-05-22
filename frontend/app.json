@@ -30,7 +30,8 @@
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.salimsandhey.almaapp"
+      "package": "com.salimsandhey.almaapp",
+      "usesCleartextTraffic": true
     },
     "extra": {
       "router": {},
