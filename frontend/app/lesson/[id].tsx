@@ -1,0 +1,388 @@
+import React, { useEffect, useState } from 'react'
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+  StyleSheet,
+  Alert,
+} from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { useRouter, useLocalSearchParams } from 'expo-router'
+import { useQuery } from '@tanstack/react-query'
+import { api } from '../../lib/api'
+import { useLessonStore } from '../../stores/lessonStore'
+
+import BottomNavBar from '../../components/BottomNavBar'
+import FlashcardGame from '../../components/lesson/FlashcardGame'
+import WordMatchGame from '../../components/lesson/WordMatchGame'
+import FillBlankGame from '../../components/lesson/FillBlankGame'
+import TrueFalseGame from '../../components/lesson/TrueFalseGame'
+import DialogueGame from '../../components/lesson/DialogueGame'
+import ImageSpeakGame from '../../components/lesson/ImageSpeakGame'
+
+const NAVY = '#0B1F4B'
+const TEAL = '#0D9488'
+const BG = '#F2F3F7'
+const WHITE = '#FFFFFF'
+const GREY = '#6B7280'
+
+const GAME_INSTRUCTIONS: Record<string, string> = {
+  FLASHCARD: 'Say the word out loud!',
+  WORD_MATCH: 'Tap a word or speak it!',
+  FILL_BLANK: 'Speak the missing word!',
+  TRUE_FALSE: 'True or false?',
+  DIALOGUE: 'Listen and respond',
+  IMAGE_SPEAK: 'Look and say the word',
+}
+
+const GAME_COMPONENTS: Record<string, React.ComponentType<any>> = {
+  FLASHCARD: FlashcardGame,
+  WORD_MATCH: WordMatchGame,
+  FILL_BLANK: FillBlankGame,
+  TRUE_FALSE: TrueFalseGame,
+  DIALOGUE: DialogueGame,
+  IMAGE_SPEAK: ImageSpeakGame,
+}
+
+export default function LessonScreen() {
+  const router = useRouter()
+  const { id } = useLocalSearchParams<{ id: string }>()
+  const [cardCompleted, setCardCompleted] = useState(false)
+
+  const { data: lesson } = useQuery({
+    queryKey: ['lesson', id],
+    queryFn: () => api.get(`/api/lessons/${id}`).then(r => r.data.lesson),
+  })
+
+  const {
+    init,
+    currentCardIndex,
+    nextCard,
+    prevCard,
+    recordResult,
+    totalXpEarned,
+    cardResults,
+  } = useLessonStore()
+
+  useEffect(() => {
+    if (lesson) init(lesson)
+  }, [lesson])
+
+  // Reset card completion state whenever the card index changes
+  useEffect(() => {
+    setCardCompleted(false)
+  }, [currentCardIndex])
+
+  if (!lesson) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={TEAL} />
+      </SafeAreaView>
+    )
+  }
+
+  const cards: any[] = lesson.content?.cards ?? []
+  const totalCards = cards.length
+  const currentCard = cards[currentCardIndex]
+  const isLastCard = currentCardIndex === totalCards - 1
+
+  const GameComponent = currentCard ? GAME_COMPONENTS[currentCard.gameType ?? lesson.gameType] : null
+  const currentGameType = currentCard?.gameType ?? lesson?.gameType
+  const isDialogue = currentGameType === 'DIALOGUE'
+
+  const handleCardComplete = (cardId: string, correct: boolean, xp: number) => {
+    recordResult(cardId, correct, xp)
+    if (isDialogue) {
+      // auto-advance without requiring a "Next" tap
+      setTimeout(() => {
+        if (isLastCard) handleFinish()
+        else nextCard()
+      }, 400)
+    } else {
+      setCardCompleted(true)
+    }
+  }
+
+  const handleNext = () => {
+    if (isLastCard) {
+      handleFinish()
+    } else {
+      nextCard()
+    }
+  }
+
+  const handleFinish = async () => {
+    let badgesUnlocked: string[] = []
+    try {
+      const { data } = await api.post('/api/progress/lesson/complete', {
+        lessonId: id,
+        xpEarned: totalXpEarned,
+        cardResults,
+      })
+      badgesUnlocked = data.badgesUnlocked ?? []
+    } catch {
+      // Progress save failed — still navigate so user isn't stuck
+    }
+    const score =
+      cardResults.length > 0
+        ? Math.round(
+            (cardResults.filter(r => r.correct).length / cardResults.length) * 100
+          )
+        : 0
+    router.replace({
+      pathname: '/lesson/complete',
+      params: {
+        xpEarned: String(totalXpEarned),
+        moduleId: lesson?.moduleId ?? '',
+        score: String(score),
+        nextLessonId: lesson?.nextLessonId ?? '',
+        badges: badgesUnlocked.join(','),
+      },
+    })
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.headerSideBtn} onPress={() => router.back()}>
+          <Text style={styles.backArrow}>←</Text>
+        </TouchableOpacity>
+
+        <View style={styles.headerCenter}>
+          <Text style={styles.moduleLabel}>
+            {lesson.moduleEmoji ? `${lesson.moduleEmoji} ` : ''}
+            {lesson.moduleTitle ?? ''}
+          </Text>
+          <Text style={styles.lessonTitle}>{lesson.title}</Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.headerSideBtn}
+          onPress={() => {
+            Alert.alert(
+              'Leave Lesson?',
+              'Your progress in this lesson will not be saved.',
+              [
+                { text: 'Stay', style: 'cancel' },
+                { text: 'Leave', style: 'destructive', onPress: () => router.replace('/(student)/modules') },
+              ]
+            )
+          }}
+        >
+          <Text style={styles.closeBtn}>✕</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Progress segments — hidden for dialogue (chat history replaces it) */}
+      {!isDialogue && (
+        <View style={styles.segmentsRow}>
+          {cards.map((_, i) => (
+            <View
+              key={i}
+              style={[styles.segment, i <= currentCardIndex ? styles.segmentActive : styles.segmentInactive]}
+            />
+          ))}
+        </View>
+      )}
+
+      {/* Subtitle — hidden for dialogue */}
+      {!isDialogue && currentCard && (() => {
+        const gameType = currentCard.gameType ?? lesson.gameType
+        const instruction = GAME_INSTRUCTIONS[gameType] ?? ''
+        return (
+          <Text style={styles.subtitle}>
+            {gameType === 'FILL_BLANK'
+              ? `🎙️ ${instruction}`
+              : `${currentCardIndex + 1} of ${totalCards} — ${instruction}`}
+          </Text>
+        )
+      })()}
+
+      {/* Game area */}
+      {(currentCard?.gameType ?? lesson?.gameType) === 'DIALOGUE' ? (
+        <View style={styles.dialogueWrapper}>
+          {GameComponent && (
+            <GameComponent
+              key={currentCardIndex}
+              card={currentCard}
+              onComplete={handleCardComplete}
+              xpReward={lesson.xpReward ?? 10}
+            />
+          )}
+        </View>
+      ) : (
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+          {!currentCard ? (
+            <Text style={styles.unknownGame}>No cards available.</Text>
+          ) : !GameComponent ? (
+            <Text style={styles.unknownGame}>Unknown game type</Text>
+          ) : (
+            <GameComponent
+              key={currentCardIndex}
+              card={currentCard}
+              onComplete={handleCardComplete}
+              xpReward={lesson.xpReward ?? 10}
+              currentIndex={currentCardIndex}
+              totalCards={totalCards}
+            />
+          )}
+        </ScrollView>
+      )}
+
+
+      {/* Bottom bar — hidden for dialogue (auto-advances on completion) */}
+      {!isDialogue && <View style={styles.bottomBar}>
+        <TouchableOpacity
+          onPress={prevCard}
+          disabled={currentCardIndex === 0}
+          style={[styles.prevBtn, currentCardIndex === 0 && styles.disabledOpacity]}
+        >
+          <Text style={styles.prevBtnText}>‹ Prev</Text>
+        </TouchableOpacity>
+
+        <View style={{ flex: 1 }} />
+
+        <TouchableOpacity
+          onPress={handleNext}
+          disabled={!cardCompleted}
+          style={[styles.nextBtn, !cardCompleted && styles.nextBtnDisabled]}
+        >
+          <Text style={[styles.nextBtnText, !cardCompleted && styles.nextBtnTextDisabled]}>
+            {isLastCard ? 'Finish' : 'Next ›'}
+          </Text>
+        </TouchableOpacity>
+      </View>}
+
+      <BottomNavBar />
+    </SafeAreaView>
+  )
+}
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: BG,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  container: {
+    flex: 1,
+    backgroundColor: BG,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 10,
+  },
+  headerSideBtn: {
+    width: 36,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  backArrow: {
+    color: GREY,
+    fontSize: 22,
+  },
+  closeBtn: {
+    color: GREY,
+    fontSize: 18,
+    textAlign: 'right',
+  },
+  moduleLabel: {
+    color: GREY,
+    fontSize: 11,
+  },
+  lessonTitle: {
+    color: NAVY,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  dialogueWrapper: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  scrollView: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  scrollContent: {
+    paddingBottom: 24,
+  },
+  unknownGame: {
+    color: GREY,
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 40,
+  },
+  segmentsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    gap: 4,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  segment: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+  },
+  segmentActive: {
+    backgroundColor: '#EAB308',
+  },
+  segmentInactive: {
+    backgroundColor: '#D1D5DB',
+  },
+  bottomBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  prevBtn: {
+    // no background, just text
+  },
+  prevBtnText: {
+    color: GREY,
+    fontSize: 14,
+  },
+  disabledOpacity: {
+    opacity: 0.3,
+  },
+  subtitle: {
+    color: GREY,
+    fontSize: 13,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  nextBtn: {
+    backgroundColor: NAVY,
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  nextBtnDisabled: {
+    backgroundColor: '#E5E7EB',
+  },
+  nextBtnText: {
+    color: WHITE,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  nextBtnTextDisabled: {
+    color: '#9CA3AF',
+  },
+})
