@@ -18,7 +18,7 @@ import { StatusBar } from 'expo-status-bar'
 import { Ionicons } from '@expo/vector-icons'
 import * as Linking from 'expo-linking'
 import Svg, { Path } from 'react-native-svg'
-import { api } from '../../lib/api'
+import { api, API_BASE_URL } from '../../lib/api'
 
 const NAVY = '#0B1F4B'
 const GOLD = '#F5A623'
@@ -96,7 +96,7 @@ export default function Register() {
 
   const handleGoogleSignUp = async () => {
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_API_URL
+      const baseUrl = API_BASE_URL
       if (!baseUrl) {
         setError('API URL is not configured.')
         return
@@ -137,11 +137,6 @@ export default function Register() {
 
           <Text style={styles.heading}>Welcome to A.L.M.A!</Text>
           <Text style={styles.subtitle}>Lets get started! Register to create your account</Text>
-
-          <View style={styles.authModeRow}>
-            <Text style={styles.authModeText}>Email Sign Up</Text>
-            <View style={styles.authModeUnderline} />
-          </View>
 
             <View style={styles.card}>
               <Text style={styles.fieldLabel}>Email Address</Text>

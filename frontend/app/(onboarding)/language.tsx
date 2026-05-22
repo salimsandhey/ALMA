@@ -1,16 +1,15 @@
-﻿import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
+  TextInput,
   StyleSheet,
-  ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { api } from '../../lib/api'
-import { useAuthStore } from '../../stores/authStore'
+import { SUGGESTED_LANGUAGES, ALL_LANGUAGES } from '../../lib/languages'
 
 const NAVY = '#0B1F4B'
 const GOLD = '#F5A623'
@@ -18,26 +17,14 @@ const BG = '#F2F3F7'
 const WHITE = '#FFFFFF'
 
 type Gender = 'MALE' | 'FEMALE' | 'PREFER_NOT_TO_SAY'
-type LanguageValue = 'fr' | 'sw' | 'ar' | 'mg' | 'ur'
 
-const languages: { flag: string; label: string; value: LanguageValue }[] = [
-  { flag: '\uD83C\uDDEB\uD83C\uDDF7', label: 'Fran\u00E7ais', value: 'fr' },
-  { flag: '\uD83C\uDDF0\uD83C\uDDEA', label: 'Kiswahili', value: 'sw' },
-  { flag: '\uD83C\uDDF8\uD83C\uDDE6', label: '\u0627\u0644\u0639\u0631\u0628\u064A\u0629', value: 'ar' },
-  { flag: '\uD83C\uDDF2\uD83C\uDDEC', label: 'Malagasy', value: 'mg' },
-  { flag: '\uD83C\uDDF5\uD83C\uDDF0', label: '\u0627\u064F\u0631\u062F\u0648', value: 'ur' },
-]
-
-function ProgressBar({ step }: { step: 1 | 2 | 3 }) {
+function ProgressBar({ step }: { step: 1 | 2 | 3 | 4 }) {
   return (
     <View style={styles.progressRow}>
-      {[1, 2, 3].map((i) => (
+      {[1, 2, 3, 4].map((i) => (
         <View
           key={i}
-          style={[
-            styles.progressSegment,
-            { backgroundColor: i <= step ? NAVY : '#D1D5DB' },
-          ]}
+          style={[styles.progressSegment, { backgroundColor: i <= step ? NAVY : '#D1D5DB' }]}
         />
       ))}
     </View>
@@ -47,7 +34,7 @@ function ProgressBar({ step }: { step: 1 | 2 | 3 }) {
 function BackButton({ onPress }: { onPress: () => void }) {
   return (
     <TouchableOpacity onPress={onPress} style={styles.backButton}>
-      <Text style={styles.backText}>{'\u2190  Back'}</Text>
+      <Text style={styles.backText}>{'←  Back'}</Text>
     </TouchableOpacity>
   )
 }
@@ -64,31 +51,45 @@ export default function OnboardingLanguageScreen() {
   const age = typeof params.age === 'string' ? params.age : ''
   const gender = typeof params.gender === 'string' ? (params.gender as Gender) : undefined
 
-  const [selectedLanguage, setSelectedLanguage] = useState<LanguageValue | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [selected, setSelected] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
-  const handleSubmit = async () => {
-    if (!selectedLanguage || !gender) return
+  const filteredList = useMemo(() => {
+    const q = search.toLowerCase().trim()
+    if (!q) return null // show sectioned view
+    const all = [...SUGGESTED_LANGUAGES, ...ALL_LANGUAGES]
+    const seen = new Set<string>()
+    return all.filter((l) => {
+      if (seen.has(l.value)) return false
+      seen.add(l.value)
+      return l.label.toLowerCase().includes(q) || l.value.toLowerCase().includes(q)
+    })
+  }, [search])
 
-    try {
-      setLoading(true)
-      setError(null)
+  const handleContinue = () => {
+    if (!selected || !gender) return
+    router.push({
+      pathname: '/(onboarding)/country',
+      params: { displayName, age, gender, nativeLanguage: selected },
+    })
+  }
 
-      const { data } = await api.patch('/api/auth/onboarding', {
-        displayName,
-        age: Number(age),
-        gender,
-        nativeLanguage: selectedLanguage,
-      })
-
-      useAuthStore.getState().setUser(data.user)
-      router.replace('/(student)/home')
-    } catch (e: any) {
-      setError(e?.response?.data?.error || e?.message || 'Failed to complete onboarding. Please try again.')
-    } finally {
-      setLoading(false)
-    }
+  const renderItem = (lang: { flag: string; label: string; value: string }) => {
+    const isSelected = selected === lang.value
+    return (
+      <TouchableOpacity
+        key={lang.value}
+        style={[styles.item, isSelected ? styles.itemSelected : styles.itemDefault]}
+        onPress={() => setSelected(lang.value)}
+        activeOpacity={0.9}
+      >
+        <View style={styles.itemLeft}>
+          <Text style={styles.itemFlag}>{lang.flag}</Text>
+          <Text style={styles.itemLabel}>{lang.label}</Text>
+        </View>
+        <Text style={[styles.checkmark, !isSelected && styles.hidden]}>✓</Text>
+      </TouchableOpacity>
+    )
   }
 
   return (
@@ -103,43 +104,49 @@ export default function OnboardingLanguageScreen() {
           <BackButton onPress={() => router.back()} />
           <ProgressBar step={3} />
 
-          <Text style={styles.emoji}>{'\uD83C\uDF0D'}</Text>
+          <Text style={styles.emoji}>🌍</Text>
           <Text style={styles.title}>Your native language?</Text>
           <Text style={styles.subtitle}>Used for translations during lessons.</Text>
 
-          <View style={styles.languageList}>
-            {languages.map((language) => {
-              const selected = selectedLanguage === language.value
-              return (
-                <TouchableOpacity
-                  key={language.value}
-                  style={[styles.languageItem, selected ? styles.languageItemSelected : styles.languageItemDefault]}
-                  onPress={() => {
-                    setSelectedLanguage(language.value)
-                    if (error) setError(null)
-                  }}
-                  activeOpacity={0.9}
-                >
-                  <View style={styles.languageLeft}>
-                    <Text style={styles.languageFlag}>{language.flag}</Text>
-                    <Text style={styles.languageLabel}>{language.label}</Text>
-                  </View>
-                  <Text style={[styles.checkmark, !selected && styles.hiddenCheckmark]}>{'\u2713'}</Text>
-                </TouchableOpacity>
-              )
-            })}
-          </View>
+          <TextInput
+            style={styles.searchBox}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search language..."
+            placeholderTextColor="#9CA3AF"
+            autoCorrect={false}
+            autoCapitalize="none"
+            clearButtonMode="while-editing"
+          />
 
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          <View style={styles.list}>
+            {filteredList ? (
+              filteredList.length > 0
+                ? filteredList.map(renderItem)
+                : <Text style={styles.emptyText}>No languages found</Text>
+            ) : (
+              <>
+                <Text style={styles.sectionLabel}>SUGGESTED</Text>
+                {SUGGESTED_LANGUAGES.map(renderItem)}
+                <View style={styles.divider} />
+                <Text style={styles.sectionLabel}>ALL LANGUAGES</Text>
+                {ALL_LANGUAGES.map((l) => {
+                  // dedupe — skip if already in suggested
+                  if (SUGGESTED_LANGUAGES.some((s) => s.value === l.value)) return null
+                  return renderItem(l)
+                })}
+              </>
+            )}
+          </View>
         </ScrollView>
 
         <TouchableOpacity
-          style={[styles.ctaButton, (!selectedLanguage || loading) && styles.ctaButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={!selectedLanguage || loading}
+          style={[styles.cta, !selected && styles.ctaDisabled]}
+          onPress={handleContinue}
+          disabled={!selected}
           activeOpacity={0.9}
         >
-          {loading ? <ActivityIndicator color={NAVY} /> : <Text style={styles.ctaText}>Let's Go!</Text>}
+          <Text style={styles.ctaText}>Continue ›</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -150,50 +157,36 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: BG },
   container: { flex: 1, backgroundColor: BG },
   scroll: { flex: 1 },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 8,
-    paddingBottom: 100,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  backText: {
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  progressRow: {
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: 12,
-  },
-  progressSegment: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-  },
-  emoji: {
-    fontSize: 40,
-    marginTop: 32,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '700',
+  scrollContent: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 100 },
+  backButton: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  backText: { fontSize: 16, color: '#6B7280' },
+  progressRow: { flexDirection: 'row', gap: 6, marginTop: 12 },
+  progressSegment: { flex: 1, height: 4, borderRadius: 2 },
+  emoji: { fontSize: 40, marginTop: 32 },
+  title: { fontSize: 26, fontWeight: '700', color: NAVY, marginTop: 12 },
+  subtitle: { fontSize: 14, color: '#6B7280', marginTop: 6 },
+  searchBox: {
+    marginTop: 20,
+    backgroundColor: WHITE,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    fontSize: 15,
     color: NAVY,
-    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
-  subtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 6,
+  list: { marginTop: 20, gap: 8 },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#9CA3AF',
+    letterSpacing: 1,
+    marginBottom: 4,
+    marginTop: 4,
   },
-  languageList: {
-    marginTop: 28,
-    gap: 10,
-  },
-  languageItem: {
+  divider: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 12 },
+  item: {
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 16,
@@ -202,41 +195,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  languageItemSelected: {
-    borderColor: NAVY,
-    backgroundColor: 'rgba(11,31,75,0.06)',
-  },
-  languageItemDefault: {
-    borderColor: '#E5E7EB',
-    backgroundColor: WHITE,
-  },
-  languageLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  languageFlag: {
-    fontSize: 20,
-  },
-  languageLabel: {
-    fontSize: 16,
-    color: '#111827',
-    fontWeight: '500',
-  },
-  checkmark: {
-    fontSize: 18,
-    color: NAVY,
-    fontWeight: '700',
-  },
-  hiddenCheckmark: {
-    opacity: 0,
-  },
-  errorText: {
-    marginTop: 12,
-    color: '#EF4444',
-    fontSize: 13,
-  },
-  ctaButton: {
+  itemSelected: { borderColor: NAVY, backgroundColor: 'rgba(11,31,75,0.06)' },
+  itemDefault: { borderColor: '#E5E7EB', backgroundColor: WHITE },
+  itemLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  itemFlag: { fontSize: 22 },
+  itemLabel: { fontSize: 16, color: '#111827', fontWeight: '500' },
+  checkmark: { fontSize: 18, color: NAVY, fontWeight: '700' },
+  hidden: { opacity: 0 },
+  emptyText: { color: '#9CA3AF', textAlign: 'center', marginTop: 24, fontSize: 14 },
+  cta: {
     position: 'absolute',
     left: 24,
     right: 24,
@@ -246,14 +213,7 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 58,
   },
-  ctaButtonDisabled: {
-    backgroundColor: '#D1D5DB',
-  },
-  ctaText: {
-    color: NAVY,
-    fontSize: 16,
-    fontWeight: '700',
-  },
+  ctaDisabled: { backgroundColor: '#D1D5DB' },
+  ctaText: { color: NAVY, fontSize: 16, fontWeight: '700' },
 })

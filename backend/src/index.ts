@@ -9,6 +9,7 @@ dotenv.config()
 import authRouter from './routes/auth'
 import usersRouter from './routes/users'
 import modulesRouter from './routes/modules'
+import lessonsRouter from './routes/lessons'
 import progressRouter from './routes/progress'
 import aiRouter from './routes/ai'
 import exploreRouter from './routes/explore'
@@ -30,6 +31,7 @@ app.use(passport.initialize())
 app.use('/api/auth', authRouter)
 app.use('/api/users', usersRouter)
 app.use('/api/modules', modulesRouter)
+app.use('/api/lessons', lessonsRouter)
 app.use('/api/progress', progressRouter)
 app.use('/api/ai', aiRouter)
 app.use('/api/explore', exploreRouter)

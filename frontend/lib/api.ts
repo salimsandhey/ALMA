@@ -2,8 +2,18 @@ import axios from 'axios'
 import { getToken, deleteToken } from './storage'
 import { useAuthStore } from '../stores/authStore'
 
+function normalizeApiBaseUrl(rawUrl?: string) {
+  if (!rawUrl) return ''
+  const trimmed = rawUrl.trim()
+  if (!trimmed) return ''
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  return `http://${trimmed}`
+}
+
+export const API_BASE_URL = normalizeApiBaseUrl(process.env.EXPO_PUBLIC_API_URL)
+
 export const api = axios.create({
-  baseURL: process.env.EXPO_PUBLIC_API_URL,
+  baseURL: API_BASE_URL,
   timeout: 10000,
 })
 

@@ -17,25 +17,31 @@ export async function checkAndAwardBadges(userId: string): Promise<string[]> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
-      lessonProgress: { where: { isCompleted: true } },
-      moduleProgress: { where: { isCompleted: true } },
-      userBadges: true,
+      lessonProgress: { where: { isCompleted: true }, include: { lesson: { select: { moduleId: true } } } },
+      moduleProgress: { where: { isCompleted: true }, include: { module: { select: { orderIndex: true } } } },
+      aiUsageLogs: { where: { feature: 'coach' } },
     },
   })
   if (!user) return []
 
   const awarded: string[] = []
+
   const completedLessons = user.lessonProgress.length
   const completedModules = user.moduleProgress.length
+  const coachMessages = user.aiUsageLogs.length
+
+  // Hotel & Hospitality is orderIndex 9
+  const completedHotel = user.moduleProgress.some((mp) => mp.module.orderIndex === 9)
 
   const checks: { condition: string; met: boolean }[] = [
-    { condition: 'complete_first_lesson', met: completedLessons >= 1 },
-    { condition: 'streak_3', met: user.streakCount >= 3 },
-    { condition: 'streak_7', met: user.streakCount >= 7 },
-    { condition: 'complete_1_module', met: completedModules >= 1 },
-    { condition: 'complete_5_modules', met: completedModules >= 5 },
-    { condition: 'complete_all_modules', met: completedModules >= 11 },
-    { condition: 'leaderboard_top_10', met: false }, // checked separately
+    { condition: 'complete_first_lesson',  met: completedLessons >= 1 },
+    { condition: 'streak_3',               met: user.streakCount >= 3 },
+    { condition: 'streak_7',               met: user.streakCount >= 7 },
+    { condition: 'complete_1_module',      met: completedModules >= 1 },
+    { condition: 'complete_5_modules',     met: completedModules >= 5 },
+    { condition: 'complete_all_modules',   met: completedModules >= 11 },
+    { condition: 'complete_module_hotel',  met: completedHotel },
+    { condition: 'coach_messages_50',      met: coachMessages >= 50 },
   ]
 
   for (const check of checks) {

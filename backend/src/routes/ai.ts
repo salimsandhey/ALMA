@@ -94,7 +94,7 @@ router.post('/pronunciation', async (req: Request, res: Response): Promise<void>
   }
 
   const userId = req.user!.userId
-  const { allowed } = await checkRateLimit(`rl:pronunciation:${userId}`, 30)
+  const { allowed } = await checkRateLimit(`rl:pronunciation:${userId}`, 100)
   if (!allowed) {
     res.status(429).json({ error: 'Daily pronunciation limit reached.', code: 'RATE_LIMITED' })
     return

@@ -1,4 +1,4 @@
-﻿import { Tabs } from 'expo-router'
+import { Tabs } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 
 const NAVY = '#0B1F4B'
@@ -37,8 +37,15 @@ export default function StudentLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore',
+          title: 'Entertainment',
           tabBarIcon: ({ color }) => <Ionicons name="compass-outline" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="music"
+        options={{
+          title: 'Music',
+          tabBarIcon: ({ color }) => <Ionicons name="musical-notes-outline" size={22} color={color} />,
         }}
       />
       <Tabs.Screen

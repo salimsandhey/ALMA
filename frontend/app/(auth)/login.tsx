@@ -19,7 +19,7 @@ import { StatusBar } from 'expo-status-bar'
 import { Ionicons } from '@expo/vector-icons'
 import * as Linking from 'expo-linking'
 import Svg, { Path } from 'react-native-svg'
-import { api } from '../../lib/api'
+import { api, API_BASE_URL } from '../../lib/api'
 import { saveToken, deleteToken } from '../../lib/storage'
 import { useAuthStore } from '../../stores/authStore'
 
@@ -113,7 +113,7 @@ export default function Login() {
 
   const handleGoogleLogin = async () => {
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_API_URL
+      const baseUrl = API_BASE_URL
       if (!baseUrl) {
         setError('API URL is not configured.')
         return
@@ -154,11 +154,6 @@ export default function Login() {
 
           <Text style={styles.welcome}>Welcome to A.L.M.A!</Text>
           <Text style={styles.subtitle}>Lets get started! Login or create an account to continue</Text>
-
-          <View style={styles.authModeRow}>
-            <Text style={styles.authModeText}>Email Login</Text>
-            <View style={styles.authModeUnderline} />
-          </View>
 
           <View style={styles.card}>
             <Text style={styles.fieldLabel}>Email</Text>

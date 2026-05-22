@@ -10,10 +10,10 @@ const WHITE = '#FFFFFF'
 
 type Gender = 'MALE' | 'FEMALE' | 'PREFER_NOT_TO_SAY'
 
-function ProgressBar({ step }: { step: 1 | 2 | 3 }) {
+function ProgressBar({ step }: { step: 1 | 2 | 3 | 4 }) {
   return (
     <View style={styles.progressRow}>
-      {[1, 2, 3].map((i) => (
+      {[1, 2, 3, 4].map((i) => (
         <View
           key={i}
           style={[

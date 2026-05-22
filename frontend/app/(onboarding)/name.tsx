@@ -9,10 +9,10 @@ const GOLD = '#F5A623'
 const BG = '#F2F3F7'
 const WHITE = '#FFFFFF'
 
-function ProgressBar({ step }: { step: 1 | 2 | 3 }) {
+function ProgressBar({ step }: { step: 1 | 2 | 3 | 4 }) {
   return (
     <View style={styles.progressRow}>
-      {[1, 2, 3].map((i) => (
+      {[1, 2, 3, 4].map((i) => (
         <View
           key={i}
           style={[

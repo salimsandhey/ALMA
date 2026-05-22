@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { View } from 'react-native'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import * as Linking from 'expo-linking'
@@ -92,30 +93,33 @@ export default function RootLayout() {
   }, [router])
 
   useEffect(() => {
-    if (booting) {
-      return
-    }
+    if (booting) return
 
     const currentRoot = segments[0]
 
+    const SHARED_SCREENS = [
+      'module', 'lesson', 'music', 'coach', 'warmup',
+      'leaderboard', 'badges', 'edit-profile',
+      'feedback', 'how-to-use', 'intro-slides',
+    ]
+
     if (!token || !user) {
-      if (currentRoot !== '(auth)') {
-        router.replace('/(auth)')
-      }
+      if (currentRoot !== '(auth)') router.replace('/(auth)/login')
       return
     }
 
     if (!user.isOnboardingComplete) {
-      if (currentRoot !== '(onboarding)') {
-        router.replace('/(onboarding)/name')
-      }
+      if (currentRoot !== '(onboarding)') router.replace('/(onboarding)/name')
       return
     }
 
+    if (SHARED_SCREENS.includes(currentRoot as string)) return
+
+    // Allow newly-onboarded users to finish the complete → slides flow
+    if (currentRoot === '(onboarding)') return
+
     if (user.role === 'ADMIN') {
-      if (currentRoot !== '(admin)') {
-        router.replace('/(admin)/overview')
-      }
+      if (currentRoot !== '(admin)') router.replace('/(admin)/overview')
       return
     }
 
@@ -123,6 +127,17 @@ export default function RootLayout() {
       router.replace('/(student)/home')
     }
   }, [booting, router, segments, token, user])
+
+  // Block ALL screen rendering until auth is resolved.
+  // This prevents Expo Router from briefly flashing whatever screen it
+  // restores from its navigation cache before the guard has a chance to run.
+  if (booting) {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View style={{ flex: 1, backgroundColor: '#0B1F4B' }} />
+      </GestureHandlerRootView>
+    )
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

@@ -56,6 +56,8 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
   }
 })
 
+const MODULE_EMOJIS = ['👤','🍽️','🐾','👫','🎨','🏠','🏃','✈️','🏨','🍕','🤝']
+
 // GET /api/modules/:moduleId
 router.get('/:moduleId', async (req: Request, res: Response): Promise<void> => {
   try {
@@ -77,56 +79,34 @@ router.get('/:moduleId', async (req: Request, res: Response): Promise<void> => {
     })
 
     const progressMap = new Map(lessonProgress.map((p) => [p.lessonId, p]))
+    const completedLessons = mod.lessons.filter((l) => progressMap.get(l.id)?.isCompleted).length
+    const lessonCount = mod.lessons.length
+    const emojiIndex = (mod.orderIndex - 1) % MODULE_EMOJIS.length
 
     res.json({
-      id: mod.id,
-      title: mod.title,
-      description: mod.description,
-      imageUrl: mod.imageUrl,
-      orderIndex: mod.orderIndex,
-      lessons: mod.lessons.map((l) => {
-        const p = progressMap.get(l.id)
-        return {
-          id: l.id,
-          title: l.title,
-          orderIndex: l.orderIndex,
-          gameType: l.gameType,
-          xpReward: l.xpReward,
-          isCompleted: p?.isCompleted ?? false,
-          xpEarned: p?.xpEarned ?? 0,
-        }
-      }),
-    })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR' })
-  }
-})
-
-// GET /api/modules/lessons/:lessonId
-router.get('/lessons/:lessonId', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const userId = req.user!.userId
-    const { lessonId } = req.params
-
-    const lesson = await prisma.lesson.findUnique({ where: { id: lessonId } })
-    if (!lesson) {
-      res.status(404).json({ error: 'Lesson not found', code: 'NOT_FOUND' })
-      return
-    }
-
-    const progress = await prisma.lessonProgress.findUnique({
-      where: { userId_lessonId: { userId, lessonId } },
-    })
-
-    res.json({
-      id: lesson.id,
-      moduleId: lesson.moduleId,
-      title: lesson.title,
-      gameType: lesson.gameType,
-      xpReward: lesson.xpReward,
-      content: lesson.content,
-      isCompleted: progress?.isCompleted ?? false,
+      module: {
+        id: mod.id,
+        title: mod.title,
+        description: mod.description,
+        imageUrl: mod.imageUrl,
+        orderIndex: mod.orderIndex,
+        emoji: MODULE_EMOJIS[emojiIndex] ?? '📚',
+        lessonCount,
+        completedLessons,
+        completionPercent: lessonCount > 0 ? Math.round((completedLessons / lessonCount) * 100) : 0,
+        lessons: mod.lessons.map((l) => {
+          const p = progressMap.get(l.id)
+          return {
+            id: l.id,
+            title: l.title,
+            orderIndex: l.orderIndex,
+            gameType: l.gameType,
+            xpReward: l.xpReward,
+            isCompleted: p?.isCompleted ?? false,
+            xpEarned: p?.xpEarned ?? 0,
+          }
+        }),
+      },
     })
   } catch (err) {
     console.error(err)

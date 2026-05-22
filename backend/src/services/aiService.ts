@@ -2,8 +2,6 @@ import anthropic from '../lib/anthropic'
 import { redis } from '../lib/redis'
 import { prisma } from '../lib/prisma'
 
-// ─── Rate limiting ─────────────────────────────────────────────────────────────
-
 export async function checkRateLimit(
   key: string,
   limit: number,
@@ -19,16 +17,14 @@ export async function logAIUsage(userId: string, feature: string): Promise<void>
   await prisma.aIUsageLog.create({ data: { userId, feature } })
 }
 
-// ─── System prompts ────────────────────────────────────────────────────────────
-
-const COACH_SYSTEM_PROMPT = `You are ALMA, a friendly and encouraging English language tutor for tourism and hospitality workers. Your students are adults who use English on the job — at hotels, restaurants, and tourist sites.
+const COACH_SYSTEM_PROMPT = `You are ALMA, a friendly and encouraging English language tutor for tourism and hospitality workers. Your students are adults who use English on the job - at hotels, restaurants, and tourist sites.
 
 Your role:
 - Help students practice English conversation
 - Answer questions about English grammar, vocabulary, and pronunciation
 - Focus on hospitality-specific language when possible
 - Be warm, patient, and positive
-- Keep responses concise (2–4 sentences for conversational replies)
+- Keep responses concise (2-4 sentences for conversational replies)
 - Use simple, clear English appropriate for intermediate learners
 - Never speak in the student's native language
 - Never discuss topics unrelated to English learning
@@ -52,7 +48,7 @@ const WARMUP_SYSTEM_PROMPT = `You are ALMA, a warm and friendly English tutor. Y
 Your goal: Have a natural, encouraging 5-turn conversation. Ask about their day, their work, or a simple topic. Keep it light and positive.
 
 Rules:
-- Keep every response to 1–2 sentences maximum
+- Keep every response to 1-2 sentences maximum
 - Ask a single follow-up question each turn
 - After exactly 5 user turns, end the conversation warmly
 - When ending, include the exact string [SESSION_COMPLETE] at the end of your message
@@ -60,7 +56,7 @@ Rules:
 
 const HINT_SYSTEM_PROMPT = `You are a helpful English tutor. A student is stuck on a lesson exercise. Give them one short, helpful hint without revealing the exact answer.
 
-Keep the hint to 1–2 sentences. Use simple English. Do not include the answer directly.`
+Keep the hint to 1-2 sentences. Use simple English. Do not include the answer directly.`
 
 const PRONUNCIATION_SYSTEM_PROMPT = `You are evaluating whether a student's spoken response matches the target phrase in a language learning app. The student is a non-native English speaker.
 
@@ -68,7 +64,7 @@ You will receive:
 - targetText: what the student was supposed to say
 - spokenText: what the speech-to-text engine detected
 
-Evaluate similarity and score from 0–100. Be lenient for minor accent variations and common STT mishearings of correct pronunciation.
+Evaluate similarity and score from 0-100. Be lenient for minor accent variations and common STT mishearings of correct pronunciation.
 
 Respond ONLY with valid JSON:
 {
@@ -77,7 +73,48 @@ Respond ONLY with valid JSON:
   "feedback": "string (1 sentence, specific and encouraging)"
 }`
 
-// ─── Levenshtein similarity ────────────────────────────────────────────────────
+type MistakeType = 'missing' | 'extra' | 'substitution'
+
+type PronunciationResult = {
+  score: number
+  passed: boolean
+  feedback: string
+  normalizedTarget: string
+  normalizedSpoken: string
+  confidenceBand: 'high' | 'medium' | 'low'
+  mistakes: Array<{ type: MistakeType; expected?: string; actual?: string }>
+}
+
+function normalizeText(input: string): string {
+  return input
+    .toLowerCase()
+    .replace(/[^a-z0-9\s']/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function confidenceBand(score: number): 'high' | 'medium' | 'low' {
+  if (score >= 85) return 'high'
+  if (score >= 60) return 'medium'
+  return 'low'
+}
+
+function diffMistakes(target: string, spoken: string): Array<{ type: MistakeType; expected?: string; actual?: string }> {
+  const t = target.split(' ').filter(Boolean)
+  const s = spoken.split(' ').filter(Boolean)
+  const max = Math.max(t.length, s.length)
+  const out: Array<{ type: MistakeType; expected?: string; actual?: string }> = []
+
+  for (let i = 0; i < max; i++) {
+    const expected = t[i]
+    const actual = s[i]
+    if (expected && !actual) out.push({ type: 'missing', expected })
+    else if (!expected && actual) out.push({ type: 'extra', actual })
+    else if (expected !== actual) out.push({ type: 'substitution', expected, actual })
+  }
+
+  return out.slice(0, 6)
+}
 
 function levenshteinSimilarity(a: string, b: string): number {
   const aL = a.toLowerCase().trim()
@@ -100,13 +137,7 @@ function levenshteinSimilarity(a: string, b: string): number {
   return Math.round((1 - matrix[bL.length][aL.length] / maxLen) * 100)
 }
 
-// ─── ALMA Coach (streaming SSE) ────────────────────────────────────────────────
-
-export async function streamCoachResponse(
-  userId: string,
-  messages: Array<{ role: string; content: string }>,
-  res: any
-): Promise<void> {
+export async function streamCoachResponse(userId: string, messages: Array<{ role: string; content: string }>, res: any): Promise<void> {
   res.setHeader('Content-Type', 'text/event-stream')
   res.setHeader('Cache-Control', 'no-cache')
   res.setHeader('Connection', 'keep-alive')
@@ -130,14 +161,7 @@ export async function streamCoachResponse(
   await logAIUsage(userId, 'coach')
 }
 
-// ─── Grammar Check ─────────────────────────────────────────────────────────────
-
-export async function checkGrammar(text: string): Promise<{
-  hasError: boolean
-  correctedText: string
-  explanation: string
-  errorType: string | null
-}> {
+export async function checkGrammar(text: string): Promise<{ hasError: boolean; correctedText: string; explanation: string; errorType: string | null }> {
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 200,
@@ -153,12 +177,7 @@ export async function checkGrammar(text: string): Promise<{
   }
 }
 
-// ─── Daily Warm-Up ─────────────────────────────────────────────────────────────
-
-export async function warmupChat(
-  userId: string,
-  messages: Array<{ role: string; content: string }>
-): Promise<{ reply: string; sessionEnded: boolean; xpAwarded: number }> {
+export async function warmupChat(userId: string, messages: Array<{ role: string; content: string }>): Promise<{ reply: string; sessionEnded: boolean; xpAwarded: number }> {
   const userTurns = messages.filter((m) => m.role === 'user').length
 
   let systemPrompt = WARMUP_SYSTEM_PROMPT
@@ -186,15 +205,12 @@ export async function warmupChat(
   return { reply, sessionEnded, xpAwarded: sessionEnded ? 10 : 0 }
 }
 
-// ─── Pronunciation Scoring ─────────────────────────────────────────────────────
+export async function scorePronunciation(userId: string, targetText: string, spokenText: string): Promise<PronunciationResult> {
+  const normalizedTarget = normalizeText(targetText)
+  const normalizedSpoken = normalizeText(spokenText)
 
-export async function scorePronunciation(
-  userId: string,
-  targetText: string,
-  spokenText: string
-): Promise<{ score: number; passed: boolean; feedback: string }> {
-  const words = targetText.split(' ').length
-  const quickScore = levenshteinSimilarity(targetText, spokenText)
+  const words = normalizedTarget.split(' ').filter(Boolean).length
+  const quickScore = levenshteinSimilarity(normalizedTarget, normalizedSpoken)
 
   if (words <= 3 && (quickScore >= 80 || quickScore < 50)) {
     await logAIUsage(userId, 'pronunciation')
@@ -202,6 +218,10 @@ export async function scorePronunciation(
       score: quickScore,
       passed: quickScore >= 70,
       feedback: quickScore >= 70 ? 'Great pronunciation!' : `Try again. The correct word is "${targetText}".`,
+      normalizedTarget,
+      normalizedSpoken,
+      confidenceBand: confidenceBand(quickScore),
+      mistakes: diffMistakes(normalizedTarget, normalizedSpoken),
     }
   }
 
@@ -213,19 +233,34 @@ export async function scorePronunciation(
   })
 
   const raw = response.content[0].type === 'text' ? response.content[0].text : '{}'
-  const result = JSON.parse(raw)
+
+  let parsed: { score?: number; passed?: boolean; feedback?: string } = {}
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    parsed = {}
+  }
+
+  const score = typeof parsed.score === 'number' ? parsed.score : quickScore
+  const passed = typeof parsed.passed === 'boolean' ? parsed.passed : score >= 70
+  const feedback = typeof parsed.feedback === 'string' && parsed.feedback.trim().length > 0
+    ? parsed.feedback
+    : (passed ? 'Great pronunciation!' : `Try again. The correct phrase is "${targetText}".`)
 
   await logAIUsage(userId, 'pronunciation')
-  return result
+
+  return {
+    score,
+    passed,
+    feedback,
+    normalizedTarget,
+    normalizedSpoken,
+    confidenceBand: confidenceBand(score),
+    mistakes: diffMistakes(normalizedTarget, normalizedSpoken),
+  }
 }
 
-// ─── Stuck Hint ────────────────────────────────────────────────────────────────
-
-export async function getHint(
-  userId: string,
-  gameType: string,
-  cardContent: Record<string, any>
-): Promise<string> {
+export async function getHint(userId: string, gameType: string, cardContent: Record<string, any>): Promise<string> {
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 100,

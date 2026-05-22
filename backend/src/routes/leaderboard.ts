@@ -16,7 +16,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
       where: { isActive: true, role: 'STUDENT' },
       orderBy: { xpTotal: 'desc' },
       take: limit,
-      select: { id: true, displayName: true, avatarUrl: true, xpTotal: true },
+      select: { id: true, displayName: true, avatarUrl: true, xpTotal: true, country: true },
     })
 
     const leaderboard = users.map((u, i) => ({
@@ -25,6 +25,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
       displayName: u.displayName,
       avatarUrl: u.avatarUrl,
       xpTotal: u.xpTotal,
+      country: u.country ?? null,
     }))
 
     const currentUserRank = leaderboard.findIndex((u) => u.userId === userId) + 1

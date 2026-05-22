@@ -5,12 +5,14 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  type DimensionValue,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
 import Svg, { Circle } from 'react-native-svg'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
+import { countryFlag } from '../../lib/countries'
 
 const NAVY = '#0B1F4B'
 const GOLD = '#F5A623'
@@ -29,6 +31,7 @@ type LeaderboardItem = {
   displayName?: string
   xp?: number
   xpTotal?: number
+  country?: string | null
 }
 
 type SummaryResponse = {
@@ -83,7 +86,7 @@ function ProgressRing({ percent }: { percent: number }) {
   )
 }
 
-function SkeletonBox({ height, width = '100%', radius = 12 }: { height: number; width?: number | string; radius?: number }) {
+function SkeletonBox({ height, width = '100%', radius = 12 }: { height: number; width?: DimensionValue; radius?: number }) {
   return <View style={[styles.skeleton, { height, width, borderRadius: radius }]} />
 }
 
@@ -241,6 +244,7 @@ export default function StudentHome() {
               const isCurrentUser =
                 (user?.id && (item.userId === user.id || item.id === user.id)) ||
                 (!!currentUserRank && currentUserRank === rank)
+              const flag = item.country ? countryFlag(item.country) : null
 
               return (
                 <View
@@ -259,9 +263,12 @@ export default function StudentHome() {
                     <Text style={styles.learnerAvatarText}>{initial}</Text>
                   </View>
 
-                  <Text style={styles.learnerName} numberOfLines={1}>
-                    {name}
-                  </Text>
+                  <View style={styles.learnerNameRow}>
+                    <Text style={styles.learnerName} numberOfLines={1}>
+                      {name}
+                    </Text>
+                    {flag ? <Text style={styles.learnerFlag}>{flag}</Text> : null}
+                  </View>
 
                   <Text style={styles.learnerXp}>{`${xp} XP`}</Text>
                 </View>
@@ -587,12 +594,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
-  learnerName: {
+  learnerNameRow: {
     flex: 1,
     marginLeft: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    overflow: 'hidden',
+  },
+  learnerName: {
     color: NAVY,
     fontSize: 14,
     fontWeight: '600',
+    flexShrink: 1,
+  },
+  learnerFlag: {
+    fontSize: 14,
   },
   learnerXp: {
     color: GOLD,

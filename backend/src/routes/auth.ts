@@ -123,6 +123,7 @@ const onboardingSchema = z.object({
   age: z.number().int().min(10).max(100),
   gender: z.enum(['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY']),
   nativeLanguage: z.string().min(1),
+  country: z.string().length(2).optional(),
 })
 
 // ─── POST /api/auth/register ──────────────────────────────────────────────────
@@ -429,12 +430,12 @@ router.patch('/onboarding', verifyJWT, async (req: Request, res: Response): Prom
     return
   }
 
-  const { displayName, age, gender, nativeLanguage } = parsed.data
+  const { displayName, age, gender, nativeLanguage, country } = parsed.data
 
   try {
     const user = await prisma.user.update({
       where: { id: req.user!.userId },
-      data: { displayName, age, gender, nativeLanguage, isOnboardingComplete: true },
+      data: { displayName, age, gender, nativeLanguage, country, isOnboardingComplete: true },
     })
 
     res.json({ message: 'Onboarding complete.', user: { ...user, isOnboardingComplete: true } })
