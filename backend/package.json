@@ -10,7 +10,7 @@
     "seed": "ts-node --transpile-only --compiler-options '{\"module\":\"CommonJS\",\"lib\":[\"ES2020\"]}' prisma/seed.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.95.1",
+    "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^5.7.1",
     "@upstash/redis": "^1.25.1",
     "bcrypt": "^6.0.0",

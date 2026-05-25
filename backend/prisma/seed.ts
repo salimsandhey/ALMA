@@ -9,8 +9,8 @@ async function main() {
   const badges = [
     { name: 'First Step',        description: 'Complete your first lesson',               condition: 'complete_first_lesson' },
     { name: 'Warm Up',           description: 'Complete your first warm-up session',      condition: 'complete_first_warmup' },
-    { name: 'On a Roll',         description: 'Maintain a 3-day streak',                  condition: 'streak_3' },
-    { name: 'Week Warrior',      description: 'Maintain a 7-day streak',                  condition: 'streak_7' },
+    { name: 'On a Roll',         description: 'Visit the app 3 days in a row',            condition: 'streak_3' },
+    { name: 'Week Warrior',      description: 'Visit the app 7 days in a row',            condition: 'streak_7' },
     { name: 'Module Master',     description: 'Complete one full module',                 condition: 'complete_1_module' },
     { name: 'Polyglot Path',     description: 'Complete five modules',                    condition: 'complete_5_modules' },
     { name: 'All In',            description: 'Complete all 14 modules',                  condition: 'complete_all_modules' },

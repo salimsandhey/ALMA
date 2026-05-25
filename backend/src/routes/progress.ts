@@ -11,7 +11,7 @@ router.use(verifyJWT)
 
 const completeLessonSchema = z.object({
   lessonId: z.string(),
-  xpEarned: z.number().int().min(0),
+  xpEarned: z.number().int().min(0).optional(), // kept for compatibility, server recalculates
   cardResults: z.array(z.object({
     cardId: z.string(),
     correct: z.boolean(),
@@ -26,8 +26,13 @@ router.post('/lesson/complete', async (req: Request, res: Response): Promise<voi
     return
   }
 
-  const { lessonId, xpEarned } = parsed.data
+  const { lessonId, cardResults } = parsed.data
   const userId = req.user!.userId
+
+  // Server-side XP calculation: 20 pts × (correct / total), min 0
+  const totalCards = cardResults?.length ?? 0
+  const correctCount = cardResults?.filter(r => r.correct).length ?? 0
+  const calculatedXp = totalCards > 0 ? Math.round((correctCount / totalCards) * 20) : 20
 
   try {
     const lesson = await prisma.lesson.findUnique({
@@ -51,13 +56,13 @@ router.post('/lesson/complete', async (req: Request, res: Response): Promise<voi
       create: {
         userId, lessonId,
         isCompleted: true,
-        xpEarned: isFirstCompletion ? xpEarned : 0,
+        xpEarned: isFirstCompletion ? calculatedXp : 0,
         attemptCount: 1,
         completedAt: new Date(),
       },
       update: {
         isCompleted: true,
-        xpEarned: isFirstCompletion ? xpEarned : existing?.xpEarned ?? 0,
+        xpEarned: isFirstCompletion ? calculatedXp : existing?.xpEarned ?? 0,
         attemptCount: { increment: 1 },
         completedAt: new Date(),
       },
@@ -65,13 +70,17 @@ router.post('/lesson/complete', async (req: Request, res: Response): Promise<voi
 
     let newXpTotal = 0
     if (isFirstCompletion) {
-      newXpTotal = await awardXP(userId, xpEarned)
+      newXpTotal = await awardXP(userId, calculatedXp)
     } else {
       const user = await prisma.user.findUnique({ where: { id: userId }, select: { xpTotal: true } })
       newXpTotal = user?.xpTotal ?? 0
     }
 
-    const newStreakCount = await updateStreak(userId)
+    const { streakCount: newStreakCount, dailyVisitBonus } = await updateStreak(userId)
+    if (dailyVisitBonus) {
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { xpTotal: true } })
+      newXpTotal = user?.xpTotal ?? newXpTotal
+    }
 
     // Check if module is now fully complete
     const module = await prisma.module.findUnique({
@@ -99,14 +108,23 @@ router.post('/lesson/complete', async (req: Request, res: Response): Promise<voi
         moduleCompleted = true
 
         if (!existingModProgress?.isCompleted) {
-          newXpTotal = await awardXP(userId, 50)
+          // Module completion bonus: 20 pts
+          newXpTotal = await awardXP(userId, 20)
         }
       }
     }
 
     const badgesUnlocked = await checkAndAwardBadges(userId)
 
-    res.json({ xpEarned: isFirstCompletion ? xpEarned : 0, newXpTotal, streakUpdated: true, newStreakCount, moduleCompleted, badgesUnlocked })
+    res.json({
+      xpEarned: isFirstCompletion ? calculatedXp : 0,
+      newXpTotal,
+      streakUpdated: true,
+      newStreakCount,
+      dailyVisitBonus,
+      moduleCompleted,
+      badgesUnlocked,
+    })
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR' })
@@ -144,7 +162,6 @@ router.get('/home', async (req: Request, res: Response): Promise<void> => {
     const totalLessons = modules.reduce((sum, m) => sum + m.lessons.length, 0)
     const completedLessons = completedIds.size
 
-    // Find first module that isn't fully complete
     let continueLesson: { moduleTitle: string; lessonTitle: string; lessonId: string } | null = null
     for (const mod of modules) {
       const incomplete = mod.lessons.find((l) => !completedIds.has(l.id))
@@ -211,13 +228,13 @@ router.get('/summary', async (req: Request, res: Response): Promise<void> => {
   }
 })
 
-// POST /api/progress/music/complete
+// POST /api/progress/music/complete — 10 pts per song
 router.post('/music/complete', async (req: Request, res: Response): Promise<void> => {
   const userId = req.user!.userId
 
   try {
     const newXpTotal = await awardXP(userId, 10)
-    const newStreakCount = await updateStreak(userId)
+    const { streakCount: newStreakCount, dailyVisitBonus } = await updateStreak(userId)
     const badgesUnlocked = await checkAndAwardBadges(userId)
 
     res.json({
@@ -225,8 +242,80 @@ router.post('/music/complete', async (req: Request, res: Response): Promise<void
       newXpTotal,
       streakUpdated: true,
       newStreakCount,
+      dailyVisitBonus,
       badgesUnlocked,
     })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR' })
+  }
+})
+
+// POST /api/progress/explore/view — 15 pts per content piece (first view only)
+router.post('/explore/view', async (req: Request, res: Response): Promise<void> => {
+  const schema = z.object({ contentId: z.string() })
+  const parsed = schema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Validation error', code: 'VALIDATION_ERROR' })
+    return
+  }
+
+  const userId = req.user!.userId
+  const { contentId } = parsed.data
+  const feature = `explore_view_${contentId}`
+
+  try {
+    const alreadyViewed = await prisma.aIUsageLog.findFirst({
+      where: { userId, feature },
+    })
+
+    if (alreadyViewed) {
+      res.json({ xpEarned: 0, alreadyViewed: true })
+      return
+    }
+
+    await prisma.aIUsageLog.create({ data: { userId, feature } })
+    const newXpTotal = await awardXP(userId, 15)
+
+    res.json({ xpEarned: 15, newXpTotal, alreadyViewed: false })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR' })
+  }
+})
+
+// POST /api/progress/explore/question — 5 pts per correct answer
+router.post('/explore/question', async (req: Request, res: Response): Promise<void> => {
+  const schema = z.object({ correct: z.boolean() })
+  const parsed = schema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Validation error', code: 'VALIDATION_ERROR' })
+    return
+  }
+
+  const userId = req.user!.userId
+
+  try {
+    if (!parsed.data.correct) {
+      res.json({ xpEarned: 0 })
+      return
+    }
+
+    const newXpTotal = await awardXP(userId, 5)
+    res.json({ xpEarned: 5, newXpTotal })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR' })
+  }
+})
+
+// POST /api/progress/daily-challenge/question — 10 pts per question
+router.post('/daily-challenge/question', async (req: Request, res: Response): Promise<void> => {
+  const userId = req.user!.userId
+
+  try {
+    const newXpTotal = await awardXP(userId, 10)
+    res.json({ xpEarned: 10, newXpTotal })
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR' })

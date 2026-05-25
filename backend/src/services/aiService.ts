@@ -1,4 +1,4 @@
-import anthropic from '../lib/anthropic'
+import genAI from '../lib/gemini'
 import { redis } from '../lib/redis'
 import { prisma } from '../lib/prisma'
 
@@ -22,26 +22,58 @@ const COACH_SYSTEM_PROMPT = `You are ALMA, a friendly and encouraging English la
 Your role:
 - Help students practice English conversation
 - Answer questions about English grammar, vocabulary, and pronunciation
-- Focus on hospitality-specific language when possible
+- Focus on hospitality-specific language and module topics when possible
 - Be warm, patient, and positive
 - Keep responses concise (2-4 sentences for conversational replies)
 - Use simple, clear English appropriate for intermediate learners
 - Never speak in the student's native language
-- Never discuss topics unrelated to English learning
+- Only discuss English learning, hospitality, tourism, and the student's work or daily life
+- NEVER share external links, URLs, or website addresses under any circumstances
+- NEVER engage with adult, illegal, or abusive content — if asked, respond: "Let's keep our focus on English practice!"
+- If the student makes a grammar or spelling error, gently note it AFTER responding. Format as: [Correction: ...]
 
-If the student makes a grammar or spelling error, gently note it AFTER responding to their message. Format the correction as: [Correction: ...]`
+After each reply, on a new line add a one-line assessment of the student's English:
+[FEEDBACK: Your encouraging assessment here — max 10 words, e.g. "Great sentence structure! Very natural phrasing."]`
 
-const GRAMMAR_CHECK_SYSTEM_PROMPT = `You are a grammar checker for English learners. Analyze the given text and identify grammar errors.
+const GRAMMAR_CHECK_SYSTEM_PROMPT = `You are an extremely strict grammar, spelling, casing, and style checker for English as a Second Language (ESL) learners.
+Analyze the given text for any errors, including:
+- Capitalization (e.g., lowercase "i" must be capitalized to "I", sentences must start with a capital letter).
+- Punctuation (e.g., missing periods, commas, or question marks at the end of sentences).
+- Missing or incorrect articles (e.g., "a", "an", "the").
+- Prepositions (e.g., "listen to music" instead of "listen music", "arrive at the hotel").
+- Subject-verb agreement and verb tenses.
+- Spelling and typos.
+- Incorrect word order.
+
+Be highly strict. If there are any minor corrections (even just a missing period or a lowercase "i"), set "hasError" to true and provide the corrected text.
 
 Respond ONLY with valid JSON. No other text.
 
 JSON format:
 {
   "hasError": boolean,
-  "correctedText": "string (corrected version, or same as input if no error)",
-  "explanation": "string (brief explanation in simple English, or empty string if no error)",
-  "errorType": "string (e.g. VERB_TENSE, SUBJECT_VERB_AGREEMENT, WORD_ORDER, MISSING_ARTICLE, SPELLING, PREPOSITION, null if no error)"
-}`
+  "correctedText": "string (corrected version with proper capitalization, spelling, and grammar)",
+  "explanation": "string (brief, encouraging explanation in simple English of what was wrong, or empty string if no error)",
+  "errorType": "string or null (e.g. VERB_TENSE, SUBJECT_VERB_AGREEMENT, WORD_ORDER, MISSING_ARTICLE, SPELLING, PREPOSITION, CAPITALIZATION, PUNCTUATION)",
+  "betterToSay": {
+    "original": "string (the exact original phrase that could be expressed more naturally or professionally in hospitality contexts)",
+    "corrected": "string (more natural, polite, or idiomatic version)",
+    "explanation": "string (encouraging explanation of why this sounds better, 1 sentence)"
+  }
+}
+
+Set betterToSay to null if the user's expression is already perfectly natural and idiomatic.`
+
+const DAILY_GREETING_SYSTEM_PROMPT = `You are ALMA, a warm and friendly daily check-in companion for English learners in tourism and hospitality.
+
+Your role:
+- Start with a warm, casual greeting
+- Ask simple daily questions (e.g. "How are you feeling today?", "How was your morning?", "What are your plans for today?")
+- Keep every response to 1-2 sentences maximum
+- Be very warm, positive, and encouraging
+- Address the student by name
+- Do NOT correct grammar — this is a friendly daily check-in, not a lesson
+- This is a brief interaction to start their day`
 
 const WARMUP_SYSTEM_PROMPT = `You are ALMA, a warm and friendly English tutor. You are starting a short daily warm-up conversation with a student who works in tourism or hospitality.
 
@@ -138,7 +170,44 @@ function levenshteinSimilarity(a: string, b: string): number {
 }
 
 function isContentPolicyError(err: any): boolean {
-  return err?.status === 400 || err?.message?.toLowerCase().includes('content') || err?.message?.toLowerCase().includes('policy')
+  const msg = err?.message?.toLowerCase() || ''
+  return err?.status === 400 || msg.includes('content') || msg.includes('policy') || msg.includes('safety') || msg.includes('blocked')
+}
+
+type GeminiContent = { role: 'user' | 'model'; parts: [{ text: string }] }
+
+function buildContents(
+  messages: Array<{ role: string; content: string }>,
+  openingPrompt: string
+): GeminiContent[] {
+  // Map to Gemini roles
+  const mapped: GeminiContent[] = messages.map((m) => ({
+    role: (m.role === 'assistant' ? 'model' : 'user') as 'user' | 'model',
+    parts: [{ text: m.content }],
+  }))
+
+  // Collapse consecutive same roles (Gemini requires strict alternation)
+  const collapsed: GeminiContent[] = []
+  for (const msg of mapped) {
+    const last = collapsed[collapsed.length - 1]
+    if (last && last.role === msg.role) {
+      last.parts[0].text += '\n' + msg.parts[0].text
+    } else {
+      collapsed.push({ role: msg.role, parts: [{ text: msg.parts[0].text }] })
+    }
+  }
+
+  // Must start with 'user'
+  if (collapsed.length === 0 || collapsed[0].role !== 'user') {
+    collapsed.unshift({ role: 'user', parts: [{ text: openingPrompt }] })
+  }
+
+  // Must end with 'user' (this is the message we want a response to)
+  if (collapsed[collapsed.length - 1].role !== 'user') {
+    collapsed.push({ role: 'user', parts: [{ text: openingPrompt }] })
+  }
+
+  return collapsed
 }
 
 export async function streamCoachResponse(userId: string, messages: Array<{ role: string; content: string }>, res: any): Promise<void> {
@@ -147,21 +216,29 @@ export async function streamCoachResponse(userId: string, messages: Array<{ role
   res.setHeader('Connection', 'keep-alive')
 
   try {
-    const stream = await anthropic.messages.stream({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 400,
-      system: COACH_SYSTEM_PROMPT,
-      messages: messages.slice(-20) as any,
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      systemInstruction: COACH_SYSTEM_PROMPT,
     })
 
-    for await (const chunk of stream) {
-      if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-        res.write(`data: ${JSON.stringify({ delta: chunk.delta.text })}\n\n`)
-      }
+    const contents = buildContents(
+      messages.slice(-20),
+      'Hello, let us start our English practice conversation.'
+    )
+
+    const stream = await model.generateContentStream({
+      contents,
+      generationConfig: { maxOutputTokens: 400 },
+    })
+
+    for await (const chunk of stream.stream) {
+      const chunkText = chunk.text()
+      if (chunkText) res.write(`data: ${JSON.stringify({ delta: chunkText })}\n\n`)
     }
 
     await logAIUsage(userId, 'coach')
   } catch (err: any) {
+    console.error('[streamCoachResponse] error:', err?.message ?? err)
     const fallback = isContentPolicyError(err)
       ? "I'm not able to respond to that. Let's try a different topic!"
       : "I'm having trouble connecting right now. Please try again."
@@ -172,19 +249,136 @@ export async function streamCoachResponse(userId: string, messages: Array<{ role
   res.end()
 }
 
-export async function checkGrammar(text: string): Promise<{ hasError: boolean; correctedText: string; explanation: string; errorType: string | null }> {
-  try {
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 200,
-      system: GRAMMAR_CHECK_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: text }],
-    })
-    const raw = response.content[0].type === 'text' ? response.content[0].text : '{}'
-    return JSON.parse(raw)
-  } catch {
-    return { hasError: false, correctedText: text, explanation: '', errorType: null }
+type BetterToSay = { original: string; corrected: string; explanation: string } | null
+
+type GrammarResult = {
+  hasError: boolean
+  correctedText: string
+  explanation: string
+  errorType: string | null
+  betterToSay: BetterToSay
+}
+
+function extractJson(text: string): string {
+  const start = text.indexOf('{')
+  const end = text.lastIndexOf('}')
+  if (start !== -1 && end !== -1 && end > start) {
+    return text.substring(start, end + 1)
   }
+  return text
+}
+
+export async function checkGrammar(text: string): Promise<GrammarResult> {
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    systemInstruction: GRAMMAR_CHECK_SYSTEM_PROMPT,
+  })
+
+  const response = await model.generateContent({
+    contents: [{ role: 'user', parts: [{ text }] }],
+    generationConfig: { maxOutputTokens: 1024 },
+  })
+  const raw = response.response.text().trim()
+  console.log('[checkGrammar] raw response:', raw.slice(0, 300))
+  const jsonText = extractJson(raw)
+  return JSON.parse(jsonText)
+}
+
+export async function dailyGreetingChat(
+  userId: string,
+  messages: Array<{ role: string; content: string }>
+): Promise<{ reply: string }> {
+  let systemPrompt = DAILY_GREETING_SYSTEM_PROMPT
+  const userTurns = messages.filter((m) => m.role === 'user').length
+
+  if (userTurns === 0) {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { displayName: true } })
+    systemPrompt += `\n\nStudent's name: ${user?.displayName ?? 'there'}`
+  }
+
+  try {
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      systemInstruction: systemPrompt,
+    })
+
+    const contents = buildContents(messages, 'Hello, please start our friendly daily greeting check-in.')
+    const result = await model.generateContent({
+      contents,
+      generationConfig: { maxOutputTokens: 80 },
+    })
+    return { reply: result.response.text().trim() }
+  } catch (err: any) {
+    console.error('[dailyGreetingChat] error:', err?.message ?? err)
+    return { reply: 'Good morning! How are you feeling today?' }
+  }
+}
+
+export async function coachChat(
+  userId: string,
+  messages: Array<{ role: string; content: string }>
+): Promise<{ reply: string; feedback: string | null; correction: string | null }> {
+  try {
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      systemInstruction: COACH_SYSTEM_PROMPT,
+    })
+
+    const contents = buildContents(
+      messages.slice(-20),
+      'Hello, let us start our English practice conversation.'
+    )
+
+    const result = await model.generateContent({
+      contents,
+      generationConfig: { maxOutputTokens: 400 },
+    })
+    const fullText = result.response.text()
+
+    const feedbackMatch = fullText.match(/\[FEEDBACK:\s*(.+?)\]/i)
+    const correctionMatch = fullText.match(/\[Correction:\s*(.+?)\]/i)
+
+    const feedback = feedbackMatch?.[1]?.trim() ?? null
+    const correction = correctionMatch?.[1]?.trim() ?? null
+    const reply = fullText
+      .replace(/\[FEEDBACK:[^\]]*\]/gi, '')
+      .replace(/\[Correction:[^\]]*\]/gi, '')
+      .trim()
+
+    await logAIUsage(userId, 'coach')
+    return { reply, feedback, correction }
+  } catch (err: any) {
+    console.error('[coachChat] error:', err?.message ?? err)
+    if (isContentPolicyError(err)) {
+      return { reply: "Let's keep our focus on English practice! What would you like to learn today?", feedback: null, correction: null }
+    }
+    return { reply: "I'm having trouble connecting right now. Please try again.", feedback: null, correction: null }
+  }
+}
+
+export async function getCoachStatus(userId: string): Promise<{
+  messagesUsed: number
+  messagesRemaining: number
+  sessionsUsed: number
+  sessionsRemaining: number
+  canChat: boolean
+}> {
+  const [msgRaw, sessionRaw] = await Promise.all([
+    redis.get(`rl:coach-msg:${userId}`),
+    redis.get(`rl:coach-session:${userId}`),
+  ])
+  const messagesUsed = parseInt((msgRaw as string | null) ?? '0')
+  const sessionsUsed = parseInt((sessionRaw as string | null) ?? '0')
+  const messagesRemaining = Math.max(0, 50 - messagesUsed)
+  const sessionsRemaining = Math.max(0, 2 - sessionsUsed)
+  return { messagesUsed, messagesRemaining, sessionsUsed, sessionsRemaining, canChat: messagesRemaining > 0 && sessionsRemaining > 0 }
+}
+
+export async function startCoachSession(userId: string): Promise<{ allowed: boolean; sessionsUsed: number }> {
+  const key = `rl:coach-session:${userId}`
+  const current = await redis.incr(key)
+  if (current === 1) await redis.expire(key, 86400)
+  return { allowed: current <= 2, sessionsUsed: current }
 }
 
 export async function warmupChat(userId: string, messages: Array<{ role: string; content: string }>): Promise<{ reply: string; sessionEnded: boolean; xpAwarded: number }> {
@@ -196,23 +390,32 @@ export async function warmupChat(userId: string, messages: Array<{ role: string;
     systemPrompt += `\n\nStudent's name: ${user?.displayName || 'there'}`
   }
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 150,
-    system: systemPrompt,
-    messages: messages as any,
-  })
+  try {
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      systemInstruction: systemPrompt,
+    })
 
-  const replyText = response.content[0].type === 'text' ? response.content[0].text : ''
-  const sessionEnded = replyText.includes('[SESSION_COMPLETE]')
-  const reply = replyText.replace('[SESSION_COMPLETE]', '').trim()
+    const contents = buildContents(messages, 'Hello, please start our 5-turn English warm-up session.')
+    const result = await model.generateContent({
+      contents,
+      generationConfig: { maxOutputTokens: 150 },
+    })
+    const replyText = result.response.text()
 
-  if (sessionEnded) {
-    await prisma.user.update({ where: { id: userId }, data: { xpTotal: { increment: 10 } } })
-    await logAIUsage(userId, 'warmup')
+    const sessionEnded = replyText.includes('[SESSION_COMPLETE]')
+    const reply = replyText.replace('[SESSION_COMPLETE]', '').trim()
+
+    if (sessionEnded) {
+      await prisma.user.update({ where: { id: userId }, data: { xpTotal: { increment: 10 } } })
+      await logAIUsage(userId, 'warmup')
+    }
+
+    return { reply, sessionEnded, xpAwarded: sessionEnded ? 10 : 0 }
+  } catch (err: any) {
+    console.error('[warmupChat] error:', err?.message ?? err)
+    return { reply: 'Good morning! Ready to start our warm-up conversation?', sessionEnded: false, xpAwarded: 0 }
   }
-
-  return { reply, sessionEnded, xpAwarded: sessionEnded ? 10 : 0 }
 }
 
 export async function scorePronunciation(userId: string, targetText: string, spokenText: string): Promise<PronunciationResult> {
@@ -237,16 +440,19 @@ export async function scorePronunciation(userId: string, targetText: string, spo
 
   let parsed: { score?: number; passed?: boolean; feedback?: string } = {}
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 150,
-      system: PRONUNCIATION_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: JSON.stringify({ targetText, spokenText }) }],
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      systemInstruction: PRONUNCIATION_SYSTEM_PROMPT,
     })
-    const raw = response.content[0].type === 'text' ? response.content[0].text : '{}'
-    parsed = JSON.parse(raw)
+
+    const response = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: JSON.stringify({ targetText, spokenText }) }] }],
+      generationConfig: { maxOutputTokens: 150 },
+    })
+
+    const raw = response.response.text().trim()
+    parsed = JSON.parse(extractJson(raw))
   } catch {
-    // fall back to local levenshtein score on any AI failure
     parsed = {}
   }
 
@@ -271,16 +477,22 @@ export async function scorePronunciation(userId: string, targetText: string, spo
 
 export async function getHint(userId: string, gameType: string, cardContent: Record<string, any>): Promise<string> {
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 100,
-      system: HINT_SYSTEM_PROMPT,
-      messages: [{
-        role: 'user',
-        content: `Game type: ${gameType}\nCard content: ${JSON.stringify(cardContent)}\nPlease give a helpful hint.`,
-      }],
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      systemInstruction: HINT_SYSTEM_PROMPT,
     })
-    const hint = response.content[0].type === 'text' ? response.content[0].text : 'Think carefully about the context!'
+
+    const response = await model.generateContent({
+      contents: [{
+        role: 'user',
+        parts: [{ text: `Game type: ${gameType}\nCard content: ${JSON.stringify(cardContent)}\nPlease give a helpful hint.` }],
+      }],
+      generationConfig: {
+        maxOutputTokens: 100,
+      },
+    })
+
+    const hint = response.response.text().trim()
     await logAIUsage(userId, 'hint')
     return hint
   } catch {
