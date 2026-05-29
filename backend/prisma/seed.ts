@@ -1550,10 +1550,194 @@ async function main() {
       passwordHash: testPasswordHash,
       displayName: 'Test User',
       role: 'STUDENT',
-      isVerified: true,
-      onboardingComplete: true,
+      isEmailVerified: true,
+      isOnboardingComplete: true,
     },
   })
+
+  // ─── Daily challenge questions ───────────────────────────────────────────────
+  console.log('Seeding daily challenge questions...')
+  const CHALLENGE_QUESTIONS = [
+    { orderIndex: 1,  question: 'How do you greet a guest at a hotel?',                              sampleAnswer: 'Welcome to our hotel',                                                    keywords: ['welcome', 'hotel', 'greet'],                          xpReward: 10 },
+    { orderIndex: 2,  question: 'What do you say when a guest checks in?',                           sampleAnswer: 'Good morning, welcome.',                                                  keywords: ['welcome', 'morning'],                                 xpReward: 10 },
+    { orderIndex: 3,  question: 'How do you apologize to an unhappy guest?',                         sampleAnswer: "I'm very sorry for the inconvenience. Let me fix that right away.",        keywords: ['sorry', 'apologize', 'fix', 'inconvenience'],         xpReward: 10 },
+    { orderIndex: 4,  question: 'What is the word for a meal at the start of a restaurant order?',   sampleAnswer: 'Appetizer',                                                               keywords: ['appetizer', 'starter'],                               xpReward: 10 },
+    { orderIndex: 5,  question: 'What do you call the special dish of the day?',                     sampleAnswer: 'The specialty of the day',                                                keywords: ['specialty', 'special'],                               xpReward: 10 },
+    { orderIndex: 6,  question: 'How do you ask if a guest is ready to order?',                      sampleAnswer: 'Are you ready to order?',                                                 keywords: ['ready', 'order'],                                     xpReward: 10 },
+    { orderIndex: 7,  question: 'What do you say when you bring the bill?',                          sampleAnswer: 'Here is your bill, sir. Thank you for dining with us.',                   keywords: ['bill', 'thank', 'dining'],                            xpReward: 10 },
+    { orderIndex: 8,  question: 'Name a unique animal found in Madagascar.',                         sampleAnswer: 'Lemur',                                                                   keywords: ['lemur'],                                              xpReward: 10 },
+    { orderIndex: 9,  question: 'What is the capital city of Madagascar?',                           sampleAnswer: 'Antananarivo',                                                            keywords: ['antananarivo'],                                       xpReward: 10 },
+    { orderIndex: 10, question: "How do you say 'mother tongue' in simple English?",                 sampleAnswer: 'It is the language you learned first at home.',                           keywords: ['first', 'home'],                                      xpReward: 10 },
+    { orderIndex: 11, question: "What does 'fluent' mean?",                                          sampleAnswer: 'It means you can speak a language very well and easily.',                 keywords: ['speak', 'well', 'easily', 'language'],                xpReward: 10 },
+    { orderIndex: 12, question: 'How do you tell a tourist about the weather in Madagascar?',        sampleAnswer: 'The weather in Madagascar is warm and tropical.',                         keywords: ['warm', 'tropical', 'weather'],                        xpReward: 10 },
+    { orderIndex: 13, question: 'What do you call the list of food at a restaurant?',                sampleAnswer: 'Menu',                                                                    keywords: ['menu'],                                               xpReward: 10 },
+    { orderIndex: 14, question: "What is a 'reservation' in a hotel?",                              sampleAnswer: 'A reservation is a booking made in advance.',                             keywords: ['booking', 'advance', 'reservation'],                  xpReward: 10 },
+    { orderIndex: 15, question: 'How do you offer help to a lost tourist?',                         sampleAnswer: 'Excuse me, can I help you?',                                              keywords: ['help', 'excuse'],                                     xpReward: 10 },
+    { orderIndex: 16, question: 'What is the word for the extra money given for good service?',      sampleAnswer: 'Tip',                                                                     keywords: ['tip'],                                                xpReward: 10 },
+    { orderIndex: 17, question: 'How do you describe your hobby to a guest?',                        sampleAnswer: 'My hobby is photography. I love taking pictures of nature.',             keywords: ['hobby', 'photography', 'pictures', 'nature'],         xpReward: 10 },
+    { orderIndex: 18, question: "What does 'check-in' mean at a hotel?",                            sampleAnswer: 'Check-in means when a guest arrives and registers at the hotel.',         keywords: ['arrive', 'register', 'hotel', 'check'],               xpReward: 10 },
+    { orderIndex: 19, question: 'Name one famous landmark in Madagascar.',                           sampleAnswer: 'The Avenue of the Baobabs',                                               keywords: ['baobab', 'avenue'],                                   xpReward: 10 },
+    { orderIndex: 20, question: 'What do you say to a guest who has a complaint?',                   sampleAnswer: 'I understand your concern. Let me find a solution right away.',           keywords: ['understand', 'concern', 'solution'],                  xpReward: 10 },
+    { orderIndex: 21, question: "What is a 'tour guide'?",                                          sampleAnswer: 'A tour guide helps visitors explore a new place.',                        keywords: ['guide', 'visitors', 'explore'],                       xpReward: 10 },
+    { orderIndex: 22, question: 'How do you recommend a local dish?',                               sampleAnswer: 'I recommend trying our local specialty. It is very delicious!',           keywords: ['recommend', 'local', 'specialty', 'delicious'],       xpReward: 10 },
+    { orderIndex: 23, question: "What does 'souvenir' mean?",                                       sampleAnswer: 'A souvenir is a small gift you buy to remember a trip.',                  keywords: ['gift', 'remember', 'trip', 'buy'],                    xpReward: 10 },
+    { orderIndex: 24, question: "How do you say 'the weather is sunny today' naturally?",           sampleAnswer: "It's a beautiful sunny day today!",                                       keywords: ['sunny', 'beautiful', 'today'],                        xpReward: 10 },
+    { orderIndex: 25, question: "What is a 'best friend'?",                                         sampleAnswer: 'A best friend is your closest and most trusted friend.',                  keywords: ['closest', 'trusted', 'friend'],                       xpReward: 10 },
+    { orderIndex: 26, question: "How do you politely ask someone's name?",                          sampleAnswer: 'May I ask your name please?',                                             keywords: ['name', 'may', 'please'],                              xpReward: 10 },
+    { orderIndex: 27, question: "What does 'passport' mean?",                                       sampleAnswer: 'A passport is an official document needed to travel abroad.',             keywords: ['passport', 'official', 'travel', 'abroad'],           xpReward: 10 },
+    { orderIndex: 28, question: 'How do you describe a hobby you enjoy?',                           sampleAnswer: 'In my free time, I enjoy hiking and exploring nature.',                   keywords: ['free time', 'enjoy', 'hiking'],                       xpReward: 10 },
+    { orderIndex: 29, question: 'What do you say when a guest leaves the hotel?',                   sampleAnswer: 'Thank you for staying with us. We hope to see you again soon!',           keywords: ['thank', 'staying', 'hope', 'see you again'],          xpReward: 10 },
+    { orderIndex: 30, question: 'What is the difference between breakfast, lunch, and dinner?',     sampleAnswer: 'Breakfast is in the morning, lunch is at midday, and dinner is in the evening.', keywords: ['morning', 'midday', 'evening', 'breakfast', 'lunch', 'dinner'], xpReward: 10 },
+  ]
+  for (const q of CHALLENGE_QUESTIONS) {
+    await prisma.dailyChallenge.upsert({
+      where: { orderIndex: q.orderIndex },
+      update: { question: q.question, sampleAnswer: q.sampleAnswer, keywords: q.keywords, xpReward: q.xpReward },
+      create: q,
+    })
+  }
+  console.log(`✓ Seeded ${CHALLENGE_QUESTIONS.length} daily challenge questions`)
+
+  // ─── Dummy leaderboard users ─────────────────────────────────────────────────
+  console.log('Seeding dummy users...')
+  const DUMMY_USERS = [
+    { displayName: 'Sheilah M. Torres',    email: 'sheilah@dummy.alma',   country: 'PH', xpTotal: 2270, streakCount: 14 },
+    { displayName: 'Jacquelin E. Bellido', email: 'jacquelin@dummy.alma', country: 'PH', xpTotal: 1650, streakCount: 9  },
+    { displayName: 'Wesley U. Seufer',     email: 'wesley@dummy.alma',    country: 'PH', xpTotal: 820,  streakCount: 5  },
+    { displayName: 'Tessa V. Rebecchi',    email: 'tessa@dummy.alma',     country: 'PH', xpTotal: 680,  streakCount: 7  },
+    { displayName: 'Latricia W. Silletti', email: 'latricia@dummy.alma',  country: 'PH', xpTotal: 450,  streakCount: 4  },
+    { displayName: 'Estell P. Lolo',       email: 'estell@dummy.alma',    country: 'PH', xpTotal: 120,  streakCount: 3  },
+    { displayName: 'Elvira E. Aus',        email: 'elvira@dummy.alma',    country: 'PH', xpTotal: 97,   streakCount: 2  },
+    { displayName: 'Florine H. Kotoff',    email: 'florine@dummy.alma',   country: 'PH', xpTotal: 64,   streakCount: 2  },
+    { displayName: 'Samantha C. Umphries', email: 'samantha@dummy.alma',  country: 'PH', xpTotal: 40,   streakCount: 1  },
+    { displayName: 'Vonnie G. Simeus',     email: 'vonnie@dummy.alma',    country: 'PH', xpTotal: 10,   streakCount: 1  },
+    { displayName: 'Alta H. Desroche',     email: 'alta@dummy.alma',      country: 'PH', xpTotal: 10,   streakCount: 1  },
+    { displayName: 'Margert J. Swon',      email: 'margert@dummy.alma',   country: 'PH', xpTotal: 10,   streakCount: 1  },
+    { displayName: 'Judi E. Ravert',       email: 'judi@dummy.alma',      country: 'PH', xpTotal: 10,   streakCount: 1  },
+    { displayName: 'Shari Y. Pento',       email: 'shari@dummy.alma',     country: 'PH', xpTotal: 10,   streakCount: 1  },
+    { displayName: 'Robt P. Delvalle',     email: 'robt@dummy.alma',      country: 'PH', xpTotal: 5,    streakCount: 1  },
+  ]
+  for (const u of DUMMY_USERS) {
+    await prisma.user.upsert({
+      where: { email: u.email },
+      update: { xpTotal: u.xpTotal, streakCount: u.streakCount },
+      create: {
+        email: u.email,
+        displayName: u.displayName,
+        country: u.country,
+        xpTotal: u.xpTotal,
+        streakCount: u.streakCount,
+        role: 'STUDENT',
+        isActive: true,
+        isEmailVerified: true,
+        isOnboardingComplete: true,
+      },
+    })
+  }
+  console.log(`✓ Seeded ${DUMMY_USERS.length} dummy users`)
+
+  // ─── Entertainment content ───────────────────────────────────────────────────
+  console.log('Seeding entertainment content...')
+  await prisma.entertainmentContent.deleteMany()
+  const entertainmentItems = [
+    {
+      type: 'VIDEO' as const, title: 'Two Minute English: At a Hotel',
+      description: '2 min 15 sec — Short, focused hotel English conversations for beginners.',
+      url: 'https://www.youtube.com/watch?v=UQFbdxkOR_M', duration: '2 min 15 sec', xpReward: 30, orderIndex: 1,
+      questions: [
+        { question: 'When a guest needs something brought to their room, which hotel service are they talking to?', expectedAnswer: 'Room service or housekeeping', keywords: ['room service', 'housekeeping', 'room'], orderIndex: 1 },
+        { question: 'What must a user do while watching this video to build fluency?', expectedAnswer: 'Repeat the words and phrases aloud', keywords: ['repeat', 'aloud', 'say', 'practice', 'speak'], orderIndex: 2 },
+      ],
+    },
+    {
+      type: 'VIDEO' as const, title: 'Two Minute English: Booking and Vacations',
+      description: '4 min — Learn how to talk about booking trips and vacation planning in English.',
+      url: 'https://www.youtube.com/watch?v=GxJzTpfBPwA', duration: '4 min', xpReward: 30, orderIndex: 2,
+      questions: [
+        { question: 'What phrase would you use to ask if a hotel room is available for a specific date?', expectedAnswer: 'Do you have any rooms available?', keywords: ['available', 'rooms', 'vacancy', 'booking'], orderIndex: 1 },
+        { question: 'What information do you typically need to give when making a hotel reservation?', expectedAnswer: 'Your name, dates of stay, and number of guests', keywords: ['name', 'dates', 'guests', 'check-in', 'check in'], orderIndex: 2 },
+      ],
+    },
+    {
+      type: 'VIDEO' as const, title: 'Oxford Online English: Rapid Hotel Check-In',
+      description: '~4 min roleplay — Professional check-in conversation with tone and hospitality tips.',
+      url: 'https://www.youtube.com/watch?v=7a5nPMB5lBk', duration: '~4 min', xpReward: 30, orderIndex: 3,
+      questions: [
+        { question: 'What is the first thing a front desk agent should say when a guest approaches?', expectedAnswer: 'Welcome or good morning/afternoon, how can I help you?', keywords: ['welcome', 'good morning', 'good afternoon', 'help', 'assist'], orderIndex: 1 },
+        { question: 'What document does a guest usually need to present at hotel check-in?', expectedAnswer: 'A passport or ID card', keywords: ['passport', 'id', 'identification', 'document'], orderIndex: 2 },
+      ],
+    },
+    {
+      type: 'VIDEO' as const, title: 'Easy English: Short Fast-Food Transactions',
+      description: '3 min 30 sec — Simple, slow-paced fast-food ordering conversations for learners.',
+      url: 'https://www.youtube.com/watch?v=E7U7FoQXPrc', duration: '3 min 30 sec', xpReward: 30, orderIndex: 4,
+      questions: [
+        { question: 'What is a polite way to ask for the total amount owed at a fast-food counter?', expectedAnswer: 'How much is that? or What is the total?', keywords: ['total', 'how much', 'price', 'cost'], orderIndex: 1 },
+        { question: 'How do you ask if an item is available when ordering food?', expectedAnswer: 'Do you have or Is there available?', keywords: ['do you have', 'available', 'have', 'stock'], orderIndex: 2 },
+      ],
+    },
+    {
+      type: 'VIDEO' as const, title: 'Everyday English: Handling a Quick Amenity Request',
+      description: '3 min — Learn how hotel staff handle in-house guest requests professionally.',
+      url: 'https://www.youtube.com/watch?v=2VsTrA1SYEQ', duration: '3 min', xpReward: 30, orderIndex: 5,
+      questions: [
+        { question: 'What should you say when a guest asks for extra towels and you are about to fulfill the request?', expectedAnswer: 'Certainly, I will have that brought to your room right away.', keywords: ['certainly', 'right away', 'of course', 'bring', 'deliver'], orderIndex: 1 },
+        { question: 'How long should a guest typically wait for an in-room amenity request?', expectedAnswer: 'A few minutes or as soon as possible', keywords: ['minutes', 'soon', 'shortly', 'quickly', 'right away'], orderIndex: 2 },
+      ],
+    },
+    {
+      type: 'ARTICLE' as const, title: 'EnglishClub: 2-Minute Hotel Check-In Dialogue',
+      description: 'A short, clear hotel check-in and check-out dialogue. Perfect for front desk vocabulary.',
+      url: 'https://www.englishclub.com/english-for-work/hotel-check-in.php', duration: null, xpReward: 30, orderIndex: 6,
+      questions: [
+        { question: 'What phrase does the receptionist use to greet a guest checking in?', expectedAnswer: 'Good morning, can I help you? or Welcome to our hotel.', keywords: ['good morning', 'welcome', 'help', 'check in', 'checking in'], orderIndex: 1 },
+        { question: 'What does the receptionist ask for before handing over the room key?', expectedAnswer: 'A credit card or ID for deposit', keywords: ['credit card', 'id', 'passport', 'deposit', 'identification'], orderIndex: 2 },
+      ],
+    },
+    {
+      type: 'ARTICLE' as const, title: 'British Council: Hotel Amenities Picture Match',
+      description: 'Match hotel amenity pictures to vocabulary. Great for learning facility names.',
+      url: 'https://learnenglish.britishcouncil.org/vocabulary/beginner-to-pre-intermediate/hotel', duration: null, xpReward: 30, orderIndex: 7,
+      questions: [
+        { question: 'If a guest wants to dry themselves after a shower, what should you bring them?', expectedAnswer: 'A towel', keywords: ['towel', 'bath towel', 'dry'], orderIndex: 1 },
+        { question: 'What is the name of the place near the hotel entrance where guests check-in?', expectedAnswer: 'Reception or Front desk', keywords: ['reception', 'front desk', 'lobby', 'check in'], orderIndex: 2 },
+      ],
+    },
+    {
+      type: 'ARTICLE' as const, title: 'ThoughtCo: The 60-Second Restaurant Script',
+      description: 'A direct, practical restaurant dialogue script for ESL learners.',
+      url: 'https://www.thoughtco.com/restaurant-english-1210136', duration: null, xpReward: 30, orderIndex: 8,
+      questions: [
+        { question: 'What is the first thing a waiter says when a customer sits down at a restaurant?', expectedAnswer: 'Good evening, welcome. Can I take your order or what would you like?', keywords: ['welcome', 'order', 'what would you like', 'ready to order', 'help you'], orderIndex: 1 },
+        { question: 'How do you ask for the bill at the end of a restaurant meal?', expectedAnswer: 'Can I have the bill please? or Check please.', keywords: ['bill', 'check', 'pay', 'receipt'], orderIndex: 2 },
+      ],
+    },
+    {
+      type: 'ARTICLE' as const, title: 'EnglishClub: Front Desk Phone Bookings',
+      description: 'Learn how to handle hotel reservation calls with professional English phrases.',
+      url: 'https://www.englishclub.com/english-for-work/hotel-reservations.php', duration: null, xpReward: 30, orderIndex: 9,
+      questions: [
+        { question: 'How should a hotel receptionist answer the phone professionally?', expectedAnswer: 'Good morning, thank you for calling. How may I assist you?', keywords: ['good morning', 'thank you', 'calling', 'assist', 'help'], orderIndex: 1 },
+        { question: 'What key information must you confirm when taking a phone reservation?', expectedAnswer: 'The guest name, arrival date, departure date, and room type', keywords: ['name', 'arrival', 'departure', 'date', 'room', 'check in', 'check out'], orderIndex: 2 },
+      ],
+    },
+    {
+      type: 'ARTICLE' as const, title: 'Global English Test: Core Hotel Booking Terms',
+      description: 'Essential vocabulary guide for hotel bookings and guest services.',
+      url: 'https://globalenglishtest.com/hotel-vocabulary', duration: null, xpReward: 30, orderIndex: 10,
+      questions: [
+        { question: 'What does "complimentary" mean in a hotel context?', expectedAnswer: 'Free or included at no extra charge', keywords: ['free', 'no charge', 'included', 'no cost', 'complimentary'], orderIndex: 1 },
+        { question: 'What is the difference between a single room and a double room?', expectedAnswer: 'A single room has one bed and a double room has a larger bed or two beds.', keywords: ['one bed', 'two beds', 'larger bed', 'double bed', 'single bed'], orderIndex: 2 },
+      ],
+    },
+  ]
+  for (const item of entertainmentItems) {
+    const { questions, ...contentData } = item
+    await prisma.entertainmentContent.create({
+      data: { ...contentData, questions: { create: questions } },
+    })
+  }
+  console.log(`✓ Seeded ${entertainmentItems.length} entertainment items`)
 
   console.log('Seed complete.')
 }
