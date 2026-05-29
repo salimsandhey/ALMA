@@ -15,7 +15,7 @@ export function stateLabel(state: SpeechState): string {
     case 'processing':
       return 'Processing...'
     case 'success':
-      return 'Great, captured'
+      return ''
     case 'failed':
       return 'Try again'
     case 'no_permission':

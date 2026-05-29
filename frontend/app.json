@@ -22,7 +22,8 @@
             "usesCleartextTraffic": true
           }
         }
-      ]
+      ],
+      "./plugins/withGradleProperties"
     ],
     "ios": {
       "supportsTablet": false,

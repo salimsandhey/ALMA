@@ -77,4 +77,15 @@ router.post('/me/avatar', verifyJWT, upload.single('avatar'), async (req: Reques
   }
 })
 
+// DELETE /api/users/me
+router.delete('/me', verifyJWT, async (req: Request, res: Response): Promise<void> => {
+  try {
+    await prisma.user.delete({ where: { id: req.user!.userId } })
+    res.json({ message: 'Account deleted.' })
+  } catch (err) {
+    console.error('[DELETE /users/me]', err)
+    res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR' })
+  }
+})
+
 export default router

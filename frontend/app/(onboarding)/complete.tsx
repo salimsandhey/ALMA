@@ -1,17 +1,31 @@
 import React from 'react'
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 
-const NAVY = '#0B1F4B'
+const NAVY = '#093373'
 const GOLD = '#F5A623'
 const WHITE = '#FFFFFF'
+
+const badges = [
+  {
+    image: require('../../assets/onboarding/footprints.png'),
+    label: 'First Steps',
+  },
+  {
+    image: require('../../assets/onboarding/fire.png'),
+    label: '1 Day Visit',
+  },
+  {
+    image: require('../../assets/onboarding/star.png'),
+    label: '10 ALMA Points',
+  },
+]
 
 export default function OnboardingCompleteScreen() {
   const router = useRouter()
 
   const handleStartLearning = () => {
-    // First time completing onboarding — always show intro slides
     router.replace('/intro-slides')
   }
 
@@ -23,34 +37,16 @@ export default function OnboardingCompleteScreen() {
         <Text style={styles.subheading}>Welcome to the ALMA family</Text>
         <Text style={styles.tagline}>Your journey to English fluency starts now!</Text>
 
-        <View style={styles.statsCard}>
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statIcon}>👣</Text>
-              <Text style={styles.statLabel}>First Steps</Text>
+        <View style={styles.badgesRow}>
+          {badges.map((badge) => (
+            <View key={badge.label} style={styles.badgeBox}>
+              <Image source={badge.image} style={styles.badgeImage} resizeMode="contain" />
+              <Text style={styles.badgeLabel}>{badge.label}</Text>
             </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.statItem}>
-              <Text style={styles.statIcon}>💧</Text>
-              <Text style={styles.statLabel}>1 Day Streak</Text>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.statItem}>
-              <Text style={styles.statIcon}>⭐</Text>
-              <Text style={styles.statLabel}>10 XP</Text>
-            </View>
-          </View>
+          ))}
         </View>
 
-        <TouchableOpacity
-          style={styles.ctaButton}
-          onPress={handleStartLearning}
-          activeOpacity={0.9}
-        >
+        <TouchableOpacity style={styles.ctaButton} onPress={handleStartLearning} activeOpacity={0.9}>
           <Text style={styles.ctaText}>Start Learning!</Text>
         </TouchableOpacity>
       </View>
@@ -93,38 +89,31 @@ const styles = StyleSheet.create({
     marginTop: 10,
     textAlign: 'center',
   },
-  statsCard: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 20,
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    marginTop: 32,
-    width: '85%',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  statsRow: {
+  badgesRow: {
     flexDirection: 'row',
+    gap: 14,
+    marginTop: 36,
+  },
+  badgeBox: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    paddingVertical: 18,
+    paddingHorizontal: 16,
     alignItems: 'center',
+    gap: 10,
+    minWidth: 90,
   },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 6,
+  badgeImage: {
+    width: 40,
+    height: 40,
   },
-  statIcon: {
-    fontSize: 24,
-  },
-  statLabel: {
+  badgeLabel: {
     color: WHITE,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     textAlign: 'center',
-  },
-  divider: {
-    width: 1,
-    height: 40,
-    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   ctaButton: {
     backgroundColor: GOLD,

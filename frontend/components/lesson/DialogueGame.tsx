@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import * as Speech from 'expo-speech'
+import TTSButton from '../TTSButton'
 import MicButton from './MicButton'
 import DiffView from './DiffView'
 import ConfidenceBadge from './ConfidenceBadge'
@@ -128,9 +129,7 @@ export default function DialogueGame({ card, onComplete, xpReward }: any) {
               <View style={styles.guestBubble}>
                 <Text style={styles.guestBubbleText}>{item.text}</Text>
               </View>
-              <TouchableOpacity onPress={() => Speech.speak(item.text)} style={styles.speakerBtn}>
-                <Ionicons name="volume-low-outline" size={16} color="#9CA3AF" />
-              </TouchableOpacity>
+              <TTSButton text={item.text} size={16} color="#9CA3AF" idleColor="#9CA3AF" style={styles.speakerBtn} />
             </View>
           ) : (
             <View key={idx} style={styles.userBlock}>
@@ -155,10 +154,10 @@ export default function DialogueGame({ card, onComplete, xpReward }: any) {
 
           <View style={styles.expectedCard}>
             <Text style={styles.expectedText}>{currentSeg.expected}</Text>
-            <TouchableOpacity onPress={hearExample} style={styles.hearBtn}>
-              <Ionicons name="volume-low-outline" size={14} color="#143F86" />
+            <View style={styles.hearBtn}>
+              <TTSButton text={currentSeg.expected} size={14} color="#143F86" idleColor="#143F86" />
               <Text style={styles.hearBtnText}> Hear example</Text>
-            </TouchableOpacity>
+            </View>
           </View>
 
           <MicButton
@@ -191,7 +190,7 @@ export default function DialogueGame({ card, onComplete, xpReward }: any) {
   )
 }
 
-const NAVY = '#0B1F4B'
+const NAVY = '#093373'
 const BG = '#F2F3F7'
 
 const styles = StyleSheet.create({

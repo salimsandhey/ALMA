@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter, usePathname } from 'expo-router'
 
-const NAVY = '#0B1F4B'
+const NAVY = '#093373'
 const GREY = '#9CA3AF'
 
 const TABS = [

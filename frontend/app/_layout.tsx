@@ -3,6 +3,7 @@ import { View } from 'react-native'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import * as Linking from 'expo-linking'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { getToken, deleteToken, saveToken } from '../lib/storage'
 import { useAuthStore } from '../stores/authStore'
@@ -11,7 +12,7 @@ import { api } from '../lib/api'
 const queryClient = new QueryClient()
 
 export default function RootLayout() {
-  const { token, user } = useAuthStore()
+  const { token, user, greetingDoneToday, setGreetingDone } = useAuthStore()
   const router = useRouter()
   const segments = useSegments()
   const [booting, setBooting] = useState(true)
@@ -30,6 +31,11 @@ export default function RootLayout() {
         })
 
         useAuthStore.getState().setAuth(savedToken, me)
+
+        // Check if daily greeting was already done today
+        const today = new Date().toISOString().split('T')[0]
+        const done = await AsyncStorage.getItem(`greeting_done_${today}`)
+        useAuthStore.getState().setGreetingDone(done === 'true')
       } catch (error: any) {
         if (error?.response?.status === 401) {
           await deleteToken()
@@ -99,8 +105,9 @@ export default function RootLayout() {
 
     const SHARED_SCREENS = [
       'module', 'lesson', 'music', 'coach', 'warmup',
-      'leaderboard', 'badges', 'edit-profile',
-      'feedback', 'how-to-use', 'intro-slides',
+      'badges', 'edit-profile',
+      'feedback', 'how-to-use', 'intro-slides', 'dev-screens',
+      'daily-greeting', 'coach-chat', 'daily-challenge', 'entertainment',
     ]
 
     if (!token || !user) {
@@ -123,10 +130,16 @@ export default function RootLayout() {
       return
     }
 
+    // Students: show daily greeting once per day before home
+    if (!greetingDoneToday && currentRoot !== 'daily-greeting') {
+      router.replace('/daily-greeting')
+      return
+    }
+
     if (currentRoot !== '(student)') {
       router.replace('/(student)/home')
     }
-  }, [booting, router, segments, token, user])
+  }, [booting, greetingDoneToday, router, segments, token, user])
 
   // Block ALL screen rendering until auth is resolved.
   // This prevents Expo Router from briefly flashing whatever screen it
@@ -134,7 +147,7 @@ export default function RootLayout() {
   if (booting) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <View style={{ flex: 1, backgroundColor: '#0B1F4B' }} />
+        <View style={{ flex: 1, backgroundColor: '#093373' }} />
       </GestureHandlerRootView>
     )
   }

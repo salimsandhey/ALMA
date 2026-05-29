@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   stepText: { color: '#6B7280', fontSize: 12, fontWeight: '700' },
   card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20 },
   label: { color: '#6B7280', fontSize: 11, fontWeight: '600', textAlign: 'center', marginBottom: 10 },
-  statement: { color: '#0B1F4B', fontSize: 17, fontWeight: '700', textAlign: 'center', lineHeight: 26 },
+  statement: { color: '#093373', fontSize: 17, fontWeight: '700', textAlign: 'center', lineHeight: 26 },
   micWrapper: { marginTop: 10, alignItems: 'center' },
   stateText: { color: '#4B5563', fontSize: 13, fontWeight: '600', marginBottom: 4 },
   previewText: { color: '#374151', fontSize: 13, marginBottom: 4 },

@@ -38,6 +38,11 @@ enum GameType {
   IMAGE_SPEAK
 }
 
+enum EntertainmentType {
+  VIDEO
+  ARTICLE
+}
+
 enum ContentCategory {
   PHRASE_OF_THE_DAY
   GRAMMAR_TIP
@@ -70,12 +75,14 @@ model User {
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
-  otpCodes       OTPCode[]
-  lessonProgress LessonProgress[]
-  moduleProgress ModuleProgress[]
-  userBadges     UserBadge[]
-  feedbacks      Feedback[]
-  aiUsageLogs    AIUsageLog[]
+  otpCodes                OTPCode[]
+  lessonProgress          LessonProgress[]
+  moduleProgress          ModuleProgress[]
+  userBadges              UserBadge[]
+  feedbacks               Feedback[]
+  aiUsageLogs             AIUsageLog[]
+  dailyChallengeAttempts  DailyChallengeAttempt[]
+  entertainmentAttempts   EntertainmentAttempt[]
 
   @@index([email])
   @@index([role])
@@ -264,6 +271,101 @@ model Song {
 
   @@index([isPublished])
   @@index([orderIndex])
+}
+
+// ─────────────────────────────────────────────
+// DAILY CHALLENGE
+// ─────────────────────────────────────────────
+
+model DailyChallenge {
+  id          String   @id @default(cuid())
+  question    String
+  sampleAnswer String
+  keywords    String[]
+  xpReward    Int      @default(10)
+  isActive    Boolean  @default(true)
+  orderIndex  Int      @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  attempts DailyChallengeAttempt[]
+
+  @@index([isActive])
+  @@index([orderIndex])
+}
+
+model DailyChallengeAttempt {
+  id            String   @id @default(cuid())
+  userId        String
+  challengeId   String
+  challengeDate String
+  correct       Boolean
+  spokenText    String
+  xpEarned      Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge DailyChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, challengeDate])
+  @@index([userId])
+  @@index([challengeDate])
+}
+
+// ─────────────────────────────────────────────
+// ENTERTAINMENT
+// ─────────────────────────────────────────────
+
+model EntertainmentContent {
+  id          String            @id @default(cuid())
+  type        EntertainmentType
+  title       String
+  description String
+  url         String
+  duration    String?
+  xpReward    Int               @default(30)
+  orderIndex  Int
+  isPublished Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  questions EntertainmentQuestion[]
+  attempts  EntertainmentAttempt[]
+
+  @@index([type])
+  @@index([isPublished])
+  @@index([orderIndex])
+}
+
+model EntertainmentQuestion {
+  id             String               @id @default(cuid())
+  contentId      String
+  question       String
+  expectedAnswer String
+  keywords       String[]
+  orderIndex     Int
+  createdAt      DateTime             @default(now())
+
+  content EntertainmentContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([contentId])
+}
+
+model EntertainmentAttempt {
+  id        String               @id @default(cuid())
+  userId    String
+  contentId String
+  score     Int
+  xpEarned  Int                  @default(0)
+  answers   Json
+  createdAt DateTime             @default(now())
+
+  user    User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content EntertainmentContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, contentId])
+  @@index([userId])
+  @@index([contentId])
 }
 
 // ─────────────────────────────────────────────

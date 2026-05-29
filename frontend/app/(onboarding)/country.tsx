@@ -14,7 +14,7 @@ import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { COUNTRIES, countryFlag } from '../../lib/countries'
 
-const NAVY = '#0B1F4B'
+const NAVY = '#093373'
 const GOLD = '#F5A623'
 const BG = '#F2F3F7'
 const WHITE = '#FFFFFF'

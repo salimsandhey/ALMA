@@ -14,7 +14,7 @@ import { useAuthStore } from '../stores/authStore'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 
-const NAVY = '#0B1F4B'
+const NAVY = '#093373'
 const GOLD = '#F5A623'
 const WHITE = '#FFFFFF'
 

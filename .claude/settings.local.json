@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(curl -s -o $null -w \"%{http_code}\" http://192.168.1.26:3000/api/health 2>&1)",
+      "PowerShell(curl -s http://192.168.1.26:3000/api/health 2>&1)"
+    ]
+  }
+}

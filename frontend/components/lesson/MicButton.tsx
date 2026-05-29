@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center', paddingHorizontal: 28,
   },
   modalCard: { backgroundColor: '#fff', borderRadius: 20, padding: 24 },
-  modalTitle: { fontSize: 17, fontWeight: '700', color: '#0B1F4B', marginBottom: 6 },
+  modalTitle: { fontSize: 17, fontWeight: '700', color: '#093373', marginBottom: 6 },
   modalSub: { fontSize: 12, color: '#9CA3AF', marginBottom: 16, lineHeight: 17 },
   modalInput: {
     borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12,

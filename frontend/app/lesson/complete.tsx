@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 
-const NAVY = '#0B1F4B'
+const NAVY = '#093373'
 const TEAL = '#0D9488'
 const GOLD = '#F5A623'
 const BG = '#F2F3F7'
@@ -31,14 +31,16 @@ function BadgePill({ name }: { name: string }) {
 
 export default function LessonCompleteScreen() {
   const router = useRouter()
-  const { xpEarned, moduleId, score, nextLessonId, badges } = useLocalSearchParams<{
+  const { xpEarned, moduleId, score, nextLessonId, badges, dailyVisitBonus } = useLocalSearchParams<{
     xpEarned: string
     moduleId: string
     score: string
     nextLessonId: string
     badges: string
+    dailyVisitBonus: string
   }>()
   const badgeList = badges ? badges.split(',').filter(Boolean) : []
+  const showDailyVisitBonus = dailyVisitBonus === '1'
 
   return (
     <SafeAreaView style={styles.container}>
@@ -50,8 +52,19 @@ export default function LessonCompleteScreen() {
         <View style={styles.scoreCard}>
           <Text style={styles.scoreLabel}>SCORE</Text>
           <Text style={styles.scoreValue}>{score}%</Text>
-          <Text style={styles.xpValue}>+{xpEarned} XP</Text>
+          <Text style={styles.xpValue}>+{xpEarned} ALMA Points</Text>
         </View>
+
+        {/* Daily Visit bonus */}
+        {showDailyVisitBonus && (
+          <View style={styles.bonusCard}>
+            <Text style={styles.bonusEmoji}>🔥</Text>
+            <View>
+              <Text style={styles.bonusTitle}>Daily Visit Bonus!</Text>
+              <Text style={styles.bonusSubtitle}>+10 ALMA Points for your visit streak</Text>
+            </View>
+          </View>
+        )}
 
         {/* Badge section */}
         {badgeList.length > 0 && (
@@ -147,7 +160,7 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     marginTop: 32,
-    backgroundColor: TEAL,
+    backgroundColor: NAVY,
     borderRadius: 30,
     paddingVertical: 14,
     width: '100%',
@@ -197,5 +210,30 @@ const styles = StyleSheet.create({
     color: '#92400E',
     fontSize: 14,
     fontWeight: '700',
+  },
+  bonusCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 16,
+    width: '100%',
+    borderWidth: 1.5,
+    borderColor: GOLD,
+  },
+  bonusEmoji: {
+    fontSize: 28,
+  },
+  bonusTitle: {
+    color: '#92400E',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  bonusSubtitle: {
+    color: '#B45309',
+    fontSize: 12,
+    marginTop: 2,
   },
 })

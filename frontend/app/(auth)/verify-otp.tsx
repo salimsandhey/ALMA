@@ -18,7 +18,7 @@ import { api } from '../../lib/api'
 import { saveToken } from '../../lib/storage'
 import { useAuthStore } from '../../stores/authStore'
 
-const NAVY = '#0B1F4B'
+const NAVY = '#093373'
 const GOLD = '#F5A623'
 const WHITE = '#FFFFFF'
 const RESEND_SECONDS = 47

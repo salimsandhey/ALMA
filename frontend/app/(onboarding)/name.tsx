@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useAuthStore } from '../../stores/authStore'
 
-const NAVY = '#0B1F4B'
+const NAVY = '#093373'
 const GOLD = '#F5A623'
 const BG = '#F2F3F7'
 const WHITE = '#FFFFFF'

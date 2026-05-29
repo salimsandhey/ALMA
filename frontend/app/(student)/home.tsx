@@ -10,11 +10,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
 import Svg, { Circle } from 'react-native-svg'
+import { useRouter } from 'expo-router'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { countryFlag } from '../../lib/countries'
 
-const NAVY = '#0B1F4B'
+const NAVY = '#093373'
 const GOLD = '#F5A623'
 const GREY = '#6B7280'
 const BG = '#FFFFFF'
@@ -103,6 +104,7 @@ function getRankBadge(rank: number) {
 }
 
 export default function StudentHome() {
+  const router = useRouter()
   const { user } = useAuthStore()
 
   const { data: summary, isLoading: summaryLoading } = useQuery<SummaryResponse>({
@@ -158,12 +160,12 @@ export default function StudentHome() {
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
               <Text style={styles.statEmoji}>{'\uD83D\uDD25'}</Text>
-              <Text style={styles.statLabel}>Streak</Text>
+              <Text style={styles.statLabel}>Daily Visit</Text>
               <Text style={styles.statValue}>{streakCount}</Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statEmoji}>{'\u2B50'}</Text>
-              <Text style={styles.statLabel}>XP</Text>
+              <Text style={styles.statLabel}>ALMA Points</Text>
               <Text style={styles.xpValue}>{xpTotal}</Text>
             </View>
           </View>
@@ -200,28 +202,28 @@ export default function StudentHome() {
             <Text style={styles.robotEmoji}>{'\uD83E\uDD16'}</Text>
           </View>
           <View style={styles.aiTextWrap}>
-            <Text style={styles.aiTitle}>AI English Coach</Text>
+            <Text style={styles.aiTitle}>ALMA Coach</Text>
             <Text style={styles.aiSubtitle}>Speak, chat & get instant grammar corrections</Text>
           </View>
-          <TouchableOpacity style={styles.startButton} activeOpacity={0.85}>
+          <TouchableOpacity style={styles.startButton} activeOpacity={0.85} onPress={() => router.push('/coach-chat')}>
             <Text style={styles.startButtonText}>START</Text>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.challengeRow} activeOpacity={0.85}>
+        <TouchableOpacity style={styles.challengeRow} activeOpacity={0.85} onPress={() => router.push('/daily-challenge')}>
           <View style={styles.challengeIconWrap}>
             <Text style={styles.challengeIcon}>{'\u26A1'}</Text>
           </View>
           <View style={styles.challengeTextWrap}>
             <Text style={styles.challengeTitle}>Daily Challenge</Text>
-            <Text style={styles.challengeSubtitle}>Quick quiz \u2014 earn bonus XP</Text>
+            <Text style={styles.challengeSubtitle}>Quick quiz \u2014 earn bonus ALMA Points</Text>
           </View>
           <Text style={styles.challengeChevron}>{'\u203A'}</Text>
         </TouchableOpacity>
 
         <View style={styles.topLearnersHeader}>
           <Text style={styles.topLearnersTitle}>{'\uD83C\uDFC6 Top Learners'}</Text>
-          <TouchableOpacity activeOpacity={0.8}>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => router.push('/(student)/leaderboard')}>
             <Text style={styles.viewAllText}>{'View All \u2192'}</Text>
           </TouchableOpacity>
         </View>
@@ -270,12 +272,16 @@ export default function StudentHome() {
                     {flag ? <Text style={styles.learnerFlag}>{flag}</Text> : null}
                   </View>
 
-                  <Text style={styles.learnerXp}>{`${xp} XP`}</Text>
+                  <Text style={styles.learnerXp}>{`${xp} pts`}</Text>
                 </View>
               )
             })}
           </View>
         )}
+
+        <TouchableOpacity style={styles.devButton} activeOpacity={0.8} onPress={() => router.push('/dev-screens')}>
+          <Text style={styles.devButtonText}>All Screens</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   )
@@ -619,5 +625,20 @@ const styles = StyleSheet.create({
   skeleton: {
     marginTop: 16,
     backgroundColor: 'rgba(11,31,75,0.15)',
+  },
+  devButton: {
+    marginTop: 24,
+    borderWidth: 1.5,
+    borderColor: NAVY,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    opacity: 0.5,
+  },
+  devButtonText: {
+    color: NAVY,
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
 })

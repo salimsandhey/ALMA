@@ -23,7 +23,7 @@ import { api, API_BASE_URL } from '../../lib/api'
 import { saveToken, deleteToken } from '../../lib/storage'
 import { useAuthStore } from '../../stores/authStore'
 
-const NAVY = '#0B1F4B'
+const NAVY = '#093373'
 const GOLD = '#F5A623'
 const WHITE = '#FFFFFF'
 
@@ -238,7 +238,7 @@ export default function Login() {
           </TouchableOpacity>
 
           <View style={styles.registerRow}>
-            <Text style={styles.registerText}>Haven't an account yet? </Text>
+            <Text style={styles.registerText}>Don't have an account yet? </Text>
             <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
               <Text style={styles.registerLink}>Register Here</Text>
             </TouchableOpacity>

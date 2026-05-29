@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 
-const NAVY = '#0B1F4B'
+const NAVY = '#093373'
 const GREY = '#9CA3AF'
 
 export default function StudentLayout() {
@@ -38,7 +38,7 @@ export default function StudentLayout() {
         name="explore"
         options={{
           title: 'Entertainment',
-          tabBarIcon: ({ color }) => <Ionicons name="compass-outline" size={22} color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="film-outline" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -54,6 +54,10 @@ export default function StudentLayout() {
           title: 'Profile',
           tabBarIcon: ({ color }) => <Ionicons name="person-outline" size={22} color={color} />,
         }}
+      />
+      <Tabs.Screen
+        name="leaderboard"
+        options={{ href: null }}
       />
     </Tabs>
   )

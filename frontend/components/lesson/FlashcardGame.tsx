@@ -9,6 +9,7 @@ import {
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import * as Speech from 'expo-speech'
+import TTSButton from '../TTSButton'
 import MicButton from './MicButton'
 import DiffView from './DiffView'
 import ConfidenceBadge from './ConfidenceBadge'
@@ -17,7 +18,7 @@ import { resolveLessonImage } from '../../lib/localLessonImages'
 import { SpeechState, stateLabel } from '../../lib/speech'
 import { trackSpeech } from '../../lib/speechAnalytics'
 
-const NAVY = '#0B1F4B'
+const NAVY = '#093373'
 const TEAL = '#0D9488'
 const GREY = '#6B7280'
 const WHITE = '#FFFFFF'
@@ -69,7 +70,6 @@ export default function FlashcardGame({ card, onComplete, xpReward }: GameCardPr
     trackSpeech('speech_scored', { cardId: card.id, gameType: 'FLASHCARD', attempt: retryCount + 1, score: Math.round(score * 100) })
     if (score > 0.7) {
       setSpeechState('success')
-      showBanner('Great pronunciation!', true)
       setAnswered(true)
       trackSpeech('speech_pass', { cardId: card.id, gameType: 'FLASHCARD', attempt: retryCount + 1, score: Math.round(score * 100) })
       onComplete(card.id, true, xpReward + 5)
@@ -105,9 +105,7 @@ export default function FlashcardGame({ card, onComplete, xpReward }: GameCardPr
         <View style={styles.content}>
           <View style={styles.wordRow}>
             <Text style={styles.word}>{card.word}</Text>
-            <TouchableOpacity onPress={() => Speech.speak(card.word)} activeOpacity={0.7} style={styles.speakerBtn}>
-              <Ionicons name="volume-high-outline" size={22} color={TEAL} />
-            </TouchableOpacity>
+            <TTSButton text={card.word} size={22} color={TEAL} idleColor={TEAL} />
           </View>
         </View>
       </View>

@@ -12,7 +12,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useRef, useEffect } from 'react'
 import { api } from '../../lib/api'
 
-const NAVY = '#0B1F4B'
+const NAVY = '#093373'
 const TEAL = '#0D9488'
 const GOLD = '#F5A623'
 const BG = '#F2F3F7'

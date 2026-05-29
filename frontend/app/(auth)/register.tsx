@@ -20,7 +20,7 @@ import * as Linking from 'expo-linking'
 import Svg, { Path } from 'react-native-svg'
 import { api, API_BASE_URL } from '../../lib/api'
 
-const NAVY = '#0B1F4B'
+const NAVY = '#093373'
 const GOLD = '#F5A623'
 const WHITE = '#FFFFFF'
 

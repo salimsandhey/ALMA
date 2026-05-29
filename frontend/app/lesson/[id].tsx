@@ -22,7 +22,7 @@ import TrueFalseGame from '../../components/lesson/TrueFalseGame'
 import DialogueGame from '../../components/lesson/DialogueGame'
 import ImageSpeakGame from '../../components/lesson/ImageSpeakGame'
 
-const NAVY = '#0B1F4B'
+const NAVY = '#093373'
 const TEAL = '#0D9488'
 const BG = '#F2F3F7'
 const WHITE = '#FFFFFF'
@@ -115,13 +115,16 @@ export default function LessonScreen() {
 
   const handleFinish = async () => {
     let badgesUnlocked: string[] = []
+    let serverXpEarned = 0
+    let dailyVisitBonus = false
     try {
       const { data } = await api.post('/api/progress/lesson/complete', {
         lessonId: id,
-        xpEarned: totalXpEarned,
         cardResults,
       })
       badgesUnlocked = data.badgesUnlocked ?? []
+      serverXpEarned = data.xpEarned ?? 0
+      dailyVisitBonus = data.dailyVisitBonus ?? false
     } catch {
       // Progress save failed — still navigate so user isn't stuck
     }
@@ -134,11 +137,12 @@ export default function LessonScreen() {
     router.replace({
       pathname: '/lesson/complete',
       params: {
-        xpEarned: String(totalXpEarned),
+        xpEarned: String(serverXpEarned),
         moduleId: lesson?.moduleId ?? '',
         score: String(score),
         nextLessonId: lesson?.nextLessonId ?? '',
         badges: badgesUnlocked.join(','),
+        dailyVisitBonus: dailyVisitBonus ? '1' : '0',
       },
     })
   }

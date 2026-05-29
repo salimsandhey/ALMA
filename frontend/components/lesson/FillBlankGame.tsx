@@ -7,7 +7,7 @@ import { similarity } from '../../lib/fuzzy'
 import { SpeechState, stateLabel } from '../../lib/speech'
 import { trackSpeech } from '../../lib/speechAnalytics'
 
-const NAVY = '#0B1F4B'
+const NAVY = '#093373'
 const TEAL = '#0D9488'
 const GREY = '#6B7280'
 const WHITE = '#FFFFFF'
@@ -85,7 +85,7 @@ export default function FillBlankGame({ card, onComplete, xpReward }: GameCardPr
     return all.sort(() => Math.random() - 0.5)
   }, [card.id])
 
-  const parts = (card.sentenceTemplate as string).split('___')
+  const parts = (card.sentenceTemplate as string).split(/_{1,}/)
   const before = parts[0] ?? ''
   const after = parts[1] ?? ''
 
@@ -97,7 +97,7 @@ export default function FillBlankGame({ card, onComplete, xpReward }: GameCardPr
           {filledWord ? (
             <Text style={[styles.filledWord, { color: fillCorrect ? TEAL : '#DC2626' }]}>{filledWord}</Text>
           ) : (
-            <Text style={styles.blank}>______</Text>
+            <View style={styles.blank} />
           )}
           {after !== '' && <Text style={styles.sentenceText}>{after}</Text>}
         </View>
@@ -139,13 +139,13 @@ const styles = StyleSheet.create({
   card: { backgroundColor: WHITE, borderRadius: 16, padding: 22 },
   sentenceRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'center', marginBottom: 16 },
   sentenceText: { color: NAVY, fontSize: 21, fontWeight: '800', lineHeight: 28 },
-  blank: { color: '#EAB308', fontSize: 18, fontWeight: '700', borderBottomWidth: 3, borderBottomColor: '#EAB308', minWidth: 60, textAlign: 'center', lineHeight: 28 },
+  blank: { borderBottomWidth: 2.5, borderBottomColor: '#EAB308', minWidth: 80, height: 28, marginHorizontal: 6 },
   filledWord: { fontSize: 18, fontWeight: '700', borderBottomWidth: 2, borderBottomColor: TEAL, minWidth: 60, textAlign: 'center', lineHeight: 28 },
   hint: { color: GREY, fontSize: 12, fontStyle: 'italic', marginTop: 8, textAlign: 'center' },
   pillsRow: { flexDirection: 'row', flexWrap: 'nowrap', justifyContent: 'space-between', gap: 8, marginVertical: 16 },
   pill: { borderRadius: 999, paddingHorizontal: 18, paddingVertical: 12, borderWidth: 1.5, borderColor: '#D1D5DB', backgroundColor: '#fff', minWidth: 74, alignItems: 'center' },
   pillCorrect: { borderColor: '#0D9488', backgroundColor: '#CCFBF1' },
-  pillText: { color: '#0B1F4B', fontSize: 15, fontWeight: '600' },
+  pillText: { color: '#093373', fontSize: 15, fontWeight: '600' },
   pillTextCorrect: { color: '#0D9488' },
   micArea: { marginTop: 12, alignItems: 'center' },
   evalRow: { alignItems: 'center', marginTop: 10, gap: 8 },

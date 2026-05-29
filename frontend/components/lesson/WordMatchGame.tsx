@@ -1,15 +1,10 @@
 import React, { useState, useMemo, useRef } from 'react'
 import { View, Text, Image, TouchableOpacity, Animated, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import * as Speech from 'expo-speech'
-import MicButton from './MicButton'
-import ConfidenceBadge from './ConfidenceBadge'
-import { similarity } from '../../lib/fuzzy'
+import TTSButton from '../TTSButton'
 import { resolveLessonImage } from '../../lib/localLessonImages'
-import { SpeechState, stateLabel } from '../../lib/speech'
-import { trackSpeech } from '../../lib/speechAnalytics'
 
-const NAVY = '#0B1F4B'
+const NAVY = '#093373'
 const TEAL = '#0D9488'
 const WHITE = '#FFFFFF'
 
@@ -36,12 +31,7 @@ export default function WordMatchGame({ card, onComplete, xpReward }: GameCardPr
   const [answered, setAnswered] = useState(false)
   const [bannerText, setBannerText] = useState('')
   const [bannerCorrect, setBannerCorrect] = useState(true)
-  const [interimText, setInterimText] = useState('')
-  const [lastSpoken, setLastSpoken] = useState('')
-  const [lastScore, setLastScore] = useState<number | null>(null)
-  const [speechState, setSpeechState] = useState<SpeechState>('idle')
   const bannerOpacity = useRef(new Animated.Value(0)).current
-  const micStartRef = useRef<number>(0)
 
   const showBanner = (text: string, correct: boolean) => {
     setBannerText(text)
@@ -61,38 +51,12 @@ export default function WordMatchGame({ card, onComplete, xpReward }: GameCardPr
     })
     setPillStates(states)
     if (isCorrect) {
-      setSpeechState('success')
       showBanner('Correct!', true)
       onComplete(card.id, true, xpReward)
     } else {
-      setSpeechState('failed')
       showBanner(`The correct word is "${card.correctWord}"`, false)
       onComplete(card.id, false, 0)
     }
-  }
-
-  const handleStateChange = (state: SpeechState) => {
-    setSpeechState(state)
-    if (state === 'listening') {
-      micStartRef.current = Date.now()
-      trackSpeech('mic_start', { cardId: card.id, gameType: 'WORD_MATCH', attempt: 1 })
-    }
-  }
-
-  const handleSTTResult = (spoken: string) => {
-    if (answered) return
-    const durationMs = micStartRef.current ? Date.now() - micStartRef.current : undefined
-    setLastSpoken(spoken)
-    const score = similarity(spoken, card.correctWord)
-    setLastScore(score)
-    trackSpeech('speech_captured', { cardId: card.id, gameType: 'WORD_MATCH', attempt: 1, durationMs })
-    trackSpeech('speech_scored', { cardId: card.id, gameType: 'WORD_MATCH', attempt: 1, score: Math.round(score * 100) })
-    const matched = options.find((o) => similarity(spoken, o) > 0.7)
-    const isCorrect = score > 0.7 || matched === card.correctWord
-    trackSpeech(isCorrect ? 'speech_pass' : 'speech_fail', { cardId: card.id, gameType: 'WORD_MATCH', attempt: 1, score: Math.round(score * 100) })
-    if (score > 0.7) evaluate(card.correctWord, true)
-    else if (matched) evaluate(matched, matched === card.correctWord)
-    else evaluate(spoken, false)
   }
 
   const pillStyle = (opt: string) => {
@@ -111,9 +75,7 @@ export default function WordMatchGame({ card, onComplete, xpReward }: GameCardPr
           <View style={styles.imagePlaceholder}><Text style={styles.imagePlaceholderIcon}>IMG</Text></View>
         )}
         <View style={styles.content}>
-          <TouchableOpacity onPress={() => Speech.speak(card.correctWord)} activeOpacity={0.7} style={styles.speakerBtn}>
-            <Ionicons name="volume-high-outline" size={22} color={TEAL} />
-          </TouchableOpacity>
+          <TTSButton text={card.correctWord} size={22} color={TEAL} idleColor={TEAL} />
         </View>
       </View>
 
@@ -134,24 +96,6 @@ export default function WordMatchGame({ card, onComplete, xpReward }: GameCardPr
         })}
       </View>
 
-      <View style={styles.micBlock}>
-        <Text style={styles.stateText}>{stateLabel(speechState)}</Text>
-        {!!interimText && <Text style={styles.previewText}>Hearing: {interimText}</Text>}
-        {!!lastSpoken && <Text style={styles.previewText}>You said: {lastSpoken}</Text>}
-        <MicButton
-          onResult={handleSTTResult}
-          onInterim={setInterimText}
-          onStateChange={handleStateChange}
-          disabled={answered}
-          tone="yellow"
-          label="Or say the word"
-        />
-        {answered && lastScore !== null && !!lastSpoken && (
-          <View style={styles.evalRow}>
-            <ConfidenceBadge score={lastScore} />
-          </View>
-        )}
-      </View>
 
       {bannerText !== '' && (
         <Animated.View style={[styles.banner, bannerCorrect ? styles.bannerCorrect : styles.bannerWrong, { opacity: bannerOpacity }]}>
