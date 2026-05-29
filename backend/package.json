@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/index.js",
   "prisma": {
-    "seed": "ts-node --transpile-only prisma/seed.ts"
+    "seed": "npx ts-node --transpile-only prisma/seed.ts"
   },
   "scripts": {
     "dev": "nodemon",
