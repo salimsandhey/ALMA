@@ -1,4 +1,5 @@
 import { PrismaClient, GameType, ContentCategory } from '@prisma/client'
+import bcrypt from 'bcrypt'
 
 const prisma = new PrismaClient()
 
@@ -1538,6 +1539,21 @@ async function main() {
       create: song,
     })
   }
+
+  // ─── Test user ──────────────────────────────────────────────────────────────
+  const testPasswordHash = await bcrypt.hash('Admin@123', 12)
+  await prisma.user.upsert({
+    where: { email: 'test@alma.com' },
+    update: {},
+    create: {
+      email: 'test@alma.com',
+      passwordHash: testPasswordHash,
+      displayName: 'Test User',
+      role: 'STUDENT',
+      isVerified: true,
+      onboardingComplete: true,
+    },
+  })
 
   console.log('Seed complete.')
 }
