@@ -12,7 +12,10 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
-import { COUNTRIES, countryFlag } from '../../lib/countries'
+import { useQuery } from '@tanstack/react-query'
+import { countryFlag } from '../../lib/countries'
+
+type Country = { id: string; name: string; code: string }
 
 const NAVY = '#093373'
 const GOLD = '#F5A623'
@@ -61,11 +64,18 @@ export default function OnboardingCountryScreen() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const { data: countriesData, isLoading: loadingCountries } = useQuery<{ countries: Country[] }>({
+    queryKey: ['countries'],
+    queryFn: () => api.get('/api/countries').then((r) => r.data),
+  })
+
+  const allCountries = countriesData?.countries ?? []
+
   const filteredCountries = useMemo(() => {
     const q = search.toLowerCase().trim()
-    if (!q) return COUNTRIES
-    return COUNTRIES.filter((c) => c.name.toLowerCase().includes(q))
-  }, [search])
+    if (!q) return allCountries
+    return allCountries.filter((c) => c.name.toLowerCase().includes(q))
+  }, [search, allCountries])
 
   const handleSubmit = async () => {
     if (!selected || !gender) return
@@ -116,7 +126,9 @@ export default function OnboardingCountryScreen() {
           />
 
           <View style={styles.list}>
-            {filteredCountries.length > 0 ? (
+            {loadingCountries ? (
+              <ActivityIndicator color={NAVY} style={{ marginTop: 24 }} />
+            ) : filteredCountries.length > 0 ? (
               filteredCountries.map((country) => {
                 const isSelected = selected === country.code
                 return (

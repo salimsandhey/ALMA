@@ -243,6 +243,7 @@ model Feedback {
   id        String   @id @default(cuid())
   userId    String
   rating    Int
+  topic     String?
   comment   String?
   createdAt DateTime @default(now())
 
@@ -366,6 +367,29 @@ model EntertainmentAttempt {
   @@unique([userId, contentId])
   @@index([userId])
   @@index([contentId])
+}
+
+// ─────────────────────────────────────────────
+// REFERENCE DATA
+// ─────────────────────────────────────────────
+
+model Country {
+  id   String @id @default(cuid())
+  name String
+  code String @unique
+
+  @@index([name])
+}
+
+model Language {
+  id          String  @id @default(cuid())
+  code        String  @unique
+  label       String
+  flag        String
+  isSuggested Boolean @default(false)
+  orderIndex  Int     @default(999)
+
+  @@index([orderIndex])
 }
 
 // ─────────────────────────────────────────────

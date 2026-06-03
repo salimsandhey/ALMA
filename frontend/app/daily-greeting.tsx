@@ -304,28 +304,39 @@ export default function DailyGreeting() {
         </View>
       )}
 
-      {/* Mic */}
+      {/* Mic + Type */}
       <View style={styles.micContainer}>
         <Text style={styles.micLabel}>
           {listening ? 'Listening... speak now!' : 'Tap the mic to respond'}
         </Text>
-        <View style={styles.micWrapper}>
-          {listening && (
-            <Animated.View
-              style={[
-                styles.pulseRing,
-                { transform: [{ scale: pulseAnim }], opacity: pulseOpacity },
-              ]}
-            />
-          )}
+        <View style={styles.inputRow}>
           <TouchableOpacity
-            style={[styles.micButton, listening && styles.micButtonActive]}
-            onPress={handleMicPress}
-            activeOpacity={0.85}
-            disabled={loading}
+            style={styles.typeBtn}
+            onPress={() => { setFallbackText(''); setFallbackVisible(true) }}
+            activeOpacity={0.8}
+            disabled={loading || timeUp}
           >
-            <Ionicons name={listening ? 'stop' : 'mic-outline'} size={36} color="#FFFFFF" />
+            <Ionicons name="create-outline" size={22} color="rgba(255,255,255,0.7)" />
           </TouchableOpacity>
+          <View style={styles.micWrapper}>
+            {listening && (
+              <Animated.View
+                style={[
+                  styles.pulseRing,
+                  { transform: [{ scale: pulseAnim }], opacity: pulseOpacity },
+                ]}
+              />
+            )}
+            <TouchableOpacity
+              style={[styles.micButton, listening && styles.micButtonActive]}
+              onPress={handleMicPress}
+              activeOpacity={0.85}
+              disabled={loading}
+            >
+              <Ionicons name={listening ? 'stop' : 'mic-outline'} size={36} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.typeBtn} />
         </View>
       </View>
 
@@ -533,6 +544,20 @@ const styles = StyleSheet.create({
   micLabel: {
     color: 'rgba(255,255,255,0.5)',
     fontSize: 13,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 24,
+  },
+  typeBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   micWrapper: {
     alignItems: 'center',

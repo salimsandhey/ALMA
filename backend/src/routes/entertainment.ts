@@ -2,14 +2,11 @@ import { Router, Request, Response } from 'express'
 import { verifyJWT } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { awardXP } from '../services/xpService'
+import { gradeQuizAnswersWithAI } from '../services/aiService'
+import { evaluateAndAward } from '../services/badgeService'
 
 const router = Router()
 router.use(verifyJWT)
-
-function gradeAnswer(spokenText: string, keywords: string[]): boolean {
-  const normalized = spokenText.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
-  return keywords.some((kw) => normalized.includes(kw.toLowerCase().trim()))
-}
 
 // GET /api/entertainment — list all published content with user completion status
 router.get('/', async (req: Request, res: Response): Promise<void> => {
@@ -141,18 +138,27 @@ router.post('/:id/attempt', async (req: Request, res: Response): Promise<void> =
       return
     }
 
-    const gradedAnswers = content.questions.map((q) => {
+    const answerInputs = content.questions.map((q) => {
       const submitted = answers.find((a: any) => a.questionId === q.id)
-      const spokenText: string = submitted?.spokenText?.trim() ?? ''
-      const correct = spokenText.length > 0 && gradeAnswer(spokenText, q.keywords)
       return {
         questionId: q.id,
         question: q.question,
-        spokenText,
-        correct,
+        spokenText: submitted?.spokenText?.trim() ?? '',
         expectedAnswer: q.expectedAnswer,
+        keywords: q.keywords,
       }
     })
+
+    const aiGrades = await gradeQuizAnswersWithAI(answerInputs)
+    const gradeMap = new Map(aiGrades.map((g) => [g.questionId, g.correct]))
+
+    const gradedAnswers = answerInputs.map((a) => ({
+      questionId: a.questionId,
+      question: a.question,
+      spokenText: a.spokenText,
+      correct: gradeMap.get(a.questionId) ?? false,
+      expectedAnswer: a.expectedAnswer,
+    }))
 
     const correctCount = gradedAnswers.filter((a) => a.correct).length
     const score = content.questions.length > 0
@@ -174,6 +180,8 @@ router.post('/:id/attempt', async (req: Request, res: Response): Promise<void> =
     if (xpEarned > 0) {
       newXpTotal = await awardXP(userId, xpEarned)
     }
+
+    await evaluateAndAward(userId, 'first_entertainment')
 
     res.json({ score, xpEarned, newXpTotal, answers: gradedAnswers })
   } catch (err) {

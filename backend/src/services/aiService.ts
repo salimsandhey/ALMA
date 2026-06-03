@@ -305,7 +305,11 @@ export async function dailyGreetingChat(
     const contents = buildContents(messages, 'Hello, please start our friendly daily greeting check-in.')
     const result = await model.generateContent({
       contents,
-      generationConfig: { maxOutputTokens: 80 },
+      generationConfig: {
+        maxOutputTokens: 300,
+        // @ts-ignore — thinkingConfig supported in gemini-2.5-flash
+        thinkingConfig: { thinkingBudget: 0 },
+      },
     })
     return { reply: result.response.text().trim() }
   } catch (err: any) {
@@ -472,6 +476,62 @@ export async function scorePronunciation(userId: string, targetText: string, spo
     normalizedSpoken,
     confidenceBand: confidenceBand(score),
     mistakes: diffMistakes(normalizedTarget, normalizedSpoken),
+  }
+}
+
+type QuizAnswerInput = {
+  questionId: string
+  question: string
+  spokenText: string
+  expectedAnswer: string
+  keywords: string[]
+}
+
+type QuizGradeResult = {
+  questionId: string
+  correct: boolean
+}
+
+export async function gradeQuizAnswersWithAI(answers: QuizAnswerInput[]): Promise<QuizGradeResult[]> {
+  if (answers.length === 0) return []
+
+  const lines = answers.map((a, i) =>
+    `Q${i + 1} [${a.questionId}]: ${a.question}\nExpected: ${a.expectedAnswer}\nUser said: "${a.spokenText || '(no answer)'}"`
+  ).join('\n\n')
+
+  const prompt = `Grade each answer. Reply with ONLY a comma-separated list of 1 (correct) or 0 (wrong), one per question, in order. Nothing else.\n\nExamples of correct: synonyms, paraphrases, partial answers that show understanding.\nExamples of wrong: empty, completely off-topic, opposite meaning.\n\n${lines}`
+
+  try {
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      systemInstruction: 'You are a strict but fair quiz grader for English language learners. Grade answers as correct if they show genuine understanding, even if phrasing differs from the expected answer.',
+    })
+
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        maxOutputTokens: answers.length * 3,
+        // @ts-ignore
+        thinkingConfig: { thinkingBudget: 0 },
+      },
+    })
+
+    const raw = result.response.text().trim()
+    const grades = raw.split(',').map((v) => v.trim())
+
+    return answers.map((a, i) => ({
+      questionId: a.questionId,
+      correct: grades[i] === '1',
+    }))
+  } catch (err) {
+    console.error('[gradeQuizAnswersWithAI] error, falling back to keyword match:', err)
+    // Fallback: keyword matching
+    return answers.map((a) => ({
+      questionId: a.questionId,
+      correct: a.spokenText.length > 0 && a.keywords.some((kw) =>
+        a.spokenText.toLowerCase().includes(kw.toLowerCase().trim())
+      ),
+    }))
   }
 }
 

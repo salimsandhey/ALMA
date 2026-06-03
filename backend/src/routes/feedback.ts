@@ -10,7 +10,24 @@ router.use(verifyJWT)
 
 const feedbackSchema = z.object({
   rating: z.number().int().min(1).max(5),
+  topic: z.string().max(50).optional(),
   comment: z.string().max(1000).optional(),
+})
+
+// GET /api/feedback — user's past submissions
+router.get('/', async (req: Request, res: Response): Promise<void> => {
+  const userId = req.user!.userId
+  try {
+    const feedbacks = await prisma.feedback.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, rating: true, topic: true, comment: true, createdAt: true },
+    })
+    res.json({ feedbacks })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR' })
+  }
 })
 
 // POST /api/feedback

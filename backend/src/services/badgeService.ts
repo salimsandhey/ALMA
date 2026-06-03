@@ -13,13 +13,24 @@ export async function evaluateAndAward(userId: string, condition: string): Promi
   return badge.name
 }
 
-export async function checkAndAwardBadges(userId: string): Promise<string[]> {
+type BadgeCheckOptions = {
+  hasPerfectLessonScore?: boolean
+  hasModuleWithAllPerfect?: boolean
+}
+
+export async function checkAndAwardBadges(
+  userId: string,
+  options: BadgeCheckOptions = {},
+): Promise<string[]> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
-      lessonProgress: { where: { isCompleted: true }, include: { lesson: { select: { moduleId: true } } } },
+      lessonProgress: {
+        where: { isCompleted: true },
+        include: { lesson: { select: { moduleId: true, gameType: true } } },
+      },
       moduleProgress: { where: { isCompleted: true }, include: { module: { select: { orderIndex: true } } } },
-      aiUsageLogs: { where: { feature: 'coach' } },
+      entertainmentAttempts: { select: { id: true } },
     },
   })
   if (!user) return []
@@ -27,21 +38,28 @@ export async function checkAndAwardBadges(userId: string): Promise<string[]> {
   const awarded: string[] = []
 
   const completedLessons = user.lessonProgress.length
+  const completedDialogueLessons = user.lessonProgress.filter(
+    (progress) => progress.lesson.gameType === 'DIALOGUE',
+  ).length
   const completedModules = user.moduleProgress.length
-  const coachMessages = user.aiUsageLogs.length
+  const entertainmentAttempts = user.entertainmentAttempts.length
 
   // Hotel & Hospitality is orderIndex 9
   const completedHotel = user.moduleProgress.some((mp) => mp.module.orderIndex === 9)
 
   const checks: { condition: string; met: boolean }[] = [
-    { condition: 'complete_first_lesson',  met: completedLessons >= 1 },
-    { condition: 'streak_3',               met: user.streakCount >= 3 },
-    { condition: 'streak_7',               met: user.streakCount >= 7 },
-    { condition: 'complete_1_module',      met: completedModules >= 1 },
-    { condition: 'complete_5_modules',     met: completedModules >= 5 },
-    { condition: 'complete_all_modules',   met: completedModules >= 11 },
-    { condition: 'complete_module_hotel',  met: completedHotel },
-    { condition: 'coach_messages_50',      met: coachMessages >= 50 },
+    { condition: 'complete_first_lesson', met: completedLessons >= 1 },
+    { condition: 'complete_first_dialogue', met: completedDialogueLessons >= 1 },
+    { condition: 'complete_module_hotel', met: completedHotel },
+    { condition: 'complete_10_lessons', met: completedLessons >= 10 },
+    { condition: 'quiz_perfect_score', met: options.hasPerfectLessonScore === true },
+    { condition: 'streak_3', met: user.streakCount >= 3 },
+    { condition: 'streak_7', met: user.streakCount >= 7 },
+    { condition: 'streak_30', met: user.streakCount >= 30 },
+    { condition: 'complete_half_modules', met: completedModules >= 6 },
+    { condition: 'complete_all_modules', met: completedModules >= 11 },
+    { condition: 'perfect_module', met: options.hasModuleWithAllPerfect === true },
+    { condition: 'first_entertainment', met: entertainmentAttempts >= 1 },
   ]
 
   for (const check of checks) {

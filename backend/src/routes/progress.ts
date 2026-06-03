@@ -33,6 +33,7 @@ router.post('/lesson/complete', async (req: Request, res: Response): Promise<voi
   const totalCards = cardResults?.length ?? 0
   const correctCount = cardResults?.filter(r => r.correct).length ?? 0
   const calculatedXp = totalCards > 0 ? Math.round((correctCount / totalCards) * 20) : 20
+  const hasPerfectLessonScore = totalCards > 0 && correctCount === totalCards
 
   try {
     const lesson = await prisma.lesson.findUnique({
@@ -89,6 +90,7 @@ router.post('/lesson/complete', async (req: Request, res: Response): Promise<voi
     })
 
     let moduleCompleted = false
+    let hasModuleWithAllPerfect = false
     if (module) {
       const completedCount = await prisma.lessonProgress.count({
         where: { userId, lessonId: { in: module.lessons.map((l) => l.id) }, isCompleted: true },
@@ -111,10 +113,32 @@ router.post('/lesson/complete', async (req: Request, res: Response): Promise<voi
           // Module completion bonus: 20 pts
           newXpTotal = await awardXP(userId, 20)
         }
+
+        const moduleLessonProgress = await prisma.lessonProgress.findMany({
+          where: {
+            userId,
+            lessonId: { in: module.lessons.map((l) => l.id) },
+            isCompleted: true,
+          },
+          include: {
+            lesson: {
+              select: {
+                xpReward: true,
+              },
+            },
+          },
+        })
+
+        hasModuleWithAllPerfect =
+          moduleLessonProgress.length === module.lessons.length &&
+          moduleLessonProgress.every((progress) => progress.xpEarned >= progress.lesson.xpReward)
       }
     }
 
-    const badgesUnlocked = await checkAndAwardBadges(userId)
+    const badgesUnlocked = await checkAndAwardBadges(userId, {
+      hasPerfectLessonScore,
+      hasModuleWithAllPerfect,
+    })
 
     res.json({
       xpEarned: isFirstCompletion ? calculatedXp : 0,

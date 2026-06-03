@@ -23,6 +23,7 @@ import adminContentRouter from './routes/admin/content'
 import musicRouter from './routes/music'
 import challengesRouter from './routes/challenges'
 import entertainmentRouter from './routes/entertainment'
+import referenceRouter from './routes/reference'
 
 const app = express()
 
@@ -48,6 +49,7 @@ app.use('/api/admin/content', adminContentRouter)
 app.use('/api/music', musicRouter)
 app.use('/api/challenges', challengesRouter)
 app.use('/api/entertainment', entertainmentRouter)
+app.use('/api', referenceRouter)
 
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date() })

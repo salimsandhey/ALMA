@@ -6,6 +6,21 @@ const router = Router()
 
 router.use(verifyJWT)
 
+const BADGE_ORDER = [
+  'First Steps',
+  'First Conversation',
+  'Hospitality Hero',
+  'Word Wizard',
+  'Quiz Master',
+  'On Fire!',
+  'Week Warrior',
+  'Monthly Marvel',
+  'Halfway There',
+  'ALMA Graduate',
+  'Perfect Score',
+  'World Explorer',
+] as const
+
 // GET /api/badges
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
@@ -19,7 +34,15 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 
     const earnedIds = new Map(earnedBadges.map((ub) => [ub.badgeId, ub.earnedAt]))
 
-    const badges = allBadges.map((b) => ({
+    const orderedBadges = allBadges.sort((left, right) => {
+      const leftIndex = BADGE_ORDER.indexOf(left.name as (typeof BADGE_ORDER)[number])
+      const rightIndex = BADGE_ORDER.indexOf(right.name as (typeof BADGE_ORDER)[number])
+
+      return (leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex) -
+        (rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex)
+    })
+
+    const badges = orderedBadges.map((b) => ({
       id: b.id,
       name: b.name,
       description: b.description,

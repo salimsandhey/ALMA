@@ -8,22 +8,37 @@ async function main() {
 
   // ─── 1. Badges ──────────────────────────────────────────────────────────────
   const badges = [
-    { name: 'First Step',        description: 'Complete your first lesson',               condition: 'complete_first_lesson' },
-    { name: 'Warm Up',           description: 'Complete your first warm-up session',      condition: 'complete_first_warmup' },
-    { name: 'On a Roll',         description: 'Visit the app 3 days in a row',            condition: 'streak_3' },
-    { name: 'Week Warrior',      description: 'Visit the app 7 days in a row',            condition: 'streak_7' },
-    { name: 'Module Master',     description: 'Complete one full module',                 condition: 'complete_1_module' },
-    { name: 'Polyglot Path',     description: 'Complete five modules',                    condition: 'complete_5_modules' },
-    { name: 'All In',            description: 'Complete all 14 modules',                  condition: 'complete_all_modules' },
-    { name: 'Chatterbox',        description: 'Send 50 messages to AI Coach',             condition: 'coach_messages_50' },
-    { name: 'Pronunciation Pro', description: 'Score 90%+ on 10 pronunciation exercises', condition: 'pronunciation_90_10' },
-    { name: 'Hospitality Hero',  description: 'Complete the Hotel & Hospitality module',  condition: 'complete_module_hotel' },
-    { name: 'Top Talker',        description: 'Reach top 10 on the leaderboard',          condition: 'leaderboard_top_10' },
-    { name: 'Feedback Friend',   description: 'Submit feedback',                          condition: 'submit_feedback' },
+    { name: 'First Steps',        description: 'Complete your first lesson',              condition: 'complete_first_lesson' },
+    { name: 'First Conversation', description: 'Complete your first dialogue lesson',     condition: 'complete_first_dialogue' },
+    { name: 'Hospitality Hero',   description: 'Complete the Hotel & Hospitality module', condition: 'complete_module_hotel' },
+    { name: 'Word Wizard',        description: 'Complete 10 lessons',                     condition: 'complete_10_lessons' },
+    { name: 'Quiz Master',        description: 'Score 100% on any quiz',                  condition: 'quiz_perfect_score' },
+    { name: 'On Fire!',           description: '3-day streak',                            condition: 'streak_3' },
+    { name: 'Week Warrior',       description: '7-day streak',                            condition: 'streak_7' },
+    { name: 'Monthly Marvel',     description: '30-day streak',                           condition: 'streak_30' },
+    { name: 'Halfway There',      description: 'Complete 6 or more modules',              condition: 'complete_half_modules' },
+    { name: 'ALMA Graduate',      description: 'Complete all modules',                    condition: 'complete_all_modules' },
+    { name: 'Perfect Score',      description: 'Score 100% on all lessons in a module',   condition: 'perfect_module' },
+    { name: 'World Explorer',     description: 'Complete your first entertainment quiz',  condition: 'first_entertainment' },
   ]
 
+  await prisma.badge.deleteMany({
+    where: {
+      name: {
+        notIn: badges.map((badge) => badge.name),
+      },
+    },
+  })
+
   for (const badge of badges) {
-    await prisma.badge.upsert({ where: { name: badge.name }, update: {}, create: badge })
+    await prisma.badge.upsert({
+      where: { name: badge.name },
+      update: {
+        description: badge.description,
+        condition: badge.condition,
+      },
+      create: badge,
+    })
   }
 
   // ─── 2. Modules with lessons ─────────────────────────────────────────────────

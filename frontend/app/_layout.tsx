@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { View } from 'react-native'
 import { Stack, useRouter, useSegments } from 'expo-router'
+import SplashScreen from '../components/SplashScreen'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import * as Linking from 'expo-linking'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -16,6 +16,7 @@ export default function RootLayout() {
   const router = useRouter()
   const segments = useSegments()
   const [booting, setBooting] = useState(true)
+  const [splashVisible, setSplashVisible] = useState(true)
 
   useEffect(() => {
     const bootstrapAuth = async () => {
@@ -106,7 +107,7 @@ export default function RootLayout() {
     const SHARED_SCREENS = [
       'module', 'lesson', 'music', 'coach', 'warmup',
       'badges', 'edit-profile',
-      'feedback', 'how-to-use', 'intro-slides', 'dev-screens',
+      'feedback', 'how-to-use', 'terms-privacy', 'intro-slides', 'dev-screens',
       'daily-greeting', 'coach-chat', 'daily-challenge', 'entertainment',
     ]
 
@@ -141,13 +142,10 @@ export default function RootLayout() {
     }
   }, [booting, greetingDoneToday, router, segments, token, user])
 
-  // Block ALL screen rendering until auth is resolved.
-  // This prevents Expo Router from briefly flashing whatever screen it
-  // restores from its navigation cache before the guard has a chance to run.
-  if (booting) {
+  if (splashVisible) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <View style={{ flex: 1, backgroundColor: '#093373' }} />
+        <SplashScreen ready={!booting} onFinish={() => setSplashVisible(false)} />
       </GestureHandlerRootView>
     )
   }

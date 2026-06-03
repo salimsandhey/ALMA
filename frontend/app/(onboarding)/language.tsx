@@ -6,10 +6,14 @@ import {
   ScrollView,
   TextInput,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { SUGGESTED_LANGUAGES, ALL_LANGUAGES } from '../../lib/languages'
+import { useQuery } from '@tanstack/react-query'
+import { api } from '../../lib/api'
+
+type Language = { id: string; code: string; label: string; flag: string; isSuggested: boolean; orderIndex: number }
 
 const NAVY = '#093373'
 const GOLD = '#F5A623'
@@ -54,17 +58,22 @@ export default function OnboardingLanguageScreen() {
   const [selected, setSelected] = useState<string | null>(null)
   const [search, setSearch] = useState('')
 
+  const { data, isLoading } = useQuery<{ languages: Language[] }>({
+    queryKey: ['languages'],
+    queryFn: () => api.get('/api/languages').then((r) => r.data),
+  })
+
+  const allLanguages = data?.languages ?? []
+  const suggested = allLanguages.filter((l) => l.isSuggested)
+  const rest = allLanguages.filter((l) => !l.isSuggested)
+
   const filteredList = useMemo(() => {
     const q = search.toLowerCase().trim()
-    if (!q) return null // show sectioned view
-    const all = [...SUGGESTED_LANGUAGES, ...ALL_LANGUAGES]
-    const seen = new Set<string>()
-    return all.filter((l) => {
-      if (seen.has(l.value)) return false
-      seen.add(l.value)
-      return l.label.toLowerCase().includes(q) || l.value.toLowerCase().includes(q)
-    })
-  }, [search])
+    if (!q) return null
+    return allLanguages.filter(
+      (l) => l.label.toLowerCase().includes(q) || l.code.toLowerCase().includes(q)
+    )
+  }, [search, allLanguages])
 
   const handleContinue = () => {
     if (!selected || !gender) return
@@ -74,13 +83,13 @@ export default function OnboardingLanguageScreen() {
     })
   }
 
-  const renderItem = (lang: { flag: string; label: string; value: string }) => {
-    const isSelected = selected === lang.value
+  const renderItem = (lang: Language) => {
+    const isSelected = selected === lang.code
     return (
       <TouchableOpacity
-        key={lang.value}
+        key={lang.code}
         style={[styles.item, isSelected ? styles.itemSelected : styles.itemDefault]}
-        onPress={() => setSelected(lang.value)}
+        onPress={() => setSelected(lang.code)}
         activeOpacity={0.9}
       >
         <View style={styles.itemLeft}>
@@ -120,21 +129,23 @@ export default function OnboardingLanguageScreen() {
           />
 
           <View style={styles.list}>
-            {filteredList ? (
+            {isLoading ? (
+              <ActivityIndicator color={NAVY} style={{ marginTop: 24 }} />
+            ) : filteredList ? (
               filteredList.length > 0
                 ? filteredList.map(renderItem)
                 : <Text style={styles.emptyText}>No languages found</Text>
             ) : (
               <>
-                <Text style={styles.sectionLabel}>SUGGESTED</Text>
-                {SUGGESTED_LANGUAGES.map(renderItem)}
-                <View style={styles.divider} />
+                {suggested.length > 0 && (
+                  <>
+                    <Text style={styles.sectionLabel}>SUGGESTED</Text>
+                    {suggested.map(renderItem)}
+                    <View style={styles.divider} />
+                  </>
+                )}
                 <Text style={styles.sectionLabel}>ALL LANGUAGES</Text>
-                {ALL_LANGUAGES.map((l) => {
-                  // dedupe — skip if already in suggested
-                  if (SUGGESTED_LANGUAGES.some((s) => s.value === l.value)) return null
-                  return renderItem(l)
-                })}
+                {rest.map(renderItem)}
               </>
             )}
           </View>

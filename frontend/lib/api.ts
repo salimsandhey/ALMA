@@ -14,7 +14,7 @@ export const API_BASE_URL = normalizeApiBaseUrl(process.env.EXPO_PUBLIC_API_URL)
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 20000,
 })
 
 api.interceptors.request.use(async (config) => {

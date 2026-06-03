@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   Animated,
   Alert,
+  TextInput,
+  Modal,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -94,6 +96,8 @@ export default function EntertainmentQuizScreen() {
   const [transcript, setTranscript] = useState('')
   const [listening, setListening] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [typeModalVisible, setTypeModalVisible] = useState(false)
+  const [typeInput, setTypeInput] = useState('')
   const [result, setResult] = useState<SubmitResponse | null>(null)
 
   const pulseAnim = useRef(new Animated.Value(1)).current
@@ -192,6 +196,13 @@ export default function EntertainmentQuizScreen() {
       setListening(false)
     }
   }, [listening, submitting])
+
+  const handleTypeSubmit = useCallback(() => {
+    const trimmed = typeInput.trim()
+    if (trimmed) setTranscript(trimmed)
+    setTypeModalVisible(false)
+    setTypeInput('')
+  }, [typeInput])
 
   const handleNext = useCallback(() => {
     if (!content) return
@@ -357,6 +368,16 @@ export default function EntertainmentQuizScreen() {
             {listening ? 'Listening... tap to stop' : hasAnswer ? 'Tap to re-record' : 'Tap mic to speak'}
           </Text>
 
+          <TouchableOpacity
+            style={styles.typeBtn}
+            onPress={() => { setTypeInput(transcript); setTypeModalVisible(true) }}
+            disabled={submitting}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="create-outline" size={15} color={NAVY} />
+            <Text style={styles.typeBtnText}>Type answer instead</Text>
+          </TouchableOpacity>
+
           {hasAnswer && (
             <View style={[styles.transcriptBox, listening && styles.transcriptBoxRecording]}>
               <Text style={styles.transcriptLabel}>YOUR ANSWER</Text>
@@ -382,6 +403,36 @@ export default function EntertainmentQuizScreen() {
             <Text style={styles.goldBtnText}>{isLast ? 'Submit' : 'Next →'}</Text>
           </TouchableOpacity>
         </View>
+
+        <Modal visible={typeModalVisible} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <Text style={styles.modalTitle}>Type your answer</Text>
+              <Text style={styles.modalQuestion} numberOfLines={3}>{currentQ.question}</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={typeInput}
+                onChangeText={setTypeInput}
+                placeholder="Type your answer here..."
+                placeholderTextColor="#9CA3AF"
+                autoFocus
+                multiline
+                returnKeyType="done"
+              />
+              <View style={styles.modalBtns}>
+                <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setTypeModalVisible(false)}>
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalSubmitBtn, !typeInput.trim() && { opacity: 0.4 }]}
+                  onPress={typeInput.trim() ? handleTypeSubmit : undefined}
+                >
+                  <Text style={styles.modalSubmitText}>Use Answer</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     )
   }
@@ -771,6 +822,83 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: GREY,
     fontStyle: 'italic',
+  },
+  typeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+  },
+  typeBtnText: {
+    fontSize: 13,
+    color: NAVY,
+    fontWeight: '500',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    gap: 14,
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: NAVY,
+  },
+  modalQuestion: {
+    fontSize: 14,
+    color: GREY,
+    lineHeight: 20,
+  },
+  modalInput: {
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 15,
+    color: '#111',
+    backgroundColor: '#F9FAFB',
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  modalBtns: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+  },
+  modalCancelText: {
+    color: '#6B7280',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  modalSubmitBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: NAVY,
+  },
+  modalSubmitText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 15,
   },
   // Error / centered
   centered: {

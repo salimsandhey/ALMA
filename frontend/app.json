@@ -32,8 +32,18 @@
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone."
       }
     },
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B1F4B"
+    },
     "android": {
       "adaptiveIcon": {
+        "backgroundColor": "#0B1F4B"
+      },
+      "splash": {
+        "image": "./assets/logo.png",
+        "resizeMode": "contain",
         "backgroundColor": "#0B1F4B"
       },
       "permissions": [

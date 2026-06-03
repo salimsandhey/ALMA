@@ -13,6 +13,7 @@ const updateProfileSchema = z.object({
   age: z.number().int().min(10).max(100).optional(),
   gender: z.enum(['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY']).optional(),
   nativeLanguage: z.string().optional(),
+  country: z.string().max(100).optional(),
 })
 
 // GET /api/users/me
@@ -22,7 +23,7 @@ router.get('/me', verifyJWT, async (req: Request, res: Response): Promise<void> 
       where: { id: req.user!.userId },
       select: {
         id: true, email: true, displayName: true, avatarUrl: true,
-        age: true, gender: true, nativeLanguage: true, role: true,
+        age: true, gender: true, nativeLanguage: true, country: true, role: true,
         xpTotal: true, streakCount: true, isOnboardingComplete: true, createdAt: true,
       },
     })
