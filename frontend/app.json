@@ -5,6 +5,7 @@
     "scheme": "alma",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "plugins": [
       "expo-router",
       "expo-speech-recognition",
@@ -19,7 +20,7 @@
         "expo-build-properties",
         {
           "android": {
-            "usesCleartextTraffic": true
+            "usesCleartextTraffic": false
           }
         }
       ],
@@ -39,6 +40,7 @@
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0B1F4B"
       },
       "splash": {
@@ -49,7 +51,7 @@
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.salimsandhey.almaapp"
+      "package": "com.alma.app"
     },
     "extra": {
       "router": {},
