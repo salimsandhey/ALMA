@@ -23,6 +23,8 @@ type FeedbackItem = {
   topic: string | null
   comment: string | null
   createdAt: string
+  adminReply: string | null
+  adminRepliedAt: string | null
 }
 
 export default function FeedbackScreen() {
@@ -35,10 +37,9 @@ export default function FeedbackScreen() {
   const [message, setMessage] = useState('')
   const [submitted, setSubmitted] = useState(false)
 
-  const { data: myFeedback, isLoading: loadingMine } = useQuery<{ feedbacks: FeedbackItem[] }>({
+  const { data: myFeedback, isLoading: loadingMine } = useQuery<{ feedbacks: FeedbackItem[]; hasUnreadReply: boolean }>({
     queryKey: ['my-feedback'],
     queryFn: () => api.get('/api/feedback').then((r) => r.data),
-    enabled: tab === 'mine',
   })
 
   const submitMutation = useMutation({
@@ -98,7 +99,12 @@ export default function FeedbackScreen() {
           onPress={() => setTab('mine')}
           activeOpacity={0.7}
         >
-          <Text style={[styles.tabText, tab === 'mine' && styles.tabTextActive]}>My Feedback</Text>
+          <View style={styles.tabInner}>
+            <Text style={[styles.tabText, tab === 'mine' && styles.tabTextActive]}>My Feedback</Text>
+            {myFeedback?.hasUnreadReply && tab !== 'mine' && (
+              <View style={styles.replyDot} />
+            )}
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -188,7 +194,7 @@ export default function FeedbackScreen() {
             </View>
           ) : (
             myFeedback.feedbacks.map((fb) => (
-              <View key={fb.id} style={styles.feedbackCard}>
+              <View key={fb.id} style={[styles.feedbackCard, fb.adminReply && styles.feedbackCardReplied]}>
                 <View style={styles.feedbackCardTop}>
                   <Text style={styles.feedbackEmoji}>{EMOJIS[fb.rating - 1]}</Text>
                   {fb.topic && (
@@ -201,6 +207,20 @@ export default function FeedbackScreen() {
                   </Text>
                 </View>
                 {fb.comment && <Text style={styles.feedbackComment}>{fb.comment}</Text>}
+                {fb.adminReply && (
+                  <View style={styles.adminReplyBox}>
+                    <View style={styles.adminReplyHeader}>
+                      <Ionicons name="shield-checkmark-outline" size={13} color={NAVY} />
+                      <Text style={styles.adminReplyLabel}>ALMA Team replied</Text>
+                      {fb.adminRepliedAt && (
+                        <Text style={styles.adminReplyDate}>
+                          {new Date(fb.adminRepliedAt).toLocaleDateString()}
+                        </Text>
+                      )}
+                    </View>
+                    <Text style={styles.adminReplyText}>{fb.adminReply}</Text>
+                  </View>
+                )}
               </View>
             ))
           )}
@@ -296,4 +316,17 @@ const styles = StyleSheet.create({
   feedbackTopicText: { fontSize: 11, color: NAVY, fontWeight: '600' },
   feedbackDate: { marginLeft: 'auto', fontSize: 12, color: GREY },
   feedbackComment: { fontSize: 14, color: '#374151', lineHeight: 20 },
+  feedbackCardReplied: { borderLeftWidth: 3, borderLeftColor: NAVY },
+  adminReplyBox: {
+    marginTop: 10, backgroundColor: '#EFF6FF',
+    borderRadius: 10, padding: 12,
+  },
+  adminReplyHeader: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
+  adminReplyLabel: { fontSize: 11, fontWeight: '700', color: NAVY, flex: 1 },
+  adminReplyDate: { fontSize: 11, color: '#6B7280' },
+  adminReplyText: { fontSize: 13, color: '#1E3A5F', lineHeight: 18 },
+  tabInner: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  replyDot: {
+    width: 8, height: 8, borderRadius: 4, backgroundColor: GOLD,
+  },
 })

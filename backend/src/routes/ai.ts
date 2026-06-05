@@ -27,6 +27,11 @@ router.post('/daily-greeting', async (req: Request, res: Response): Promise<void
     return
   }
   const userId = req.user!.userId
+  const limited = await checkRateLimit(`rl:greeting:${userId}`, 20)
+  if (!limited.allowed) {
+    res.status(429).json({ error: 'Daily greeting limit reached.', code: 'RATE_LIMITED' })
+    return
+  }
   try {
     const result = await dailyGreetingChat(userId, messages)
     res.json(result)
@@ -144,7 +149,7 @@ router.post('/grammar-check', async (req: Request, res: Response): Promise<void>
   }
 
   try {
-    const result = await checkGrammar(text)
+    const result = await checkGrammar(userId, text)
     res.json(result)
   } catch (err: any) {
     console.error('[grammar-check route] error:', err?.message ?? err)

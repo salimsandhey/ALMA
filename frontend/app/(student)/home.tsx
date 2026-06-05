@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Image,
   type DimensionValue,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -31,6 +32,7 @@ type LeaderboardItem = {
   userId?: string
   id?: string
   displayName?: string
+  avatarUrl?: string | null
   xp?: number
   xpTotal?: number
   country?: string | null
@@ -152,9 +154,13 @@ export default function StudentHome() {
           <View style={styles.levelBadge}>
             <Text style={styles.levelBadgeText}>BEGINNER</Text>
           </View>
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarInitial}>{userInitial}</Text>
-          </View>
+          {user?.avatarUrl ? (
+            <Image source={{ uri: user.avatarUrl }} style={styles.avatarCircle} />
+          ) : (
+            <View style={styles.avatarCircle}>
+              <Text style={styles.avatarInitial}>{userInitial}</Text>
+            </View>
+          )}
         </View>
 
         <Text style={styles.greeting}>{`Hey, ${displayName} \uD83D\uDC4B`}</Text>
@@ -218,9 +224,11 @@ export default function StudentHome() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.devResetBtn} onPress={resetDailyGreeting} activeOpacity={0.7}>
-          <Text style={styles.devResetText}>🔁 [DEV] Reset Daily Greeting</Text>
-        </TouchableOpacity>
+        {__DEV__ && (
+          <TouchableOpacity style={styles.devResetBtn} onPress={resetDailyGreeting} activeOpacity={0.7}>
+            <Text style={styles.devResetText}>🔁 [DEV] Reset Daily Greeting</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity style={styles.challengeRow} activeOpacity={0.85} onPress={() => router.push('/daily-challenge')}>
           <View style={styles.challengeIconWrap}>
@@ -273,9 +281,13 @@ export default function StudentHome() {
                     </View>
                   )}
 
-                  <View style={styles.learnerAvatar}>
-                    <Text style={styles.learnerAvatarText}>{initial}</Text>
-                  </View>
+                  {item.avatarUrl ? (
+                    <Image source={{ uri: item.avatarUrl }} style={styles.learnerAvatar} />
+                  ) : (
+                    <View style={styles.learnerAvatar}>
+                      <Text style={styles.learnerAvatarText}>{initial}</Text>
+                    </View>
+                  )}
 
                   <View style={styles.learnerNameRow}>
                     <Text style={styles.learnerName} numberOfLines={1}>

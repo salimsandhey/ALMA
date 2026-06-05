@@ -240,12 +240,14 @@ model ExploreContent {
 // ─────────────────────────────────────────────
 
 model Feedback {
-  id        String   @id @default(cuid())
-  userId    String
-  rating    Int
-  topic     String?
-  comment   String?
-  createdAt DateTime @default(now())
+  id             String    @id @default(cuid())
+  userId         String
+  rating         Int
+  topic          String?
+  comment        String?
+  adminReply     String?
+  adminRepliedAt DateTime?
+  createdAt      DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -393,16 +395,32 @@ model Language {
 }
 
 // ─────────────────────────────────────────────
+// LEGAL CONTENT
+// ─────────────────────────────────────────────
+
+model LegalContent {
+  id        String   @id @default(cuid())
+  type      String   @unique
+  sections  Json
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
+
+// ─────────────────────────────────────────────
 // AI USAGE LOG
 // ─────────────────────────────────────────────
 
 model AIUsageLog {
-  id        String   @id @default(cuid())
-  userId    String
-  feature   String
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  userId       String
+  feature      String
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  aiModel      String   @default("gemini-2.5-flash")
+  createdAt    DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, feature, createdAt])
+  @@index([createdAt])
 }

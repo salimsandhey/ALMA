@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import {
   View,
   Text,
@@ -41,6 +41,17 @@ export default function FlashcardGame({ card, onComplete, xpReward }: GameCardPr
   const bannerOpacity = useRef(new Animated.Value(0)).current
   const micStartRef = useRef<number>(0)
 
+  useEffect(() => {
+    setRetryCount(0)
+    setBannerText('')
+    setAnswered(false)
+    setInterimText('')
+    setLastSpoken('')
+    setLastScore(null)
+    setSpeechState('idle')
+    bannerOpacity.setValue(0)
+  }, [card.id])
+
   const showBanner = (text: string, correct: boolean) => {
     setBannerText(text)
     setBannerCorrect(correct)
@@ -72,7 +83,7 @@ export default function FlashcardGame({ card, onComplete, xpReward }: GameCardPr
       setSpeechState('success')
       setAnswered(true)
       trackSpeech('speech_pass', { cardId: card.id, gameType: 'FLASHCARD', attempt: retryCount + 1, score: Math.round(score * 100) })
-      onComplete(card.id, true, xpReward + 5)
+      onComplete(card.id, true, xpReward)
     } else if (retryCount === 0) {
       setSpeechState('failed')
       showBanner('Try again. One more chance.', false)
@@ -88,17 +99,23 @@ export default function FlashcardGame({ card, onComplete, xpReward }: GameCardPr
   }
 
   const localImage = resolveLessonImage(card.imageUrl)
+  const isRemoteUrl = card.imageUrl && (card.imageUrl.startsWith('http://') || card.imageUrl.startsWith('https://'))
+  const isEmoji = card.imageUrl && !card.imageUrl.startsWith('local:') && !isRemoteUrl && card.imageUrl.trim().length > 0
 
   return (
     <View style={styles.container}>
       <View style={styles.card}>
         {localImage ? (
           <Image source={localImage} style={styles.image} resizeMode="cover" />
-        ) : card.imageUrl && !card.imageUrl.startsWith('local:') ? (
+        ) : isRemoteUrl ? (
           <Image source={{ uri: card.imageUrl }} style={styles.image} resizeMode="cover" />
+        ) : isEmoji ? (
+          <View style={styles.emojiContainer}>
+            <Text style={styles.emojiText}>{card.imageUrl}</Text>
+          </View>
         ) : (
           <View style={styles.imagePlaceholder}>
-            <Text style={styles.imagePlaceholderIcon}>IMG</Text>
+            <Text style={styles.imagePlaceholderIcon}>🖼️</Text>
           </View>
         )}
 
@@ -174,7 +191,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  imagePlaceholderIcon: { fontSize: 24, color: '#6B7280' },
+  imagePlaceholderIcon: { fontSize: 32, color: '#9CA3AF' },
+  emojiContainer: {
+    width: '100%',
+    height: 180,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emojiText: { fontSize: 96 },
   content: {
     paddingHorizontal: 20,
     paddingTop: 14,

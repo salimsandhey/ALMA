@@ -1,6 +1,6 @@
 import React from 'react'
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
@@ -33,13 +33,17 @@ function getInitial(name: string) {
   return (name || 'A').trim().charAt(0).toUpperCase()
 }
 
-function Avatar({ name, size, borderColor }: { name: string; size: number; borderColor?: string }) {
+function Avatar({ name, avatarUrl, size, borderColor }: { name: string; avatarUrl?: string | null; size: number; borderColor?: string }) {
+  const circleStyle = [
+    avatarStyles.circle,
+    { width: size, height: size, borderRadius: size / 2 },
+    borderColor ? { borderWidth: 3, borderColor } : undefined,
+  ]
+  if (avatarUrl) {
+    return <Image source={{ uri: avatarUrl }} style={circleStyle as any} />
+  }
   return (
-    <View style={[
-      avatarStyles.circle,
-      { width: size, height: size, borderRadius: size / 2 },
-      borderColor ? { borderWidth: 3, borderColor } : undefined,
-    ]}>
+    <View style={circleStyle}>
       <Text style={[avatarStyles.initial, { fontSize: size * 0.38 }]}>{getInitial(name)}</Text>
     </View>
   )
@@ -80,7 +84,7 @@ function PodiumSpot({
         podStyles.avatarRing,
         isFirst && { borderColor: GOLD, borderWidth: 3, borderRadius: (avatarSize + 12) / 2, padding: 4 },
       ]}>
-        <Avatar name={entry.displayName} size={avatarSize} />
+        <Avatar name={entry.displayName} avatarUrl={entry.avatarUrl} size={avatarSize} />
       </View>
       <Text style={podStyles.podName} numberOfLines={1}>
         {isCurrentUser ? 'You' : entry.displayName.split(' ')[0]}
@@ -217,9 +221,13 @@ export default function Leaderboard() {
               return (
                 <View key={entry.userId} style={[styles.row, me && styles.rowMe]}>
                   <Text style={[styles.rowRank, me && styles.rowRankMe]}>#{entry.rank}</Text>
-                  <View style={styles.rowAvatar}>
-                    <Text style={styles.rowAvatarText}>{getInitial(entry.displayName)}</Text>
-                  </View>
+                  {entry.avatarUrl ? (
+                    <Image source={{ uri: entry.avatarUrl }} style={styles.rowAvatar} />
+                  ) : (
+                    <View style={styles.rowAvatar}>
+                      <Text style={styles.rowAvatarText}>{getInitial(entry.displayName)}</Text>
+                    </View>
+                  )}
                   <View style={styles.rowNameWrap}>
                     {flag ? <Text style={styles.rowFlag}>{flag}</Text> : null}
                     <Text style={[styles.rowName, me && styles.rowNameMe]} numberOfLines={1}>

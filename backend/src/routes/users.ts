@@ -6,7 +6,15 @@ import { uploadAvatar } from '../lib/cloudinary'
 import { verifyJWT } from '../middleware/auth'
 
 const router = Router()
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } })
+const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_MIME.has(file.mimetype)) cb(null, true)
+    else cb(new Error('Only JPEG, PNG, WebP, and GIF images are allowed'))
+  },
+})
 
 const updateProfileSchema = z.object({
   displayName: z.string().min(2).max(50).optional(),

@@ -13,8 +13,21 @@ export async function checkRateLimit(
   return { allowed: current <= limit, remaining }
 }
 
-export async function logAIUsage(userId: string, feature: string): Promise<void> {
-  await prisma.aIUsageLog.create({ data: { userId, feature } })
+export async function logAIUsage(
+  userId: string,
+  feature: string,
+  inputTokens = 0,
+  outputTokens = 0,
+  aiModel = 'gemini-2.5-flash'
+): Promise<void> {
+  await prisma.aIUsageLog.create({ data: { userId, feature, inputTokens, outputTokens, aiModel } })
+}
+
+function extractTokens(response: any): { inputTokens: number; outputTokens: number } {
+  return {
+    inputTokens:  response?.usageMetadata?.promptTokenCount     ?? 0,
+    outputTokens: response?.usageMetadata?.candidatesTokenCount ?? 0,
+  }
 }
 
 const COACH_SYSTEM_PROMPT = `You are ALMA, a friendly and encouraging English language tutor for tourism and hospitality workers. Your students are adults who use English on the job - at hotels, restaurants, and tourist sites.
@@ -231,12 +244,14 @@ export async function streamCoachResponse(userId: string, messages: Array<{ role
       generationConfig: { maxOutputTokens: 400 },
     })
 
+    let fullText = ''
     for await (const chunk of stream.stream) {
       const chunkText = chunk.text()
-      if (chunkText) res.write(`data: ${JSON.stringify({ delta: chunkText })}\n\n`)
+      if (chunkText) { fullText += chunkText; res.write(`data: ${JSON.stringify({ delta: chunkText })}\n\n`) }
     }
-
-    await logAIUsage(userId, 'coach')
+    const finalResp = await stream.response
+    const { inputTokens, outputTokens } = extractTokens(finalResp)
+    await logAIUsage(userId, 'coach', inputTokens, outputTokens)
   } catch (err: any) {
     console.error('[streamCoachResponse] error:', err?.message ?? err)
     const fallback = isContentPolicyError(err)
@@ -268,7 +283,7 @@ function extractJson(text: string): string {
   return text
 }
 
-export async function checkGrammar(text: string): Promise<GrammarResult> {
+export async function checkGrammar(userId: string, text: string): Promise<GrammarResult> {
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
     systemInstruction: GRAMMAR_CHECK_SYSTEM_PROMPT,
@@ -278,6 +293,8 @@ export async function checkGrammar(text: string): Promise<GrammarResult> {
     contents: [{ role: 'user', parts: [{ text }] }],
     generationConfig: { maxOutputTokens: 1024 },
   })
+  const { inputTokens, outputTokens } = extractTokens(response.response)
+  await logAIUsage(userId, 'grammar', inputTokens, outputTokens)
   const raw = response.response.text().trim()
   console.log('[checkGrammar] raw response:', raw.slice(0, 300))
   const jsonText = extractJson(raw)
@@ -311,6 +328,8 @@ export async function dailyGreetingChat(
         thinkingConfig: { thinkingBudget: 0 },
       },
     })
+    const { inputTokens, outputTokens } = extractTokens(result.response)
+    await logAIUsage(userId, 'daily_greeting', inputTokens, outputTokens)
     return { reply: result.response.text().trim() }
   } catch (err: any) {
     console.error('[dailyGreetingChat] error:', err?.message ?? err)
@@ -349,7 +368,8 @@ export async function coachChat(
       .replace(/\[Correction:[^\]]*\]/gi, '')
       .trim()
 
-    await logAIUsage(userId, 'coach')
+    const { inputTokens, outputTokens } = extractTokens(result.response)
+    await logAIUsage(userId, 'coach', inputTokens, outputTokens)
     return { reply, feedback, correction }
   } catch (err: any) {
     console.error('[coachChat] error:', err?.message ?? err)
@@ -388,13 +408,13 @@ export async function startCoachSession(userId: string): Promise<{ allowed: bool
 export async function warmupChat(userId: string, messages: Array<{ role: string; content: string }>): Promise<{ reply: string; sessionEnded: boolean; xpAwarded: number }> {
   const userTurns = messages.filter((m) => m.role === 'user').length
 
-  let systemPrompt = WARMUP_SYSTEM_PROMPT
-  if (userTurns === 0) {
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { displayName: true } })
-    systemPrompt += `\n\nStudent's name: ${user?.displayName || 'there'}`
-  }
-
   try {
+    let systemPrompt = WARMUP_SYSTEM_PROMPT
+    if (userTurns === 0) {
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { displayName: true } })
+      systemPrompt += `\n\nStudent's name: ${user?.displayName || 'there'}`
+    }
+
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
       systemInstruction: systemPrompt,
@@ -409,10 +429,11 @@ export async function warmupChat(userId: string, messages: Array<{ role: string;
 
     const sessionEnded = replyText.includes('[SESSION_COMPLETE]')
     const reply = replyText.replace('[SESSION_COMPLETE]', '').trim()
+    const { inputTokens, outputTokens } = extractTokens(result.response)
+    await logAIUsage(userId, 'warmup', inputTokens, outputTokens)
 
     if (sessionEnded) {
       await prisma.user.update({ where: { id: userId }, data: { xpTotal: { increment: 10 } } })
-      await logAIUsage(userId, 'warmup')
     }
 
     return { reply, sessionEnded, xpAwarded: sessionEnded ? 10 : 0 }
@@ -430,7 +451,7 @@ export async function scorePronunciation(userId: string, targetText: string, spo
   const quickScore = levenshteinSimilarity(normalizedTarget, normalizedSpoken)
 
   if (words <= 3 && (quickScore >= 80 || quickScore < 50)) {
-    await logAIUsage(userId, 'pronunciation')
+    await logAIUsage(userId, 'pronunciation', 0, 0)
     return {
       score: quickScore,
       passed: quickScore >= 70,
@@ -456,8 +477,11 @@ export async function scorePronunciation(userId: string, targetText: string, spo
 
     const raw = response.response.text().trim()
     parsed = JSON.parse(extractJson(raw))
+    const { inputTokens, outputTokens } = extractTokens(response.response)
+    await logAIUsage(userId, 'pronunciation', inputTokens, outputTokens)
   } catch {
     parsed = {}
+    await logAIUsage(userId, 'pronunciation', 0, 0)
   }
 
   const score = typeof parsed.score === 'number' ? parsed.score : quickScore
@@ -465,8 +489,6 @@ export async function scorePronunciation(userId: string, targetText: string, spo
   const feedback = typeof parsed.feedback === 'string' && parsed.feedback.trim().length > 0
     ? parsed.feedback
     : (passed ? 'Great pronunciation!' : `Try again. The correct phrase is "${targetText}".`)
-
-  await logAIUsage(userId, 'pronunciation')
 
   return {
     score,
@@ -553,7 +575,8 @@ export async function getHint(userId: string, gameType: string, cardContent: Rec
     })
 
     const hint = response.response.text().trim()
-    await logAIUsage(userId, 'hint')
+    const { inputTokens, outputTokens } = extractTokens(response.response)
+    await logAIUsage(userId, 'hint', inputTokens, outputTokens)
     return hint
   } catch {
     return 'Think carefully about the context and what you have learned so far!'

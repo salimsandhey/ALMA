@@ -21,9 +21,10 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     const feedbacks = await prisma.feedback.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      select: { id: true, rating: true, topic: true, comment: true, createdAt: true },
+      select: { id: true, rating: true, topic: true, comment: true, createdAt: true, adminReply: true, adminRepliedAt: true },
     })
-    res.json({ feedbacks })
+    const hasUnreadReply = feedbacks.some((f) => f.adminReply)
+    res.json({ feedbacks, hasUnreadReply })
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR' })
