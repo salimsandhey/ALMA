@@ -35,6 +35,7 @@ import referenceRouter from './routes/reference'
 
 const app = express()
 
+app.set('trust proxy', 1)
 app.use(cors({ origin: '*' }))
 app.use(helmet())
 app.use(express.json({ limit: '10mb' }))

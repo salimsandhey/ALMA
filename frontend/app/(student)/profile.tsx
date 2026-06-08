@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useQuery } from '@tanstack/react-query'
 import { deleteToken } from '../../lib/storage'
 import { useAuthStore } from '../../stores/authStore'
+import { useVoiceStore, VoiceGender } from '../../stores/voiceStore'
 import { api } from '../../lib/api'
 
 const NAVY = '#093373'
@@ -60,6 +61,7 @@ type Language = { code: string; label: string; flag: string }
 export default function Profile() {
   const router = useRouter()
   const { user } = useAuthStore()
+  const { voiceGender, setVoiceGender } = useVoiceStore()
 
   const { data: profile } = useQuery<ProfileData>({
     queryKey: ['profile'],
@@ -186,6 +188,35 @@ export default function Profile() {
                 trackColor={{ false: '#E5E7EB', true: NAVY }}
                 thumbColor="#FFFFFF"
               />
+            </View>
+          </View>
+        </View>
+
+        {/* ── Preferences ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Preferences</Text>
+          <View style={styles.card}>
+            <View style={styles.menuRow}>
+              <View style={styles.menuLeft}>
+                <View style={styles.menuIconBox}>
+                  <Ionicons name="mic-outline" size={17} color={NAVY} />
+                </View>
+                <Text style={styles.menuLabel}>Voice</Text>
+              </View>
+              <View style={styles.voiceChips}>
+                {(['female', 'male'] as VoiceGender[]).map((g) => (
+                  <TouchableOpacity
+                    key={g}
+                    style={[styles.voiceChip, voiceGender === g && styles.voiceChipActive]}
+                    onPress={() => setVoiceGender(g)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.voiceChipText, voiceGender === g && styles.voiceChipTextActive]}>
+                      {g === 'female' ? 'Female' : 'Male'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           </View>
         </View>
@@ -361,6 +392,16 @@ const styles = StyleSheet.create({
   },
   menuLabel: { color: '#111827', fontSize: 15 },
   divider: { height: 1, backgroundColor: '#F3F4F6', marginLeft: 60 },
+
+  voiceChips: { flexDirection: 'row', gap: 8 },
+  voiceChip: {
+    paddingHorizontal: 14, paddingVertical: 6,
+    borderRadius: 20, borderWidth: 1.5, borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+  },
+  voiceChipActive: { borderColor: NAVY, backgroundColor: NAVY },
+  voiceChipText: { fontSize: 13, fontWeight: '600', color: GREY },
+  voiceChipTextActive: { color: '#FFFFFF' },
 
   logoutBtn: {
     marginHorizontal: 16, marginTop: 8, backgroundColor: '#E53935',

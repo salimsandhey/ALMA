@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { TouchableOpacity, View, Animated, StyleSheet, StyleProp, ViewStyle } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import * as Speech from 'expo-speech'
+import { useVoiceStore, getSpeakOptions } from '../stores/voiceStore'
 
 interface Props {
   text: string
@@ -18,6 +19,7 @@ export default function TTSButton({
   idleColor = '#9CA3AF',
   style,
 }: Props) {
+  const voiceGender = useVoiceStore((s) => s.voiceGender)
   const [playing, setPlaying] = useState(false)
   const bar1 = useRef(new Animated.Value(0.4)).current
   const bar2 = useRef(new Animated.Value(0.4)).current
@@ -54,8 +56,7 @@ export default function TTSButton({
     Speech.stop()
     setPlaying(true)
     Speech.speak(text, {
-      language: 'en-US',
-      rate: 0.9,
+      ...getSpeakOptions(voiceGender),
       onDone: () => setPlaying(false),
       onError: () => setPlaying(false),
     })

@@ -283,7 +283,7 @@ function RuleRow({ met, label }: { met: boolean; label: string }) {
   return (
     <View style={styles.ruleRow}>
       <Text style={[styles.ruleBullet, met && styles.ruleBulletMet]}>
-        {met ? '?' : '•'}
+        {met ? '✓' : '•'}
       </Text>
       <Text style={styles.ruleLabel}>{label}</Text>
     </View>

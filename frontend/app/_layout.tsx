@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { getToken, deleteToken, saveToken } from '../lib/storage'
 import { useAuthStore } from '../stores/authStore'
+import { useVoiceStore } from '../stores/voiceStore'
 import { api } from '../lib/api'
 
 const queryClient = new QueryClient()
@@ -17,6 +18,10 @@ export default function RootLayout() {
   const segments = useSegments()
   const [booting, setBooting] = useState(true)
   const [splashVisible, setSplashVisible] = useState(true)
+
+  useEffect(() => {
+    useVoiceStore.getState().loadVoiceGender()
+  }, [])
 
   useEffect(() => {
     const bootstrapAuth = async () => {

@@ -8,7 +8,6 @@ import {
   StyleSheet,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import * as Speech from 'expo-speech'
 import TTSButton from '../TTSButton'
 import MicButton from './MicButton'
 import DiffView from './DiffView'
