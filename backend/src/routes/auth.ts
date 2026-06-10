@@ -8,6 +8,8 @@ import { prisma } from '../lib/prisma'
 import { signToken, signResetToken, verifyResetToken } from '../lib/jwt'
 import { sendOTPEmail } from '../lib/email'
 import { verifyJWT } from '../middleware/auth'
+import jwksClient from 'jwks-rsa'
+import jwt from 'jsonwebtoken'
 
 const router = Router()
 const appDeepLinkCallback = process.env.APP_DEEP_LINK_CALLBACK || 'alma://auth/google-callback'
@@ -124,6 +126,17 @@ const onboardingSchema = z.object({
   gender: z.enum(['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY']),
   nativeLanguage: z.string().min(1),
   country: z.string().length(2).optional(),
+})
+
+const appleJwksClient = jwksClient({
+  jwksUri: 'https://appleid.apple.com/auth/keys',
+  cache: true,
+  cacheMaxAge: 600000,
+})
+
+const appleSchema = z.object({
+  identityToken: z.string().min(1),
+  displayName: z.string().min(1).max(100).optional(),
 })
 
 // ─── POST /api/auth/register ──────────────────────────────────────────────────
@@ -440,6 +453,94 @@ router.patch('/onboarding', verifyJWT, async (req: Request, res: Response): Prom
 
     res.json({ message: 'Onboarding complete.', user: { ...user, isOnboardingComplete: true } })
   } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR' })
+  }
+})
+
+// ─── POST /api/auth/apple ─────────────────────────────────────────────────────
+
+router.post('/apple', async (req: Request, res: Response): Promise<void> => {
+  const parsed = appleSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Validation error', code: 'VALIDATION_ERROR' })
+    return
+  }
+
+  const { identityToken, displayName } = parsed.data
+
+  try {
+    const decoded = jwt.decode(identityToken, { complete: true })
+    if (!decoded || typeof decoded === 'string' || !decoded.header?.kid) {
+      res.status(401).json({ error: 'Invalid Apple token', code: 'INVALID_APPLE_TOKEN' })
+      return
+    }
+
+    const key = await appleJwksClient.getSigningKey(decoded.header.kid)
+    const publicKey = key.getPublicKey()
+
+    const payload = jwt.verify(identityToken, publicKey, {
+      algorithms: ['RS256'],
+      issuer: 'https://appleid.apple.com',
+    }) as jwt.JwtPayload
+
+    const appleId = payload.sub
+    const email = payload.email as string | undefined
+
+    if (!appleId) {
+      res.status(401).json({ error: 'Invalid Apple token', code: 'INVALID_APPLE_TOKEN' })
+      return
+    }
+
+    let user = await prisma.user.findFirst({
+      where: { OR: [{ appleId }, ...(email ? [{ email }] : [])] },
+    })
+
+    if (!user) {
+      if (!email) {
+        res.status(400).json({ error: 'Email not provided by Apple', code: 'MISSING_EMAIL' })
+        return
+      }
+      user = await prisma.user.create({
+        data: {
+          email,
+          appleId,
+          displayName: displayName || email.split('@')[0],
+          isEmailVerified: true,
+          role: 'STUDENT',
+        },
+      })
+    } else if (!user.appleId) {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { appleId, isEmailVerified: true },
+      })
+    }
+
+    if (!user.isActive) {
+      res.status(403).json({ error: 'Account is deactivated', code: 'ACCOUNT_INACTIVE' })
+      return
+    }
+
+    const token = signToken({ userId: user.id, role: user.role, email: user.email })
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        role: user.role,
+        isOnboardingComplete: user.isOnboardingComplete,
+        xpTotal: user.xpTotal,
+        streakCount: user.streakCount,
+      },
+    })
+  } catch (err: any) {
+    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+      res.status(401).json({ error: 'Invalid Apple token', code: 'INVALID_APPLE_TOKEN' })
+      return
+    }
     console.error(err)
     res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR' })
   }
