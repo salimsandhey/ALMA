@@ -22,6 +22,7 @@ import Svg, { Path } from 'react-native-svg'
 import { api, API_BASE_URL } from '../../lib/api'
 import { saveToken, deleteToken } from '../../lib/storage'
 import { useAuthStore } from '../../stores/authStore'
+import * as AppleAuthentication from 'expo-apple-authentication'
 
 const NAVY = '#093373'
 const GOLD = '#F5A623'
@@ -38,6 +39,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [appleLoading, setAppleLoading] = useState(false)
 
   const [forgotVisible, setForgotVisible] = useState(false)
   const [forgotEmail, setForgotEmail] = useState('')
@@ -121,6 +123,46 @@ export default function Login() {
       await Linking.openURL(`${baseUrl}/api/auth/google`)
     } catch (e: any) {
       setError(getErrorMessage(e, 'Unable to start Google sign-in'))
+    }
+  }
+
+  const handleAppleLogin = async () => {
+    setAppleLoading(true)
+    setError(null)
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      })
+
+      const displayName = credential.fullName
+        ? [credential.fullName.givenName, credential.fullName.familyName]
+            .filter(Boolean)
+            .join(' ')
+        : undefined
+
+      const { data } = await api.post('/api/auth/apple', {
+        identityToken: credential.identityToken,
+        ...(displayName ? { displayName } : {}),
+      })
+
+      await saveToken(data.token)
+      useAuthStore.getState().setAuth(data.token, data.user)
+
+      if (!data.user.isOnboardingComplete) {
+        router.replace('/(onboarding)/name')
+      } else if (data.user.role === 'ADMIN') {
+        router.replace('/(admin)/overview')
+      } else {
+        router.replace('/(student)/home')
+      }
+    } catch (e: any) {
+      if (e?.code === 'ERR_REQUEST_CANCELED') return
+      setError(getErrorMessage(e, 'Apple sign-in failed'))
+    } finally {
+      setAppleLoading(false)
     }
   }
 
@@ -236,6 +278,16 @@ export default function Login() {
             <GoogleIcon />
             <Text style={styles.googleText}>Sign In with Google</Text>
           </TouchableOpacity>
+
+          {Platform.OS === 'ios' && (
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+              cornerRadius={26}
+              style={styles.appleBtn}
+              onPress={handleAppleLogin}
+            />
+          )}
 
           <View style={styles.registerRow}>
             <Text style={styles.registerText}>Don't have an account yet? </Text>
@@ -494,6 +546,11 @@ const styles = StyleSheet.create({
     color: '#202124',
     fontSize: 17,
     fontWeight: '500',
+  },
+  appleBtn: {
+    width: '100%',
+    height: 54,
+    marginTop: 14,
   },
 
   registerRow: {
