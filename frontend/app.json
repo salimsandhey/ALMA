@@ -29,7 +29,7 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.almalearn.app",
+      "bundleIdentifier": "app.alma.learn",
       "infoPlist": {
         "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition.",
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone."
