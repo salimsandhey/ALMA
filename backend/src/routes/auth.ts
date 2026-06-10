@@ -482,6 +482,7 @@ router.post('/apple', async (req: Request, res: Response): Promise<void> => {
     const payload = jwt.verify(identityToken, publicKey, {
       algorithms: ['RS256'],
       issuer: 'https://appleid.apple.com',
+      audience: process.env.APPLE_BUNDLE_ID,
     }) as jwt.JwtPayload
 
     const appleId = payload.sub
@@ -510,16 +511,18 @@ router.post('/apple', async (req: Request, res: Response): Promise<void> => {
           role: 'STUDENT',
         },
       })
-    } else if (!user.appleId) {
-      user = await prisma.user.update({
-        where: { id: user.id },
-        data: { appleId, isEmailVerified: true },
-      })
-    }
+    } else {
+      if (!user.isActive) {
+        res.status(403).json({ error: 'Account is deactivated', code: 'ACCOUNT_INACTIVE' })
+        return
+      }
 
-    if (!user.isActive) {
-      res.status(403).json({ error: 'Account is deactivated', code: 'ACCOUNT_INACTIVE' })
-      return
+      if (!user.appleId) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { appleId, isEmailVerified: true },
+        })
+      }
     }
 
     const token = signToken({ userId: user.id, role: user.role, email: user.email })
