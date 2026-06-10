@@ -69,6 +69,7 @@ model User {
   isOnboardingComplete Boolean   @default(false)
   isActive             Boolean   @default(true)
   googleId             String?   @unique
+  appleId              String?   @unique
   xpTotal              Int       @default(0)
   streakCount          Int       @default(0)
   lastActiveDate       DateTime?
