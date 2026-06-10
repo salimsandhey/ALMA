@@ -9,6 +9,7 @@
     "plugins": [
       "expo-router",
       "expo-speech-recognition",
+      "expo-apple-authentication",
       [
         "expo-image-picker",
         {
@@ -28,6 +29,7 @@
     ],
     "ios": {
       "supportsTablet": false,
+      "bundleIdentifier": "com.almalearn.app",
       "infoPlist": {
         "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition.",
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone."
