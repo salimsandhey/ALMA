@@ -1,4 +1,4 @@
-﻿-- AlterTable
+-- AlterTable
 ALTER TABLE "User" ADD COLUMN     "appleId" TEXT;
 
 -- CreateIndex

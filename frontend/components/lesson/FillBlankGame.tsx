@@ -6,11 +6,7 @@ import ConfidenceBadge from './ConfidenceBadge'
 import { similarity } from '../../lib/fuzzy'
 import { SpeechState, stateLabel } from '../../lib/speech'
 import { trackSpeech } from '../../lib/speechAnalytics'
-
-const NAVY = '#093373'
-const TEAL = '#0D9488'
-const GREY = '#6B7280'
-const WHITE = '#FFFFFF'
+import { NAVY, TEAL, GREY, WHITE, GOLD } from '../../constants/colors'
 
 interface GameCardProps {
   card: any
@@ -139,7 +135,7 @@ const styles = StyleSheet.create({
   card: { backgroundColor: WHITE, borderRadius: 16, padding: 22 },
   sentenceRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'center', marginBottom: 16 },
   sentenceText: { color: NAVY, fontSize: 21, fontWeight: '800', lineHeight: 28 },
-  blank: { borderBottomWidth: 2.5, borderBottomColor: '#EAB308', minWidth: 80, height: 28, marginHorizontal: 6 },
+  blank: { borderBottomWidth: 2.5, borderBottomColor: GOLD, minWidth: 80, height: 28, marginHorizontal: 6 },
   filledWord: { fontSize: 18, fontWeight: '700', borderBottomWidth: 2, borderBottomColor: TEAL, minWidth: 60, textAlign: 'center', lineHeight: 28 },
   hint: { color: GREY, fontSize: 12, fontStyle: 'italic', marginTop: 8, textAlign: 'center' },
   pillsRow: { flexDirection: 'row', flexWrap: 'nowrap', justifyContent: 'space-between', gap: 8, marginVertical: 16 },

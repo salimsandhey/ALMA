@@ -46,9 +46,13 @@ export const useLessonStore = create<LessonState>((set, get) => ({
     }
   },
   prevCard: () => set((s) => ({ currentCardIndex: Math.max(0, s.currentCardIndex - 1) })),
-  recordResult: (cardId, correct, xp) => set((s) => ({
-    cardResults: [...s.cardResults, { cardId, correct, xpEarned: xp }],
-    totalXpEarned: s.totalXpEarned + xp,
-  })),
+  recordResult: (cardId, correct, xp) => set((s) => {
+    const existing = s.cardResults.find((r) => r.cardId === cardId)
+    const updated = existing
+      ? s.cardResults.map((r) => r.cardId === cardId ? { cardId, correct, xpEarned: xp } : r)
+      : [...s.cardResults, { cardId, correct, xpEarned: xp }]
+    const totalXpEarned = updated.reduce((sum, r) => sum + r.xpEarned, 0)
+    return { cardResults: updated, totalXpEarned }
+  }),
   reset: () => set({ lesson: null, currentCardIndex: 0, cardResults: [], totalXpEarned: 0, isComplete: false }),
 }))

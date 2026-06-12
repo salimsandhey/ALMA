@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
   ActivityIndicator, Modal, ScrollView, Alert, Switch,
-  KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform, useWindowDimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -11,12 +11,7 @@ import { useRouter } from 'expo-router'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { deleteToken } from '../../lib/storage'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const BG = '#F3F4F6'
-const CARD = '#FFFFFF'
-const RED = '#EF4444'
+import { NAVY, GOLD, BG, CARD, RED } from '../../constants/colors'
 
 type Challenge = {
   id: string
@@ -34,6 +29,7 @@ export default function ChallengesScreen() {
   const router = useRouter()
   const queryClient = useQueryClient()
   const { clearAuth } = useAuthStore()
+  const { width: screenWidth } = useWindowDimensions()
 
   const [modalVisible, setModalVisible] = useState(false)
   const [editing, setEditing] = useState<Challenge | null>(null)
@@ -113,7 +109,7 @@ export default function ChallengesScreen() {
           onValueChange={(v) => toggleActive.mutate({ id: c.id, isActive: v })}
           trackColor={{ false: '#E5E7EB', true: '#93C5FD' }}
           thumbColor={c.isActive ? NAVY : '#9CA3AF'}
-          style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+          style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }], flexShrink: 0 }}
         />
       </View>
 
@@ -124,8 +120,8 @@ export default function ChallengesScreen() {
 
       <View style={styles.keywordsRow}>
         {c.keywords.slice(0, 5).map((k) => (
-          <View key={k} style={styles.keywordChip}>
-            <Text style={styles.keywordText}>{k}</Text>
+          <View key={k} style={[styles.keywordChip, { maxWidth: screenWidth * 0.4 }]}>
+            <Text style={styles.keywordText} numberOfLines={1}>{k}</Text>
           </View>
         ))}
         {c.keywords.length > 5 && (
@@ -233,8 +229,8 @@ export default function ChallengesScreen() {
                 {keywordsText.trim().length > 0 && (
                   <View style={styles.keywordsPreview}>
                     {keywordsText.split(',').map((k) => k.trim()).filter(Boolean).map((k) => (
-                      <View key={k} style={styles.keywordChip}>
-                        <Text style={styles.keywordText}>{k}</Text>
+                      <View key={k} style={[styles.keywordChip, { maxWidth: screenWidth * 0.4 }]}>
+                        <Text style={styles.keywordText} numberOfLines={1}>{k}</Text>
                       </View>
                     ))}
                   </View>
@@ -309,13 +305,13 @@ const styles = StyleSheet.create({
   keywordChip: { backgroundColor: '#EFF6FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   keywordText: { fontSize: 11, color: NAVY, fontWeight: '500' },
   moreKeywords: { fontSize: 11, color: '#9CA3AF', alignSelf: 'center' },
-  cardActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardActions: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   editBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: GOLD, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   editBtnText: { fontSize: 12, fontWeight: '700', color: '#FFF' },
   deleteBtn: { padding: 4 },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end', position: 'relative' },
-  modalSheet: { backgroundColor: CARD, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 20, paddingBottom: 36, maxHeight: '92%' },
+  modalSheet: { backgroundColor: CARD, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 20, paddingBottom: 36, maxHeight: '85%' },
   modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#D1D5DB', alignSelf: 'center', marginBottom: 12 },
   modalHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   modalTitle: { fontSize: 17, fontWeight: '700', color: '#1F2937' },

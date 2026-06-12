@@ -2,10 +2,7 @@ import React from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const WHITE = '#FFFFFF'
+import { NAVY, GOLD, WHITE } from '../../constants/colors'
 
 const badges = [
   {

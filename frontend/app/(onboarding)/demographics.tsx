@@ -1,12 +1,8 @@
-﻿import React, { useState } from 'react'
+import React, { useState } from 'react'
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const BG = '#F2F3F7'
-const WHITE = '#FFFFFF'
+import { NAVY, GOLD, BG, WHITE } from '../../constants/colors'
 
 type Gender = 'MALE' | 'FEMALE' | 'PREFER_NOT_TO_SAY'
 

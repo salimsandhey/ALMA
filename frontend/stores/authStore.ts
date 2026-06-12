@@ -9,6 +9,7 @@ export interface AuthUser {
   xpTotal: number
   streakCount: number
   isOnboardingComplete: boolean
+  lastGreetingDate: string | null
 }
 
 interface AuthState {

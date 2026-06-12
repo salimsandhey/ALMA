@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   rightCol: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   badge: {
     backgroundColor: '#FEF9C3',
-    borderColor: '#F5A623',
+    borderColor: '#F6B80D',
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 10,

@@ -8,11 +8,7 @@ import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { api } from '../lib/api'
 import TTSButton from '../components/TTSButton'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const GREY = '#6B7280'
-const BG = '#F3F4F6'
+import { NAVY, GOLD, GREY, BG } from '../constants/colors'
 
 const _speechMod = (() => {
   try { return require('expo-speech-recognition') } catch { return null }

@@ -13,12 +13,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { api } from '../../lib/api'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const GREY = '#6B7280'
-const GREEN = '#16A34A'
-const BG = '#F3F4F6'
+import { NAVY, GOLD, GREY, GREEN, BG } from '../../constants/colors'
 
 type EntertainmentItem = {
   id: string
@@ -72,7 +67,7 @@ function ContentCard({ item }: { item: EntertainmentItem }) {
               </View>
             )}
           </View>
-          <Text style={styles.cardTitle}>{item.title}</Text>
+          <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
           <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text>
         </View>
       </View>

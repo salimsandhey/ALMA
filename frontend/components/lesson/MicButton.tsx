@@ -5,6 +5,7 @@ import {
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { SpeechState, stateLabel } from '../../lib/speech'
+import { GOLD, TEAL } from '../../constants/colors'
 
 const _speechMod = (() => {
   try { return require('expo-speech-recognition') } catch { return null }
@@ -162,7 +163,7 @@ export default function MicButton({
         disabled={disabled}
         style={[
           styles.button,
-          { backgroundColor: listening ? '#EF4444' : tone === 'yellow' ? '#F5A623' : '#0D9488' },
+          { backgroundColor: listening ? '#EF4444' : tone === 'yellow' ? GOLD : TEAL },
           disabled && styles.buttonDisabled,
         ]}
         activeOpacity={0.8}
@@ -243,7 +244,7 @@ const styles = StyleSheet.create({
   cancelText: { color: '#6B7280', fontWeight: '600' },
   submitBtn: {
     flex: 1, paddingVertical: 13, borderRadius: 12,
-    alignItems: 'center', backgroundColor: '#0D9488',
+    alignItems: 'center', backgroundColor: TEAL,
   },
   submitText: { color: '#fff', fontWeight: '700' },
 })

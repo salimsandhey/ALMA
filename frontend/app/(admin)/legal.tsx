@@ -10,12 +10,7 @@ import { useRouter } from 'expo-router'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { deleteToken } from '../../lib/storage'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const BG = '#F3F4F6'
-const CARD = '#FFFFFF'
-const RED = '#EF4444'
+import { NAVY, GOLD, BG, CARD, RED } from '../../constants/colors'
 
 type Section = { title: string; body: string }
 type Tab = 'terms' | 'privacy'
@@ -269,16 +264,16 @@ const s = StyleSheet.create({
   defaultBadge:    { backgroundColor: '#FEF3C7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, alignSelf: 'flex-start' },
   defaultBadgeText:{ fontSize: 12, color: '#D97706', fontWeight: '600' },
   updatedText:     { fontSize: 12, color: '#9CA3AF' },
-  resetBtn:        { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8 },
+  resetBtn:        { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, flexShrink: 0 },
   resetBtnText:    { fontSize: 12, color: '#6B7280', fontWeight: '500' },
 
   sectionCard:       { backgroundColor: CARD, borderRadius: 14, padding: 14, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 },
   sectionCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   sectionNum:        { fontSize: 11, fontWeight: '700', color: '#9CA3AF', letterSpacing: 0.5 },
-  sectionActions:    { flexDirection: 'row', gap: 2 },
+  sectionActions:    { flexDirection: 'row', gap: 4 },
   orderBtn:          { padding: 6 },
   titleInput:        { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 14, fontWeight: '600', color: '#1F2937', backgroundColor: '#FAFAFA', marginBottom: 8 },
-  bodyInput:         { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 13, color: '#374151', backgroundColor: '#FAFAFA', minHeight: 80, lineHeight: 20 },
+  bodyInput:         { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 13, color: '#374151', backgroundColor: '#FAFAFA', minHeight: 80, maxHeight: 200, lineHeight: 20 },
 
   addBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13, borderWidth: 1, borderColor: NAVY, borderRadius: 12, borderStyle: 'dashed' },
   addBtnText: { fontSize: 14, fontWeight: '600', color: NAVY },

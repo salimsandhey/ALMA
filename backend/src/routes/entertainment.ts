@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express'
 import { verifyJWT } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { awardXP } from '../services/xpService'
-import { gradeQuizAnswersWithAI } from '../services/aiService'
+import { gradeQuizAnswersWithAI, checkRateLimit } from '../services/aiService'
 import { evaluateAndAward } from '../services/badgeService'
 
 const router = Router()
@@ -111,6 +111,12 @@ router.post('/:id/attempt', async (req: Request, res: Response): Promise<void> =
 
   if (!Array.isArray(answers) || answers.length === 0) {
     res.status(400).json({ error: 'answers array is required', code: 'VALIDATION_ERROR' })
+    return
+  }
+
+  const { allowed: quizAllowed } = await checkRateLimit(`rl:quiz-grade:${userId}`, 10)
+  if (!quizAllowed) {
+    res.status(429).json({ error: 'Daily quiz submission limit reached. Come back tomorrow!', code: 'RATE_LIMITED' })
     return
   }
 

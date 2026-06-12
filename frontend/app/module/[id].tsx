@@ -11,13 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import BottomNavBar from '../../components/BottomNavBar'
-
-const NAVY = '#093373'
-const TEAL = '#0D9488'
-const GOLD = '#F5A623'
-const BG = '#F2F3F7'
-const WHITE = '#FFFFFF'
-const GREY = '#6B7280'
+import { NAVY, TEAL, GOLD, BG, WHITE, GREY } from '../../constants/colors'
 
 type GameType =
   | 'FLASHCARD'

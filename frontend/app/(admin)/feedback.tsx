@@ -10,11 +10,7 @@ import { useRouter } from 'expo-router'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { deleteToken } from '../../lib/storage'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const BG = '#F3F4F6'
-const CARD = '#FFFFFF'
+import { NAVY, GOLD, BG, CARD } from '../../constants/colors'
 
 type FeedbackItem = {
   id: string
@@ -90,7 +86,7 @@ export default function FeedbackScreen() {
       <View style={[styles.card, item.needsReply ? styles.cardNeedsReply : styles.cardReplied]}>
         {/* Name row */}
         <View style={styles.nameRow}>
-          <Text style={styles.senderName}>{item.displayName}</Text>
+          <Text style={styles.senderName} numberOfLines={1}>{item.displayName}</Text>
           {item.needsReply && (
             <View style={styles.needsReplyBadge}>
               <Text style={styles.needsReplyText}>Needs Reply</Text>
@@ -259,14 +255,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 }, elevation: 2,
   },
 
-  nameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  senderName: { fontSize: 15, fontWeight: '700', color: '#1F2937' },
+  nameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 8 },
+  senderName: { fontSize: 15, fontWeight: '700', color: '#1F2937', flex: 1 },
 
   // "Needs Reply" badge — gold bg, navy text
-  needsReplyBadge: { backgroundColor: GOLD, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
+  needsReplyBadge: { backgroundColor: GOLD, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20, flexShrink: 0 },
   needsReplyText: { fontSize: 11, color: NAVY, fontWeight: '700' },
 
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' },
   topicBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   topicText: { fontSize: 11, color: '#374151', fontWeight: '500' },
   ratingEmoji: { fontSize: 16 },
@@ -298,7 +294,7 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end', position: 'relative' },
   modalSheet: {
     backgroundColor: CARD, borderTopLeftRadius: 22, borderTopRightRadius: 22,
-    padding: 20, paddingBottom: 36,
+    padding: 20, paddingBottom: 36, maxHeight: '88%',
   },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   modalTitle: { fontSize: 17, fontWeight: '700', color: '#1F2937' },
@@ -314,7 +310,7 @@ const styles = StyleSheet.create({
 
   replyInput: {
     borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12,
-    padding: 14, fontSize: 14, color: '#1F2937', minHeight: 110,
+    padding: 14, fontSize: 14, color: '#1F2937', minHeight: 80,
     marginBottom: 16, textAlignVertical: 'top',
   },
   sendBtn: { backgroundColor: GOLD, borderRadius: 12, paddingVertical: 15, alignItems: 'center' },

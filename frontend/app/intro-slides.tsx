@@ -11,12 +11,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { useAuthStore } from '../stores/authStore'
+import { NAVY, GOLD, WHITE } from '../constants/colors'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const WHITE = '#FFFFFF'
 
 interface Slide {
   id: string

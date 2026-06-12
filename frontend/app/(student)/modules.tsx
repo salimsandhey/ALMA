@@ -11,13 +11,9 @@ import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { useRef, useEffect } from 'react'
 import { api } from '../../lib/api'
+import { NAVY, TEAL, GOLD, WHITE, GREY } from '../../constants/colors'
 
-const NAVY = '#093373'
-const TEAL = '#0D9488'
-const GOLD = '#F5A623'
 const BG = '#F2F3F7'
-const WHITE = '#FFFFFF'
-const GREY = '#6B7280'
 
 const EMOJI_BG_COLORS = [
   '#DBEAFE',

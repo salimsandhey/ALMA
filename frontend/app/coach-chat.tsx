@@ -10,12 +10,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { api } from '../lib/api'
 import TTSButton from '../components/TTSButton'
 import { useAuthStore } from '../stores/authStore'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const GREEN = '#22C55E'
-const GREY = '#6B7280'
-const BG = '#F3F4F6'
+import { NAVY, GOLD, GREEN, GREY, BG } from '../constants/colors'
 
 const _speechMod = (() => {
   try { return require('expo-speech-recognition') } catch { return null }
@@ -494,7 +489,7 @@ function UserMessage({
           {gr.hasError && (
             <View style={styles.grammarCard}>
               <View style={styles.cardHeader}>
-                <View style={[styles.cardTag, { backgroundColor: '#FBBF24' }]}>
+                <View style={[styles.cardTag, { backgroundColor: GOLD }]}>
                   <Text style={styles.cardTagText}>Grammar Check</Text>
                 </View>
               </View>

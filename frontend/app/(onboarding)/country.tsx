@@ -14,13 +14,9 @@ import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { useQuery } from '@tanstack/react-query'
 import { countryFlag } from '../../lib/countries'
+import { NAVY, GOLD, BG, WHITE } from '../../constants/colors'
 
 type Country = { id: string; name: string; code: string }
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const BG = '#F2F3F7'
-const WHITE = '#FFFFFF'
 
 type Gender = 'MALE' | 'FEMALE' | 'PREFER_NOT_TO_SAY'
 

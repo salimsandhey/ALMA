@@ -1,17 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Animated, TextInput, Modal,
+  Animated, Modal,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Ionicons } from '@expo/vector-icons'
+import * as Speech from 'expo-speech'
 import { api } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
+import { NAVY, GOLD } from '../constants/colors'
 
-const NAVY = '#093373'
-const GOLD = '#F5A623'
 const SESSION_SECONDS = 60
 const SKIP_AFTER_SECONDS = 30
 
@@ -31,10 +30,6 @@ function formatTime(s: number) {
   return `${m}:${sec < 10 ? '0' : ''}${sec}`
 }
 
-function todayKey() {
-  return `greeting_done_${new Date().toISOString().split('T')[0]}`
-}
-
 export default function DailyGreeting() {
   const router = useRouter()
   const { setGreetingDone } = useAuthStore()
@@ -42,12 +37,11 @@ export default function DailyGreeting() {
   const [messages, setMessages] = useState<Msg[]>([])
   const [loading, setLoading] = useState(false)
   const [timeLeft, setTimeLeft] = useState(SESSION_SECONDS)
-  const [showSkip, setShowSkip] = useState(false)
+  const [showSkipModal, setShowSkipModal] = useState(false)
   const [timeUp, setTimeUp] = useState(false)
   const [listening, setListening] = useState(false)
+  const [speaking, setSpeaking] = useState(false)
   const [interimText, setInterimText] = useState('')
-  const [fallbackVisible, setFallbackVisible] = useState(false)
-  const [fallbackText, setFallbackText] = useState('')
   const lastActivityRef = useRef(Date.now())
   const scrollRef = useRef<ScrollView>(null)
   const pulseAnim = useRef(new Animated.Value(1)).current
@@ -56,7 +50,10 @@ export default function DailyGreeting() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
-    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+      Speech.stop()
+    }
   }, [])
 
   // Pulse animation for mic
@@ -96,18 +93,35 @@ export default function DailyGreeting() {
   useSpeechHook('end', () => { setListening(false); setInterimText('') })
   useSpeechHook('error', () => { setListening(false); setInterimText('') })
 
+  const speakText = useCallback((text: string) => {
+    Speech.stop()
+    setSpeaking(true)
+    Speech.speak(text, {
+      language: 'en-US',
+      pitch: 1.0,
+      rate: 0.9,
+      onDone: () => setSpeaking(false),
+      onStopped: () => setSpeaking(false),
+      onError: () => setSpeaking(false),
+    })
+  }, [])
+
   const fetchAlmaReply = useCallback(async (msgs: Msg[]) => {
     setLoading(true)
     try {
       const { data } = await api.post('/api/ai/daily-greeting', { messages: msgs })
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }])
+      const reply: string = data.reply
+      setMessages((prev) => [...prev, { role: 'assistant', content: reply }])
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
+      speakText(reply)
     } catch {
-      setMessages((prev) => [...prev, { role: 'assistant', content: "Good morning! How are you feeling today?" }])
+      const fallback = "Good morning! How are you feeling today?"
+      setMessages((prev) => [...prev, { role: 'assistant', content: fallback }])
+      speakText(fallback)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [speakText])
 
   const startSession = useCallback(() => {
     setScreen('chat')
@@ -122,7 +136,7 @@ export default function DailyGreeting() {
         }
         const inactiveSecs = (Date.now() - lastActivityRef.current) / 1000
         if (inactiveSecs >= SKIP_AFTER_SECONDS) {
-          setShowSkip(true)
+          setShowSkipModal(true)
         }
         return prev - 1
       })
@@ -132,7 +146,7 @@ export default function DailyGreeting() {
   const handleUserResponse = useCallback(async (text: string) => {
     if (!text.trim() || loading) return
     lastActivityRef.current = Date.now()
-    setShowSkip(false)
+    setShowSkipModal(false)
     setListening(false)
 
     const updated: Msg[] = [...messages, { role: 'user', content: text.trim() }]
@@ -144,11 +158,11 @@ export default function DailyGreeting() {
   const handleMicPress = async () => {
     if (loading || timeUp) return
 
-    if (!IS_NATIVE) {
-      setFallbackText('')
-      setFallbackVisible(true)
-      return
-    }
+    // Stop TTS so the user can speak
+    Speech.stop()
+    setSpeaking(false)
+
+    if (!IS_NATIVE) return
 
     if (listening) {
       SpeechModule.stop()
@@ -158,11 +172,7 @@ export default function DailyGreeting() {
 
     try {
       const perm = await SpeechModule.requestPermissionsAsync()
-      if (!perm.granted) {
-        setFallbackText('')
-        setFallbackVisible(true)
-        return
-      }
+      if (!perm.granted) return
     } catch { /* continue */ }
 
     setListening(true)
@@ -173,15 +183,11 @@ export default function DailyGreeting() {
     }
   }
 
-  const handleFallbackSubmit = () => {
-    const trimmed = fallbackText.trim()
-    if (trimmed) handleUserResponse(trimmed)
-    setFallbackVisible(false)
-    setFallbackText('')
-  }
-
   const markDoneAndGoHome = useCallback(async () => {
-    await AsyncStorage.setItem(todayKey(), 'true')
+    Speech.stop()
+    try {
+      await api.post('/api/ai/greeting-done', {})
+    } catch { /* non-blocking — proceed anyway */ }
     setGreetingDone(true)
     router.replace('/(student)/home')
   }, [router, setGreetingDone])
@@ -199,9 +205,6 @@ export default function DailyGreeting() {
           </Text>
           <TouchableOpacity style={styles.startBtn} onPress={startSession} activeOpacity={0.85}>
             <Text style={styles.startBtnText}>Start  ›</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.skipBtn} onPress={markDoneAndGoHome} activeOpacity={0.7}>
-            <Text style={styles.skipBtnText}>Skip for now</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -286,15 +289,6 @@ export default function DailyGreeting() {
         )}
       </ScrollView>
 
-      {/* Skip prompt */}
-      {showSkip && !loading && (
-        <View style={styles.skipBanner}>
-          <Text style={styles.skipBannerText}>No rush! Tap below or</Text>
-          <TouchableOpacity onPress={markDoneAndGoHome} activeOpacity={0.8}>
-            <Text style={styles.skipLink}>  skip for today →</Text>
-          </TouchableOpacity>
-        </View>
-      )}
 
       {/* Live transcript preview */}
       {interimText.length > 0 && (
@@ -304,68 +298,57 @@ export default function DailyGreeting() {
         </View>
       )}
 
-      {/* Mic + Type */}
+      {/* Mic */}
       <View style={styles.micContainer}>
         <Text style={styles.micLabel}>
-          {listening ? 'Listening... speak now!' : 'Tap the mic to respond'}
+          {speaking ? 'ALMA is speaking...' : listening ? 'Listening... speak now!' : 'Tap the mic to respond'}
         </Text>
-        <View style={styles.inputRow}>
+        <View style={styles.micWrapper}>
+          {listening && (
+            <Animated.View
+              style={[
+                styles.pulseRing,
+                { transform: [{ scale: pulseAnim }], opacity: pulseOpacity },
+              ]}
+            />
+          )}
           <TouchableOpacity
-            style={styles.typeBtn}
-            onPress={() => { setFallbackText(''); setFallbackVisible(true) }}
-            activeOpacity={0.8}
-            disabled={loading || timeUp}
+            style={[styles.micButton, listening && styles.micButtonActive]}
+            onPress={handleMicPress}
+            activeOpacity={0.85}
+            disabled={loading}
           >
-            <Ionicons name="create-outline" size={22} color="rgba(255,255,255,0.7)" />
+            <Ionicons name={listening ? 'stop' : 'mic-outline'} size={36} color="#FFFFFF" />
           </TouchableOpacity>
-          <View style={styles.micWrapper}>
-            {listening && (
-              <Animated.View
-                style={[
-                  styles.pulseRing,
-                  { transform: [{ scale: pulseAnim }], opacity: pulseOpacity },
-                ]}
-              />
-            )}
-            <TouchableOpacity
-              style={[styles.micButton, listening && styles.micButtonActive]}
-              onPress={handleMicPress}
-              activeOpacity={0.85}
-              disabled={loading}
-            >
-              <Ionicons name={listening ? 'stop' : 'mic-outline'} size={36} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.typeBtn} />
         </View>
       </View>
 
-      {/* Fallback text input modal */}
-      <Modal visible={fallbackVisible} transparent animationType="fade">
+      {/* Skip confirmation modal */}
+      <Modal visible={showSkipModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Type your response</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={fallbackText}
-              onChangeText={setFallbackText}
-              placeholder="What would you say..."
-              placeholderTextColor="#9CA3AF"
-              autoFocus
-              returnKeyType="done"
-              onSubmitEditing={handleFallbackSubmit}
-            />
+            <Text style={styles.modalTitle}>Skip today's greeting?</Text>
+            <Text style={styles.modalBody}>
+              You can come back and chat with ALMA Coach tomorrow. Are you sure you want to skip?
+            </Text>
             <View style={styles.modalBtns}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setFallbackVisible(false)}>
-                <Text style={styles.cancelText}>Cancel</Text>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => {
+                lastActivityRef.current = Date.now()
+                setShowSkipModal(false)
+              }}>
+                <Text style={styles.cancelText}>Continue</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.submitBtn} onPress={handleFallbackSubmit}>
-                <Text style={styles.submitText}>Send</Text>
+              <TouchableOpacity style={styles.submitBtn} onPress={() => {
+                setShowSkipModal(false)
+                markDoneAndGoHome()
+              }}>
+                <Text style={styles.submitText}>Skip</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
+
     </SafeAreaView>
   )
 }
@@ -501,23 +484,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 2,
   },
-  skipBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  skipBannerText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 13,
-  },
-  skipLink: {
-    color: GOLD,
-    fontSize: 13,
-    fontWeight: '600',
-  },
   interimPreview: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -544,20 +510,6 @@ const styles = StyleSheet.create({
   micLabel: {
     color: 'rgba(255,255,255,0.5)',
     fontSize: 13,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 24,
-  },
-  typeBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   micWrapper: {
     alignItems: 'center',
@@ -620,14 +572,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
-  skipBtn: {
-    paddingVertical: 10,
-  },
-  skipBtnText: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 14,
-    textDecorationLine: 'underline',
-  },
   // Time's up screen
   timeUpContainer: {
     flex: 1,
@@ -683,16 +627,13 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     color: NAVY,
-    marginBottom: 16,
+    marginBottom: 8,
   },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 15,
-    color: '#111',
-    backgroundColor: '#F9FAFB',
+  modalBody: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+    marginBottom: 20,
   },
   modalBtns: {
     flexDirection: 'row',

@@ -8,11 +8,7 @@ import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const BG = '#F3F4F6'
-const GREY = '#6B7280'
+import { NAVY, GOLD, BG, GREY } from '../constants/colors'
 
 const EMOJIS = ['😞', '😐', '🙂', '😊', '🤩']
 const TOPICS = ['General', 'Lesson Content', 'AI Coach', 'Technical Issue', 'Suggestion']

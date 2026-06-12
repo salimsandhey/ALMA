@@ -6,11 +6,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import { NAVY, GOLD, BG, GREY } from '../constants/colors'
 
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const BG = '#F3F4F6'
-const GREY = '#6B7280'
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 
 const SLIDES = [

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   TextInput, ActivityIndicator, Modal, ScrollView,
-  Alert, Dimensions, Image,
+  Alert, Dimensions, Image, useWindowDimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -12,11 +12,8 @@ import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { deleteToken } from '../../lib/storage'
 import { generateStudentPDF, generateMasterPDF } from '../../lib/pdfReports'
+import { NAVY, GOLD, BG, CARD } from '../../constants/colors'
 
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const BG = '#F3F4F6'
-const CARD = '#FFFFFF'
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 
 // Derive flag emoji from ISO country code e.g. 'MG' → 🇲🇬
@@ -91,6 +88,8 @@ export default function StudentsScreen() {
   const [downloadingMaster, setDownloadingMaster] = useState(false)
   const [downloadingStudent, setDownloadingStudent] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { width } = useWindowDimensions()
+  const isNarrow = width < 380
 
   // Debounce search
   useEffect(() => {
@@ -221,8 +220,8 @@ export default function StudentsScreen() {
           {/* Name + badge + country */}
           <View style={styles.cardMid}>
             <View style={styles.nameRow}>
-              <Text style={styles.studentName}>{item.displayName}</Text>
-              <View style={[styles.statusBadge, item.isActive ? styles.activeBadge : styles.inactiveBadge]}>
+              <Text style={styles.studentName} numberOfLines={1}>{item.displayName}</Text>
+              <View style={[styles.statusBadge, item.isActive ? styles.activeBadge : styles.inactiveBadge, { flexShrink: 0 }]}>
                 <Text style={[styles.statusText, item.isActive ? styles.activeText : styles.inactiveText]}>
                   {item.isActive ? 'Active' : 'Inactive'}
                 </Text>
@@ -264,12 +263,12 @@ export default function StudentsScreen() {
       {/* Toolbar */}
       <View style={styles.toolbar}>
         <Text style={styles.totalText}>{data?.total ?? allStudents.length} students</Text>
-        <TouchableOpacity style={styles.masterReportBtn} onPress={handleMasterReport} disabled={downloadingMaster}>
+        <TouchableOpacity style={[styles.masterReportBtn, { flexShrink: 1 }]} onPress={handleMasterReport} disabled={downloadingMaster}>
           {downloadingMaster
             ? <ActivityIndicator size="small" color={NAVY} />
             : <>
-                <Ionicons name="download-outline" size={14} color={NAVY} />
-                <Text style={styles.masterReportText}>Download Master Report</Text>
+                <Ionicons name="download-outline" size={16} color={NAVY} />
+                {!isNarrow && <Text style={styles.masterReportText} numberOfLines={1}>Download Master Report</Text>}
               </>
           }
         </TouchableOpacity>
@@ -357,9 +356,9 @@ export default function StudentsScreen() {
                         <Text style={styles.sheetAvatarText}>{detail.displayName?.[0]?.toUpperCase()}</Text>
                       </View>
                     )}
-                    <View>
+                    <View style={{ flex: 1 }}>
                       <Text style={styles.sheetName}>{detail.displayName}</Text>
-                      <View style={[styles.statusBadge, detail.isActive ? styles.activeBadge : styles.inactiveBadge]}>
+                      <View style={[styles.statusBadge, detail.isActive ? styles.activeBadge : styles.inactiveBadge, { alignSelf: 'flex-start' }]}>
                         <Text style={[styles.statusText, detail.isActive ? styles.activeText : styles.inactiveText]}>
                           {detail.isActive ? 'Active' : 'Inactive'}
                         </Text>
@@ -368,7 +367,7 @@ export default function StudentsScreen() {
                   </View>
 
                   <TouchableOpacity
-                    style={styles.downloadReportBtn}
+                    style={[styles.downloadReportBtn, { alignSelf: 'flex-end' }]}
                     onPress={() => handleStudentReport(detail)}
                     disabled={downloadingStudent}
                   >
@@ -558,12 +557,13 @@ const styles = StyleSheet.create({
   toolbar: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6,
+    flexWrap: 'wrap',
   },
   totalText: { fontSize: 14, color: '#6B7280', fontWeight: '500' },
   masterReportBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: GOLD, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10,
-    minWidth: 48, justifyContent: 'center',
+    minWidth: 48, justifyContent: 'center', flexShrink: 1,
   },
   masterReportText: { fontSize: 12, fontWeight: '700', color: NAVY },
 
@@ -598,7 +598,7 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 20, fontWeight: '700', color: NAVY },
   cardMid: { flex: 1 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 },
-  studentName: { fontSize: 15, fontWeight: '700', color: '#1F2937' },
+  studentName: { fontSize: 15, fontWeight: '700', color: '#1F2937', flex: 1 },
   country: { fontSize: 12, color: '#6B7280' },
 
   statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
@@ -608,7 +608,7 @@ const styles = StyleSheet.create({
   activeText: { color: '#059669' },
   inactiveText: { color: '#6B7280' },
 
-  statsRow: { flexDirection: 'row', gap: 14 },
+  statsRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   statFire: { fontSize: 12, color: '#F97316', fontWeight: '600' },
   statXP: { fontSize: 12, color: '#D97706', fontWeight: '600' },
   statComplete: { fontSize: 12, color: '#059669', fontWeight: '600' },
@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
   sheet: {
     backgroundColor: CARD,
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    maxHeight: SCREEN_HEIGHT * 0.91,
+    maxHeight: SCREEN_HEIGHT * 0.85,
     paddingBottom: 32,
   },
   sheetHandle: {
@@ -628,7 +628,7 @@ const styles = StyleSheet.create({
   sheetLoading: { height: 200, justifyContent: 'center', alignItems: 'center' },
   sheetContent: { paddingHorizontal: 20, paddingBottom: 20 },
 
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14 },
+  sheetHeader: { flexDirection: 'column', paddingVertical: 14, gap: 10 },
   sheetAvatarWrap: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   sheetAvatar: {
     width: 52, height: 52, borderRadius: 26,
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
 
   downloadReportBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    borderWidth: 1, borderColor: NAVY, borderRadius: 8,
+    backgroundColor: GOLD, borderRadius: 8,
     paddingHorizontal: 10, paddingVertical: 6,
   },
   downloadReportText: { fontSize: 11, fontWeight: '600', color: NAVY },

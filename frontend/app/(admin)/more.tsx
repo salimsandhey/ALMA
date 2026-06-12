@@ -5,11 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useAuthStore } from '../../stores/authStore'
 import { deleteToken } from '../../lib/storage'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const BG = '#F3F4F6'
-const CARD = '#FFFFFF'
+import { NAVY, GOLD, BG, CARD } from '../../constants/colors'
 
 const SECTIONS = [
   {
@@ -91,7 +87,7 @@ export default function MoreScreen() {
             </View>
             <View style={s.cardText}>
               <Text style={s.cardTitle}>{item.title}</Text>
-              <Text style={s.cardSub}>{item.subtitle}</Text>
+              <Text style={s.cardSub} numberOfLines={2}>{item.subtitle}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#D1D5DB" />
           </TouchableOpacity>
@@ -130,5 +126,5 @@ const s = StyleSheet.create({
   iconWrap:   { width: 52, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   cardText:   { flex: 1 },
   cardTitle:  { fontSize: 15, fontWeight: '700', color: '#1F2937', marginBottom: 3 },
-  cardSub:    { fontSize: 12, color: '#9CA3AF', lineHeight: 17 },
+  cardSub:    { fontSize: 12, color: '#9CA3AF', lineHeight: 18 },
 })

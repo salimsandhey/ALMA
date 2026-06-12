@@ -73,6 +73,7 @@ model User {
   xpTotal              Int       @default(0)
   streakCount          Int       @default(0)
   lastActiveDate       DateTime?
+  lastGreetingDate     String?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 

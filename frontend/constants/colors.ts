@@ -1,15 +1,29 @@
+// Single source of truth for all brand colors.
+// Import from here — never declare local color constants in screen files.
+
+export const NAVY      = '#093373'
+export const NAVY_DARK = '#072868'
+export const GOLD      = '#F6B80D'
+export const TEAL      = '#0D9488'
+export const BG        = '#F3F4F6'
+export const WHITE     = '#FFFFFF'
+export const GREY      = '#6B7280'
+export const LIGHT_GREY = '#9CA3AF'
+export const CARD      = '#FFFFFF'
+export const RED       = '#EF4444'
+export const GREEN     = '#16A34A'
+
+// Legacy object — kept for any code already using Colors.xxx
 export const Colors = {
-  navy: '#0B1F4B',
-  midBlue: '#1A3A6B',
-  gold: '#F5A623',
-  teal: '#0D7A6B',
-  lightBlue: '#EEF2F8',
-  white: '#FFFFFF',
-  textDark: '#1A1A2E',
-  textMid: '#444466',
-  textLight: '#8888AA',
-  green: '#1E7A45',
-  red: '#DC2626',
-  cardBg: '#FFFFFF',
-  border: '#C5CDE0',
+  navy:      NAVY,
+  navyDark:  NAVY_DARK,
+  gold:      GOLD,
+  teal:      TEAL,
+  bg:        BG,
+  white:     WHITE,
+  grey:      GREY,
+  lightGrey: LIGHT_GREY,
+  card:      CARD,
+  red:       RED,
+  green:     GREEN,
 }

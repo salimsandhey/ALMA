@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { z } from 'zod'
 import { verifyJWT } from '../middleware/auth'
+import { prisma } from '../lib/prisma'
 import {
   streamCoachResponse,
   checkGrammar,
@@ -37,6 +38,20 @@ router.post('/daily-greeting', async (req: Request, res: Response): Promise<void
     res.json(result)
   } catch {
     res.status(500).json({ error: 'AI service error', code: 'INTERNAL_ERROR' })
+  }
+})
+
+// POST /api/ai/greeting-done  — marks greeting completed for today
+router.post('/greeting-done', async (req: Request, res: Response): Promise<void> => {
+  const today = new Date().toISOString().split('T')[0]
+  try {
+    await prisma.user.update({
+      where: { id: req.user!.userId },
+      data: { lastGreetingDate: today },
+    })
+    res.json({ lastGreetingDate: today })
+  } catch {
+    res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR' })
   }
 })
 
@@ -91,7 +106,7 @@ router.post('/coach/message', async (req: Request, res: Response): Promise<void>
     // Fail-safe fallback if Redis query fails
   }
 
-  const { allowed, remaining } = await checkRateLimit(`rl:coach-msg:${userId}`, 50)
+  const { allowed, remaining } = await checkRateLimit(`rl:coach-msg:${userId}`, 30)
   if (!allowed) {
     res.status(429).json({ error: 'Daily message limit reached. Come back tomorrow!', code: 'OUT_OF_MESSAGES' })
     return
@@ -116,7 +131,7 @@ router.post('/coach', async (req: Request, res: Response): Promise<void> => {
   }
 
   const userId = req.user!.userId
-  const { allowed } = await checkRateLimit(`rl:coach-msg:${userId}`, 50)
+  const { allowed } = await checkRateLimit(`rl:coach-msg:${userId}`, 30)
   if (!allowed) {
     res.status(429).json({ error: 'Daily message limit reached.', code: 'RATE_LIMITED' })
     return
@@ -142,7 +157,7 @@ router.post('/grammar-check', async (req: Request, res: Response): Promise<void>
   }
 
   const userId = req.user!.userId
-  const { allowed } = await checkRateLimit(`rl:coach:${userId}`, 100)
+  const { allowed } = await checkRateLimit(`rl:coach:${userId}`, 30)
   if (!allowed) {
     res.status(429).json({ error: 'Daily grammar check limit reached. Please try again tomorrow.', code: 'RATE_LIMITED' })
     return
@@ -195,7 +210,7 @@ router.post('/pronunciation', async (req: Request, res: Response): Promise<void>
   }
 
   const userId = req.user!.userId
-  const { allowed } = await checkRateLimit(`rl:pronunciation:${userId}`, 100)
+  const { allowed } = await checkRateLimit(`rl:pronunciation:${userId}`, 50)
   if (!allowed) {
     res.status(429).json({ error: 'Daily pronunciation limit reached.', code: 'RATE_LIMITED' })
     return

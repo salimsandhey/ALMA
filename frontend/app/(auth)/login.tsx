@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Modal,
+  useWindowDimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -23,10 +24,7 @@ import { api, API_BASE_URL } from '../../lib/api'
 import { saveToken, deleteToken } from '../../lib/storage'
 import { useAuthStore } from '../../stores/authStore'
 import * as AppleAuthentication from 'expo-apple-authentication'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const WHITE = '#FFFFFF'
+import { NAVY, GOLD, WHITE } from '../../constants/colors'
 
 function getErrorMessage(error: any, fallback: string) {
   return error?.response?.data?.error || error?.message || fallback
@@ -34,6 +32,7 @@ function getErrorMessage(error: any, fallback: string) {
 
 export default function Login() {
   const router = useRouter()
+  const { width: screenWidth } = useWindowDimensions()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -184,13 +183,13 @@ export default function Login() {
         style={styles.kav}
       >
         <ScrollView
-          contentContainerStyle={styles.scroll}
+          contentContainerStyle={[styles.scroll, { paddingHorizontal: Math.max(16, screenWidth * 0.07) }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
           <Image
             source={require('../../assets/logo.png')}
-            style={styles.logoImage}
+            style={[styles.logoImage, { width: screenWidth * 0.42, height: undefined, aspectRatio: 160 / 52 }]}
             resizeMode="contain"
           />
 
@@ -305,7 +304,7 @@ export default function Login() {
         animationType="fade"
         onRequestClose={() => setForgotVisible(false)}
       >
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { paddingHorizontal: Math.max(16, screenWidth * 0.07) }]}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Forgot Password?</Text>
             <Text style={styles.modalSubtitle}>
@@ -379,15 +378,12 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   kav: { flex: 1 },
   scroll: {
-    paddingHorizontal: 24,
     paddingTop: 28,
     paddingBottom: 32,
     alignItems: 'center',
   },
 
   logoImage: {
-    width: 160,
-    height: 52,
     marginBottom: 20,
   },
 
@@ -575,7 +571,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.55)',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 28,
   },
   modalCard: {
     width: '100%',

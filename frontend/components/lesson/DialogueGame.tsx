@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
     paddingTop: 14,
-    paddingBottom: 8,
+    paddingBottom: 60,
     alignItems: 'center',
     gap: 10,
   },

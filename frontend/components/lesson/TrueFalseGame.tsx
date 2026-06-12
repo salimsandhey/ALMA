@@ -114,7 +114,7 @@ export default function TrueFalseGame({ card, onComplete, xpReward, currentIndex
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  headerRow: { flexDirection: 'row', marginBottom: 14, alignItems: 'center', justifyContent: 'space-between' },
+  headerRow: { flexDirection: 'row', marginBottom: 10, alignItems: 'center', justifyContent: 'space-between' },
   stepText: { color: '#6B7280', fontSize: 12, fontWeight: '700' },
   card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20 },
   label: { color: '#6B7280', fontSize: 11, fontWeight: '600', textAlign: 'center', marginBottom: 10 },

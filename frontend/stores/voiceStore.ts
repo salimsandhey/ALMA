@@ -24,9 +24,7 @@ export const useVoiceStore = create<VoiceState>((set) => ({
   },
 }))
 
-// Both use en-US so the same base voice is used on the device.
-// Male  → natural pitch (device's default en-US voice, which tends to be male)
-// Female → significantly raised pitch to sound distinctly female
+// Fallback options used only when Kokoro is unreachable
 export function getSpeakOptions(gender: VoiceGender): Speech.SpeechOptions {
   return gender === 'male'
     ? { language: 'en-US', pitch: 1.0, rate: 0.85 }

@@ -11,11 +11,7 @@ import * as ImagePicker from 'expo-image-picker'
 import { api } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
 import { countryFlag } from '../lib/countries'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const BG = '#F3F4F6'
-const GREY = '#6B7280'
+import { NAVY, GOLD, BG, GREY } from '../constants/colors'
 
 const GENDERS = [
   { value: 'MALE', label: 'Male' },

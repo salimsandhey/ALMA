@@ -13,11 +13,7 @@ import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const BG = '#F3F4F6'
-const GREY = '#9CA3AF'
+import { NAVY, GOLD, BG, LIGHT_GREY as GREY } from '../constants/colors'
 
 const BADGE_IMAGES: Record<string, any> = {
   complete_first_lesson: require('../assets/badges/first step.png'),
@@ -121,7 +117,7 @@ function BadgeCard({ badge, earned }: { badge: Badge; earned: boolean }) {
           <Image source={imageSource} style={[styles.badgeImage, !earned && styles.badgeImageLocked]} resizeMode="contain" />
         ) : (
           <View style={styles.badgeFallback}>
-            <Ionicons name="ribbon" size={30} color={earned ? GOLD : '#CBD5E1'} />
+            <Ionicons name="ribbon" size={24} color={earned ? GOLD : '#CBD5E1'} />
           </View>
         )}
       </View>
@@ -149,7 +145,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 17, fontWeight: '700', color: '#111827' },
   headerSpacer: { width: 30 },
   loader: { marginTop: 60 },
-  body: { paddingHorizontal: 16, paddingTop: 8 },
+  body: { paddingHorizontal: 16, paddingTop: 16 },
   banner: {
     backgroundColor: GOLD,
     borderRadius: 18,
@@ -167,52 +163,56 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 24,
+    gap: 10,
+    marginBottom: 28,
   },
   badgeCard: {
     width: '30.5%',
-    borderRadius: 14,
-    paddingHorizontal: 6,
-    paddingTop: 10,
-    paddingBottom: 10,
+    borderRadius: 16,
+    paddingHorizontal: 8,
+    paddingTop: 24,
+    paddingBottom: 20,
     alignItems: 'center',
-    borderWidth: 1.5,
   },
   badgeCardEarned: {
     backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
     borderColor: GOLD,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
   badgeCardLocked: {
-    backgroundColor: '#F8FAFC',
-    borderColor: '#F1F5F9',
+    backgroundColor: '#F4F6FA',
   },
   badgeImageWrap: {
-    width: 52,
-    height: 52,
+    width: 44,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 10,
   },
   badgeImage: {
-    width: 52,
-    height: 52,
+    width: 28,
+    height: 28,
   },
   badgeImageLocked: {
-    opacity: 0.3,
+    opacity: 0.55,
   },
   badgeFallback: {
-    width: 52,
-    height: 52,
+    width: 44,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
   },
   badgeName: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
     color: '#111827',
     textAlign: 'center',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   badgeNameLocked: {
     color: '#94A3B8',
@@ -221,10 +221,10 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: GREY,
     textAlign: 'center',
-    lineHeight: 12,
+    lineHeight: 13,
   },
   badgeDescLocked: {
     color: '#CBD5E1',
   },
-  bottomSpacer: { height: 32 },
+  bottomSpacer: { height: 48 },
 })

@@ -9,13 +9,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter, useLocalSearchParams } from 'expo-router'
-
-const NAVY = '#093373'
-const TEAL = '#0D9488'
-const GOLD = '#F5A623'
-const BG = '#F2F3F7'
-const WHITE = '#FFFFFF'
-const GREY = '#6B7280'
+import { NAVY, TEAL, GOLD, BG, WHITE, GREY } from '../../constants/colors'
 
 function BadgePill({ name }: { name: string }) {
   const scale = useRef(new Animated.Value(0)).current
@@ -31,8 +25,9 @@ function BadgePill({ name }: { name: string }) {
 
 export default function LessonCompleteScreen() {
   const router = useRouter()
-  const { xpEarned, moduleId, score, nextLessonId, badges, dailyVisitBonus } = useLocalSearchParams<{
+  const { xpEarned, isFirstCompletion, moduleId, score, nextLessonId, badges, dailyVisitBonus } = useLocalSearchParams<{
     xpEarned: string
+    isFirstCompletion: string
     moduleId: string
     score: string
     nextLessonId: string
@@ -41,6 +36,7 @@ export default function LessonCompleteScreen() {
   }>()
   const badgeList = badges ? badges.split(',').filter(Boolean) : []
   const showDailyVisitBonus = dailyVisitBonus === '1'
+  const isRepeat = isFirstCompletion === '0'
 
   return (
     <SafeAreaView style={styles.container}>
@@ -52,7 +48,11 @@ export default function LessonCompleteScreen() {
         <View style={styles.scoreCard}>
           <Text style={styles.scoreLabel}>SCORE</Text>
           <Text style={styles.scoreValue}>{score}%</Text>
-          <Text style={styles.xpValue}>+{xpEarned} ALMA Points</Text>
+          {isRepeat ? (
+            <Text style={styles.xpRepeat}>Points already earned for this lesson</Text>
+          ) : (
+            <Text style={styles.xpValue}>+{xpEarned} ALMA Points</Text>
+          )}
         </View>
 
         {/* Daily Visit bonus */}
@@ -155,6 +155,13 @@ const styles = StyleSheet.create({
     color: GOLD,
     fontSize: 18,
     fontWeight: '700',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  xpRepeat: {
+    color: GREY,
+    fontSize: 13,
+    fontWeight: '500',
     textAlign: 'center',
     marginTop: 4,
   },

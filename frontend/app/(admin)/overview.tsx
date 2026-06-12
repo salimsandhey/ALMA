@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Modal, FlatList, ActivityIndicator, Alert, Image,
+  Modal, FlatList, ActivityIndicator, Alert, Image, useWindowDimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
@@ -11,11 +11,7 @@ import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { deleteToken } from '../../lib/storage'
 import { generateMasterPDF } from '../../lib/pdfReports'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const BG = '#F3F4F6'
-const CARD = '#FFFFFF'
+import { NAVY, GOLD, BG, CARD } from '../../constants/colors'
 
 type OverviewData = {
   totalStudents: number
@@ -48,6 +44,8 @@ export default function OverviewScreen() {
   const { clearAuth } = useAuthStore()
   const [helpModalVisible, setHelpModalVisible] = useState(false)
   const [downloading, setDownloading] = useState(false)
+  const { width } = useWindowDimensions()
+  const isNarrow = width < 380
 
   const { data, isLoading } = useQuery<OverviewData>({
     queryKey: ['admin-overview'],
@@ -151,15 +149,15 @@ export default function OverviewScreen() {
         <View style={styles.moduleHeader}>
           <Text style={styles.moduleHeading}>Module Completion{'\n'}Rates</Text>
           <TouchableOpacity
-            style={styles.downloadBtn}
+            style={[styles.downloadBtn, { flexShrink: 1 }]}
             onPress={handleDownloadReport}
             disabled={downloading}
           >
             {downloading
               ? <ActivityIndicator size="small" color={NAVY} />
               : <>
-                  <Ionicons name="download-outline" size={14} color={NAVY} />
-                  <Text style={styles.downloadBtnText}>Download Master Report</Text>
+                  <Ionicons name="download-outline" size={16} color={NAVY} />
+                  {!isNarrow && <Text style={styles.downloadBtnText} numberOfLines={1}>Download Master Report</Text>}
                 </>
             }
           </TouchableOpacity>
@@ -208,6 +206,7 @@ export default function OverviewScreen() {
               </TouchableOpacity>
             </View>
             <FlatList
+              style={{ maxHeight: 300 }}
               data={data?.needsHelpStudents ?? []}
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
@@ -267,6 +266,7 @@ const styles = StyleSheet.create({
     padding: 16,
     flex: 1,
     minWidth: '44%',
+    flexGrow: 1,
     gap: 4,
     shadowColor: '#000',
     shadowOpacity: 0.05,
@@ -283,6 +283,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 14,
+    flexWrap: 'wrap',
   },
   moduleHeading: { fontSize: 16, fontWeight: '700', color: '#1F2937', lineHeight: 22 },
   downloadBtn: {
@@ -295,6 +296,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     minWidth: 48,
     justifyContent: 'center',
+    flexShrink: 1,
   },
   downloadBtnText: { fontSize: 12, fontWeight: '700', color: NAVY },
 

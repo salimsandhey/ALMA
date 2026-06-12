@@ -17,10 +17,8 @@ import { StatusBar } from 'expo-status-bar'
 import { api } from '../../lib/api'
 import { saveToken } from '../../lib/storage'
 import { useAuthStore } from '../../stores/authStore'
+import { NAVY, GOLD, WHITE } from '../../constants/colors'
 
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const WHITE = '#FFFFFF'
 const RESEND_SECONDS = 47
 
 export default function VerifyOtp() {

@@ -29,12 +29,6 @@ router.post('/lesson/complete', async (req: Request, res: Response): Promise<voi
   const { lessonId, cardResults } = parsed.data
   const userId = req.user!.userId
 
-  // Server-side XP calculation: 20 pts × (correct / total), min 0
-  const totalCards = cardResults?.length ?? 0
-  const correctCount = cardResults?.filter(r => r.correct).length ?? 0
-  const calculatedXp = totalCards > 0 ? Math.round((correctCount / totalCards) * 20) : 20
-  const hasPerfectLessonScore = totalCards > 0 && correctCount === totalCards
-
   try {
     const lesson = await prisma.lesson.findUnique({
       where: { id: lessonId },
@@ -45,6 +39,12 @@ router.post('/lesson/complete', async (req: Request, res: Response): Promise<voi
       res.status(404).json({ error: 'Lesson not found', code: 'NOT_FOUND' })
       return
     }
+
+    // Server-side XP calculation: lesson.xpReward × (correct / total), 0 if no results
+    const totalCards = cardResults?.length ?? 0
+    const correctCount = cardResults?.filter(r => r.correct).length ?? 0
+    const calculatedXp = totalCards > 0 ? Math.round((correctCount / totalCards) * lesson.xpReward) : 0
+    const hasPerfectLessonScore = totalCards > 0 && correctCount === totalCards
 
     const existing = await prisma.lessonProgress.findUnique({
       where: { userId_lessonId: { userId, lessonId } },
@@ -142,6 +142,7 @@ router.post('/lesson/complete', async (req: Request, res: Response): Promise<voi
 
     res.json({
       xpEarned: isFirstCompletion ? calculatedXp : 0,
+      isFirstCompletion,
       newXpTotal,
       streakUpdated: true,
       newStreakCount,

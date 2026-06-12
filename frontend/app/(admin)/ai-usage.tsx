@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator,
+  ActivityIndicator, useWindowDimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
@@ -10,11 +10,7 @@ import { useRouter } from 'expo-router'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { deleteToken } from '../../lib/storage'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const BG = '#F3F4F6'
-const CARD = '#FFFFFF'
+import { NAVY, GOLD, BG, CARD } from '../../constants/colors'
 
 type Period = '7d' | '30d' | 'all'
 
@@ -72,6 +68,8 @@ export default function AiUsageScreen() {
   const router = useRouter()
   const { clearAuth } = useAuthStore()
   const [period, setPeriod] = useState<Period>('30d')
+  const { width } = useWindowDimensions()
+  const isNarrow = width < 375
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-ai-usage', period],
@@ -107,8 +105,10 @@ export default function AiUsageScreen() {
             style={[s.periodBtn, period === p && s.periodBtnActive]}
             onPress={() => setPeriod(p)}
           >
-            <Text style={[s.periodText, period === p && s.periodTextActive]}>
-              {p === '7d' ? 'Last 7 days' : p === '30d' ? 'Last 30 days' : 'All time'}
+            <Text numberOfLines={1} style={[s.periodText, period === p && s.periodTextActive]}>
+              {isNarrow
+                ? (p === '7d' ? '7d' : p === '30d' ? '30d' : 'All')
+                : (p === '7d' ? 'Last 7 days' : p === '30d' ? 'Last 30 days' : 'All time')}
             </Text>
           </TouchableOpacity>
         ))}
@@ -132,8 +132,8 @@ export default function AiUsageScreen() {
             <View style={s.costLeft}>
               <Ionicons name="card-outline" size={22} color={NAVY} />
               <View style={{ marginLeft: 10 }}>
-                <Text style={s.costLabel}>Estimated Cost (Gemini Flash)</Text>
-                <Text style={s.costHint}>$0.075/1M input · $0.30/1M output</Text>
+                <Text numberOfLines={2} style={s.costLabel}>Estimated Cost (Gemini Flash)</Text>
+                <Text numberOfLines={1} style={s.costHint}>$0.075/1M input · $0.30/1M output</Text>
               </View>
             </View>
             <Text style={s.costValue}>{formatCost(data?.overview.estimatedCost ?? 0)}</Text>
@@ -196,8 +196,8 @@ export default function AiUsageScreen() {
                 <View style={s.userRank}>
                   <Text style={s.rankText}>#{i + 1}</Text>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.userName}>{u.displayName}</Text>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text numberOfLines={1} style={s.userName}>{u.displayName}</Text>
                   <Text style={s.userMeta}>{u.calls} calls · {formatTokens(u.totalTokens)} tokens</Text>
                 </View>
                 <Text style={s.userCost}>{formatCost(u.estimatedCost)}</Text>
@@ -254,10 +254,10 @@ const s = StyleSheet.create({
   rowBorder: { borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
 
   // Chart
-  chartArea: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 100, paddingBottom: 20 },
+  chartArea: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 120, paddingBottom: 20 },
   barCol:    { flex: 1, alignItems: 'center', gap: 3 },
-  bar:       { width: '100%', borderRadius: 3, minHeight: 4 },
-  barDate:   { fontSize: 8, color: '#9CA3AF', textAlign: 'center' },
+  bar:       { width: '100%', borderRadius: 3, minHeight: 4, minWidth: 6, maxWidth: 24 },
+  barDate:   { fontSize: 8, color: '#9CA3AF', textAlign: 'center', transform: [{ rotate: '45deg' }] },
   barCount:  { fontSize: 8, color: '#6B7280', textAlign: 'center' },
 
   // By feature
@@ -275,5 +275,5 @@ const s = StyleSheet.create({
   rankText:  { fontSize: 11, fontWeight: '700', color: NAVY },
   userName:  { fontSize: 13, fontWeight: '600', color: '#1F2937' },
   userMeta:  { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
-  userCost:  { fontSize: 13, fontWeight: '700', color: NAVY },
+  userCost:  { fontSize: 13, fontWeight: '700', color: NAVY, flexShrink: 0 },
 })

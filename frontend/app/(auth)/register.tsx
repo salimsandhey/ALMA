@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   View,
   Text,
@@ -10,6 +10,9 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
+  Modal,
+  Dimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -19,10 +22,7 @@ import { Ionicons } from '@expo/vector-icons'
 import * as Linking from 'expo-linking'
 import Svg, { Path } from 'react-native-svg'
 import { api, API_BASE_URL } from '../../lib/api'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const WHITE = '#FFFFFF'
+import { NAVY, GOLD, WHITE } from '../../constants/colors'
 
 function getErrorMessage(error: any, fallback: string) {
   return error?.response?.data?.error || error?.message || fallback
@@ -30,6 +30,7 @@ function getErrorMessage(error: any, fallback: string) {
 
 export default function Register() {
   const router = useRouter()
+  const { width: screenWidth } = useWindowDimensions()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -38,6 +39,20 @@ export default function Register() {
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [legalSheet, setLegalSheet] = useState<'terms' | 'privacy' | null>(null)
+  const [legalData, setLegalData] = useState<{
+    terms: { title: string; body: string }[]
+    privacy: { title: string; body: string }[]
+  }>({ terms: LEGAL_TERMS, privacy: LEGAL_PRIVACY })
+
+  useEffect(() => {
+    api.get('/api/legal').then(res => {
+      setLegalData({
+        terms: res.data.terms?.sections ?? LEGAL_TERMS,
+        privacy: res.data.privacy?.sections ?? LEGAL_PRIVACY,
+      })
+    }).catch(() => { /* keep fallback */ })
+  }, [])
 
   const passwordsMismatch =
     confirmPassword.length > 0 && password.length > 0 && password !== confirmPassword
@@ -125,13 +140,13 @@ export default function Register() {
           style={styles.kav}
         >
           <ScrollView
-            contentContainerStyle={styles.scroll}
+            contentContainerStyle={[styles.scroll, { paddingHorizontal: Math.max(16, screenWidth * 0.07) }]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
             <Image
               source={require('../../assets/logo.png')}
-              style={styles.logoImage}
+              style={[styles.logoImage, { width: screenWidth * 0.42, height: undefined, aspectRatio: 160 / 52 }]}
               resizeMode="contain"
             />
 
@@ -221,11 +236,11 @@ export default function Register() {
                   {acceptedTerms ? <Ionicons name="checkmark" size={10} color={WHITE} /> : null}
                 </View>
                 <Text style={styles.termsText}>I agree to the </Text>
-                <TouchableOpacity activeOpacity={0.8}>
+                <TouchableOpacity activeOpacity={0.8} onPress={() => setLegalSheet('terms')}>
                   <Text style={styles.termsLink}>Terms & Conditions</Text>
                 </TouchableOpacity>
                 <Text style={styles.termsText}> and </Text>
-                <TouchableOpacity activeOpacity={0.8}>
+                <TouchableOpacity activeOpacity={0.8} onPress={() => setLegalSheet('privacy')}>
                   <Text style={styles.termsLink}>Privacy Policy</Text>
                 </TouchableOpacity>
               </TouchableOpacity>
@@ -275,9 +290,65 @@ export default function Register() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+
+      {/* Legal bottom sheet */}
+      <Modal visible={legalSheet !== null} transparent animationType="slide" onRequestClose={() => setLegalSheet(null)}>
+        <View style={styles.legalOverlay}>
+          <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={() => setLegalSheet(null)} activeOpacity={1} />
+          <View style={styles.legalSheet}>
+            <View style={styles.legalHandle} />
+            {/* Tabs */}
+            <View style={styles.legalTabs}>
+              <TouchableOpacity
+                style={[styles.legalTab, legalSheet === 'terms' && styles.legalTabActive]}
+                onPress={() => setLegalSheet('terms')}
+              >
+                <Text style={[styles.legalTabText, legalSheet === 'terms' && styles.legalTabTextActive]}>Terms & Conditions</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.legalTab, legalSheet === 'privacy' && styles.legalTabActive]}
+                onPress={() => setLegalSheet('privacy')}
+              >
+                <Text style={[styles.legalTabText, legalSheet === 'privacy' && styles.legalTabTextActive]}>Privacy Policy</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.legalScroll} showsVerticalScrollIndicator={false}>
+              {(legalSheet === 'terms' ? legalData.terms : legalData.privacy).map((item, i) => (
+                <View key={i} style={styles.legalSection}>
+                  <Text style={styles.legalSectionTitle}>{item.title}</Text>
+                  <Text style={styles.legalSectionBody}>{item.body}</Text>
+                </View>
+              ))}
+            </ScrollView>
+            <TouchableOpacity style={styles.legalCloseBtn} onPress={() => setLegalSheet(null)}>
+              <Text style={styles.legalCloseBtnText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   )
 }
+
+const LEGAL_TERMS = [
+  { title: '1. Acceptance', body: 'By using ALMA you agree to these Terms. If you do not agree, please stop using the app.' },
+  { title: '2. Who can use ALMA', body: 'ALMA is intended for students and trainers involved in hospitality education programmes. Users must be at least 13 years of age.' },
+  { title: '3. Your Account', body: 'You are responsible for keeping your login credentials secure. Do not share your account with others.' },
+  { title: '4. Acceptable Use', body: 'Do not misuse ALMA. This includes no harmful, abusive, or illegal content. Violations may result in account suspension.' },
+  { title: '5. Intellectual Property', body: 'All ALMA content, modules, and AI responses are owned by or licensed to the ALMA platform. You may not copy or redistribute them.' },
+  { title: '6. Disclaimers', body: 'ALMA is an educational tool. We do not guarantee employment outcomes. Content is provided as-is.' },
+  { title: '7. Changes', body: 'We may update these terms. Continued use after changes means you accept the new terms.' },
+]
+
+const LEGAL_PRIVACY = [
+  { title: 'What we collect', body: 'We collect your name, email, age, gender, native language, and learning progress to personalise your experience.' },
+  { title: 'How we use it', body: 'Your data is used solely to deliver and improve ALMA. We do not sell your data to third parties.' },
+  { title: 'Data storage', body: 'Data is stored securely using industry-standard infrastructure with standard encryption practices.' },
+  { title: 'Voice data', body: 'Speech recognition is processed locally on your device. We do not store audio recordings.' },
+  { title: 'Your rights', body: 'You can request deletion of your account and data at any time via the Edit Profile page.' },
+  { title: 'Cookies', body: 'We use minimal session cookies required for authentication only.' },
+  { title: 'Contact', body: "For privacy concerns, contact your programme administrator or reach out via the app's feedback form." },
+]
 
 function RuleRow({ met, label }: { met: boolean; label: string }) {
   return (
@@ -318,15 +389,12 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   kav: { flex: 1 },
   scroll: {
-    paddingHorizontal: 24,
     paddingTop: 28,
     paddingBottom: 32,
     alignItems: 'center',
   },
 
   logoImage: {
-    width: 160,
-    height: 52,
     marginBottom: 20,
   },
 
@@ -549,4 +617,38 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
+
+  legalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  legalSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: Dimensions.get('window').height * 0.78,
+    paddingBottom: 24,
+    flexDirection: 'column',
+  },
+  legalHandle: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: '#D1D5DB', alignSelf: 'center', marginTop: 12, marginBottom: 8,
+  },
+  legalTabs: {
+    flexDirection: 'row', gap: 8,
+    paddingHorizontal: 20, paddingBottom: 12, paddingTop: 4,
+  },
+  legalTab: {
+    flex: 1, paddingVertical: 8, borderRadius: 20,
+    backgroundColor: '#F3F4F6', alignItems: 'center',
+  },
+  legalTabActive: { backgroundColor: GOLD },
+  legalTabText: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
+  legalTabTextActive: { color: NAVY },
+  legalScroll: { paddingHorizontal: 20, flex: 1, marginBottom: 8 },
+  legalSection: { marginBottom: 16 },
+  legalSectionTitle: { fontSize: 14, fontWeight: '700', color: NAVY, marginBottom: 4 },
+  legalSectionBody: { fontSize: 13, color: '#374151', lineHeight: 20 },
+  legalCloseBtn: {
+    marginHorizontal: 20, marginTop: 12,
+    backgroundColor: NAVY, borderRadius: 12, paddingVertical: 14, alignItems: 'center',
+  },
+  legalCloseBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 })

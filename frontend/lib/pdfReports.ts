@@ -1,9 +1,7 @@
 import * as Print from 'expo-print'
 import * as Sharing from 'expo-sharing'
 import { Alert } from 'react-native'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
+import { NAVY, GOLD } from '../constants/colors'
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return 'Never'

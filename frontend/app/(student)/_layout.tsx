@@ -1,8 +1,6 @@
 import { Tabs } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-
-const NAVY = '#093373'
-const GREY = '#9CA3AF'
+import { NAVY, LIGHT_GREY } from '../../constants/colors'
 
 export default function StudentLayout() {
   return (
@@ -10,7 +8,7 @@ export default function StudentLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: NAVY,
-        tabBarInactiveTintColor: GREY,
+        tabBarInactiveTintColor: LIGHT_GREY,
         tabBarStyle: {
           borderTopColor: '#E5E7EB',
           backgroundColor: '#fff',

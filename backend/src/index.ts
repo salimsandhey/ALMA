@@ -32,6 +32,7 @@ import musicRouter from './routes/music'
 import challengesRouter from './routes/challenges'
 import entertainmentRouter from './routes/entertainment'
 import referenceRouter from './routes/reference'
+import ttsRouter from './routes/tts'
 
 const app = express()
 
@@ -68,6 +69,7 @@ app.use('/api/music', musicRouter)
 app.use('/api/challenges', challengesRouter)
 app.use('/api/entertainment', entertainmentRouter)
 app.use('/api', referenceRouter)
+app.use('/api/tts', ttsRouter)
 
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date() })

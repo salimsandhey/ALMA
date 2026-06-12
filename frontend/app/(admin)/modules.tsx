@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   TextInput, ActivityIndicator, ScrollView, Alert, Switch, Image,
+  useWindowDimensions,
 } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -11,13 +12,7 @@ import { useRouter } from 'expo-router'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { deleteToken } from '../../lib/storage'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const BG = '#F3F4F6'
-const CARD = '#FFFFFF'
-const GREEN = '#059669'
-const RED = '#EF4444'
+import { NAVY, GOLD, BG, CARD, GREEN, RED } from '../../constants/colors'
 
 type GameType = 'FLASHCARD' | 'WORD_MATCH' | 'FILL_BLANK' | 'TRUE_FALSE' | 'DIALOGUE' | 'IMAGE_SPEAK'
 type View = 'list' | 'module' | 'lesson'
@@ -160,7 +155,7 @@ function ModuleListView({ onLogout, onNew, onEdit }: {
                 <Text style={s.modEmoji}>{MODULE_EMOJIS[m.title] ?? '📚'}</Text>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={s.modTitle} numberOfLines={1}>{m.title}</Text>
+                    <Text style={[s.modTitle, { flex: 1 }]} numberOfLines={1}>{m.title}</Text>
                     {!m.isPublished && <View style={s.draftBadge}><Text style={s.draftText}>Draft</Text></View>}
                   </View>
                   <Text style={s.modMeta}>{m.lessonCount} lessons · {m.avgCompletion}% avg</Text>
@@ -170,7 +165,7 @@ function ModuleListView({ onLogout, onNew, onEdit }: {
                   onValueChange={(v) => toggle.mutate({ id: m.id, v })}
                   trackColor={{ false: '#E5E7EB', true: '#93C5FD' }}
                   thumbColor={m.isPublished ? NAVY : '#9CA3AF'}
-                  style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+                  style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }], flexShrink: 0 }}
                 />
                 <TouchableOpacity style={s.goldBtn} onPress={() => onEdit(m.id)}>
                   <Ionicons name="pencil-outline" size={13} color="#FFF" />
@@ -299,7 +294,7 @@ function ModuleEditorView({ moduleId, onBack, onEditLesson, onAddLesson, onLogou
                 <View key={l.id} style={[{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 10 }, i < lessons.length - 1 && { borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }]}>
                   <Text style={{ fontSize: 22 }}>{info?.emoji ?? '📝'}</Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#1F2937' }}>{l.title}</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#1F2937' }} numberOfLines={1}>{l.title}</Text>
                     <Text style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>{info?.label} · {l.xpReward} XP</Text>
                   </View>
                   <TouchableOpacity onPress={() => onEditLesson(l.id)} style={{ padding: 6 }}>
@@ -543,13 +538,13 @@ function TrueFalseForm({ cards, addCard, updateCard, removeCard }: any) {
               style={[s.tfBtn, c.isTrue && s.tfBtnTrue]}
               onPress={() => updateCard(c.id, { isTrue: true })}
             >
-              <Text style={[s.tfBtnText, c.isTrue && { color: GREEN }]}>✓ True</Text>
+              <Text style={[s.tfBtnText, c.isTrue && { color: GREEN }]} numberOfLines={1}>✓ True</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[s.tfBtn, !c.isTrue && s.tfBtnFalse]}
               onPress={() => updateCard(c.id, { isTrue: false })}
             >
-              <Text style={[s.tfBtnText, !c.isTrue && { color: RED }]}>✗ False</Text>
+              <Text style={[s.tfBtnText, !c.isTrue && { color: RED }]} numberOfLines={1}>✗ False</Text>
             </TouchableOpacity>
           </View>
           <TextInput style={s.input} placeholder="Explanation shown after the student answers" placeholderTextColor="#9CA3AF" value={c.explanation} onChangeText={(v) => updateCard(c.id, { explanation: v })} multiline />
@@ -583,7 +578,7 @@ function DialogueForm({ content, onChange }: { content: any; onChange: (c: any) 
     <View style={s.card}>
       <Text style={s.cardLabel}>DIALOGUE SCENARIO</Text>
       <TextInput
-        style={[s.input, { minHeight: 64 }]}
+        style={[s.input, { minHeight: 56, maxHeight: 120 }]}
         placeholder="Describe the scenario (e.g. Introduce yourself to a new friend at a hotel.)"
         placeholderTextColor="#9CA3AF"
         value={scenario}
@@ -675,6 +670,11 @@ const QUICK_EMOJIS = [
 function ImageEmojiPicker({
   value, onChange, label = 'Image / Emoji',
 }: { value: string; onChange: (v: string) => void; label?: string }) {
+  const { width } = useWindowDimensions()
+  const emojiNumColumns = 8
+  const emojiPadding = 16 + 16 // card padding (left + right)
+  const emojiGap = 4
+  const emojiCellSize = Math.floor((width - emojiPadding * 2 - emojiGap * (emojiNumColumns - 1)) / emojiNumColumns)
   const [mode, setMode] = useState<'image' | 'emoji'>(() => {
     if (!value || value.startsWith('http')) return 'image'
     if (value.startsWith('local:')) return 'image'
@@ -718,13 +718,13 @@ function ImageEmojiPicker({
           style={[s2.modeBtn, mode === 'image' && s2.modeBtnActive]}
           onPress={() => { setMode('image'); if (isEmoji) onChange('') }}
         >
-          <Text style={[s2.modeBtnText, mode === 'image' && s2.modeBtnTextActive]}>📷 Image</Text>
+          <Text style={[s2.modeBtnText, mode === 'image' && s2.modeBtnTextActive]} numberOfLines={1}>📷 Image</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[s2.modeBtn, mode === 'emoji' && s2.modeBtnActive]}
           onPress={() => { setMode('emoji'); if (isRemote) onChange('') }}
         >
-          <Text style={[s2.modeBtnText, mode === 'emoji' && s2.modeBtnTextActive]}>😀 Emoji</Text>
+          <Text style={[s2.modeBtnText, mode === 'emoji' && s2.modeBtnTextActive]} numberOfLines={1}>😀 Emoji</Text>
         </TouchableOpacity>
       </View>
 
@@ -770,7 +770,7 @@ function ImageEmojiPicker({
           {showEmojiGrid && (
             <View style={s2.emojiGrid}>
               {QUICK_EMOJIS.map((e) => (
-                <TouchableOpacity key={e} onPress={() => { onChange(e); setShowEmojiGrid(false) }} style={s2.emojiCell}>
+                <TouchableOpacity key={e} onPress={() => { onChange(e); setShowEmojiGrid(false) }} style={[s2.emojiCell, { width: emojiCellSize, height: emojiCellSize }]}>
                   <Text style={s2.emojiCellText}>{e}</Text>
                 </TouchableOpacity>
               ))}
@@ -843,7 +843,7 @@ const s = StyleSheet.create({
 
   dot:        { width: 10, height: 10, borderRadius: 5, backgroundColor: '#E5E7EB' },
   dotActive:  { backgroundColor: NAVY, width: 14, height: 14, borderRadius: 7 },
-  dotLine:    { width: 56, height: 2, backgroundColor: '#E5E7EB' },
+  dotLine:    { flex: 1, height: 2, backgroundColor: '#E5E7EB' },
 
   gameTypeRow:      { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, paddingHorizontal: 10, borderRadius: 10, marginBottom: 4 },
   gameTypeRowActive:{ backgroundColor: '#EFF6FF' },

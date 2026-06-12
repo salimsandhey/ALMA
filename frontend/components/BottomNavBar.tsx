@@ -2,9 +2,8 @@ import React from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter, usePathname } from 'expo-router'
-
-const NAVY = '#093373'
-const GREY = '#9CA3AF'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { NAVY, LIGHT_GREY } from '../constants/colors'
 
 const TABS = [
   { label: 'Home', icon: 'home-outline', route: '/(student)/home' },
@@ -17,9 +16,9 @@ const TABS = [
 export default function BottomNavBar() {
   const router = useRouter()
   const pathname = usePathname()
-
+  const insets = useSafeAreaInsets()
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { height: 60 + insets.bottom, paddingBottom: 8 + insets.bottom }]}>
       {TABS.map(tab => {
         const active =
           pathname.includes(tab.label.toLowerCase()) ||
@@ -31,8 +30,8 @@ export default function BottomNavBar() {
             onPress={() => router.push(tab.route as any)}
             activeOpacity={0.7}
           >
-            <Ionicons name={tab.icon as any} size={20} color={active ? NAVY : GREY} />
-            <Text style={[styles.label, { color: active ? NAVY : GREY }]} numberOfLines={1}>{tab.label}</Text>
+            <Ionicons name={tab.icon as any} size={20} color={active ? NAVY : LIGHT_GREY} />
+            <Text style={[styles.label, { color: active ? NAVY : LIGHT_GREY }]} numberOfLines={1}>{tab.label}</Text>
           </TouchableOpacity>
         )
       })}
@@ -46,8 +45,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
-    height: 60,
-    paddingBottom: 8,
   },
   tab: {
     flex: 1,

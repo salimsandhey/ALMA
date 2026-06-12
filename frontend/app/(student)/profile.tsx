@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Switch, Share, Image,
+  Switch, Share, Image, useWindowDimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
@@ -11,20 +11,8 @@ import { deleteToken } from '../../lib/storage'
 import { useAuthStore } from '../../stores/authStore'
 import { useVoiceStore, VoiceGender } from '../../stores/voiceStore'
 import { api } from '../../lib/api'
+import { NAVY, NAVY_DARK, GOLD, BG, GREY } from '../../constants/colors'
 
-const NAVY = '#093373'
-const NAVY_DARK = '#072868'
-const GOLD = '#F5A623'
-const BG = '#F3F4F6'
-const GREY = '#6B7280'
-
-// Hex geometry: flat-top, circumradius R
-const R = 28
-const HEX_W = R * 2          // 56px total width
-const HEX_H = Math.round(R * Math.sqrt(3))  // 48px total height
-const TRI_W = Math.round(R / 2)             // 14px triangle width
-const RECT_W = R              // 28px center rect width
-const TRI_H = Math.round(HEX_H / 2)        // 24px half-height
 
 function getLevel(xp: number): string {
   if (xp >= 1000) return 'Advanced'
@@ -62,6 +50,17 @@ export default function Profile() {
   const router = useRouter()
   const { user } = useAuthStore()
   const { voiceGender, setVoiceGender } = useVoiceStore()
+
+  // Responsive scale based on available card width
+  const { width: screenWidth } = useWindowDimensions()
+  const scale = Math.min(1, (screenWidth - 48) / 320)
+
+  // Hex geometry: flat-top, circumradius R (scaled)
+  const HEX_W = 56 * scale
+  const HEX_H = 48 * scale
+  const TRI_W = 14 * scale
+  const RECT_W = 28 * scale
+  const TRI_H = Math.round(HEX_H / 2)
 
   const { data: profile } = useQuery<ProfileData>({
     queryKey: ['profile'],
@@ -123,11 +122,11 @@ export default function Profile() {
 
         {/* ── Hero card ── */}
         <View style={styles.heroCard}>
-          <View style={styles.decorCircle1} />
-          <View style={styles.decorCircle2} />
+          <View style={[styles.decorCircle1, { width: screenWidth * 0.41, height: screenWidth * 0.41, borderRadius: screenWidth * 0.205 }]} />
+          <View style={[styles.decorCircle2, { width: screenWidth * 0.18, height: screenWidth * 0.18, borderRadius: screenWidth * 0.09 }]} />
 
           {/* Avatar */}
-          <View style={styles.avatarRing}>
+          <View style={[styles.avatarRing, { width: 86 * scale, height: 86 * scale, borderRadius: 43 * scale }]}>
             {profile?.avatarUrl ? (
               <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImg} />
             ) : (
@@ -155,9 +154,9 @@ export default function Profile() {
 
           {/* Stats */}
           <View style={styles.statsRow}>
-            <StatBox icon="star" value={String(xp)} label="XP" />
-            <StatBox icon="flame" value={String(streak)} label="Streak" />
-            <StatBox icon="checkmark-circle-outline" value={`${donePercent}%`} label="Done" />
+            <StatBox icon="star" value={String(xp)} label="XP" hexW={HEX_W} hexH={HEX_H} triW={TRI_W} triH={TRI_H} rectW={RECT_W} />
+            <StatBox icon="flame" value={String(streak)} label="Streak" hexW={HEX_W} hexH={HEX_H} triW={TRI_W} triH={TRI_H} rectW={RECT_W} />
+            <StatBox icon="checkmark-circle-outline" value={`${donePercent}%`} label="Done" hexW={HEX_W} hexH={HEX_H} triW={TRI_W} triH={TRI_H} rectW={RECT_W} />
           </View>
         </View>
 
@@ -248,19 +247,21 @@ export default function Profile() {
 
 // ── Flat-top hexagon stat box ─────────────────────────────────────────────────
 
-function StatBox({ icon, value, label }: { icon: any; value: string; label: string }) {
+type StatBoxProps = { icon: any; value: string; label: string; hexW: number; hexH: number; triW: number; triH: number; rectW: number }
+
+function StatBox({ icon, value, label, hexW, hexH, triW, triH, rectW }: StatBoxProps) {
   return (
-    <View style={styles.statBox}>
+    <View style={[styles.statBox, { minWidth: hexW }]}>
       {/* Flat-top hexagon: left triangle + center rect + right triangle */}
-      <View style={{ width: HEX_W, height: HEX_H, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ width: hexW, height: hexH, alignItems: 'center', justifyContent: 'center' }}>
         {/* Left-pointing triangle (tip at left) */}
         <View style={{
           position: 'absolute', left: 0,
           width: 0, height: 0,
           borderStyle: 'solid',
-          borderRightWidth: TRI_W,
-          borderTopWidth: TRI_H,
-          borderBottomWidth: TRI_H,
+          borderRightWidth: triW,
+          borderTopWidth: triH,
+          borderBottomWidth: triH,
           borderRightColor: 'rgba(255,255,255,0.13)',
           borderTopColor: 'transparent',
           borderBottomColor: 'transparent',
@@ -268,9 +269,9 @@ function StatBox({ icon, value, label }: { icon: any; value: string; label: stri
         {/* Center rectangle */}
         <View style={{
           position: 'absolute',
-          left: TRI_W,
-          width: RECT_W,
-          height: HEX_H,
+          left: triW,
+          width: rectW,
+          height: hexH,
           backgroundColor: 'rgba(255,255,255,0.13)',
         }} />
         {/* Right-pointing triangle (tip at right) */}
@@ -278,9 +279,9 @@ function StatBox({ icon, value, label }: { icon: any; value: string; label: stri
           position: 'absolute', right: 0,
           width: 0, height: 0,
           borderStyle: 'solid',
-          borderLeftWidth: TRI_W,
-          borderTopWidth: TRI_H,
-          borderBottomWidth: TRI_H,
+          borderLeftWidth: triW,
+          borderTopWidth: triH,
+          borderBottomWidth: triH,
           borderLeftColor: 'rgba(255,255,255,0.13)',
           borderTopColor: 'transparent',
           borderBottomColor: 'transparent',
@@ -330,17 +331,14 @@ const styles = StyleSheet.create({
   },
   decorCircle1: {
     position: 'absolute', right: -40, top: -40,
-    width: 160, height: 160, borderRadius: 80,
     backgroundColor: 'rgba(255,255,255,0.05)',
   },
   decorCircle2: {
     position: 'absolute', right: 14, top: 14,
-    width: 70, height: 70, borderRadius: 35,
     backgroundColor: 'rgba(255,255,255,0.05)',
   },
 
   avatarRing: {
-    width: 86, height: 86, borderRadius: 43,
     borderWidth: 3, borderColor: 'rgba(255,255,255,0.5)',
     overflow: 'hidden', marginBottom: 12,
   },
@@ -369,7 +367,7 @@ const styles = StyleSheet.create({
 
   // Stats
   statsRow: { flexDirection: 'row', gap: 20, alignItems: 'flex-start' },
-  statBox: { alignItems: 'center', gap: 6, minWidth: HEX_W },
+  statBox: { alignItems: 'center', gap: 6 },
   statValue: { color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
   statLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 11 },
 

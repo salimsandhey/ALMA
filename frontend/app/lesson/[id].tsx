@@ -13,6 +13,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { useLessonStore } from '../../stores/lessonStore'
+import { NAVY, TEAL, GOLD, BG, WHITE, GREY } from '../../constants/colors'
 
 import BottomNavBar from '../../components/BottomNavBar'
 import FlashcardGame from '../../components/lesson/FlashcardGame'
@@ -22,11 +23,6 @@ import TrueFalseGame from '../../components/lesson/TrueFalseGame'
 import DialogueGame from '../../components/lesson/DialogueGame'
 import ImageSpeakGame from '../../components/lesson/ImageSpeakGame'
 
-const NAVY = '#093373'
-const TEAL = '#0D9488'
-const BG = '#F2F3F7'
-const WHITE = '#FFFFFF'
-const GREY = '#6B7280'
 
 const GAME_INSTRUCTIONS: Record<string, string> = {
   FLASHCARD: 'Say the word out loud!',
@@ -117,6 +113,7 @@ export default function LessonScreen() {
     let badgesUnlocked: string[] = []
     let serverXpEarned = 0
     let dailyVisitBonus = false
+    let isFirstCompletion = true
     try {
       const { data } = await api.post('/api/progress/lesson/complete', {
         lessonId: id,
@@ -125,6 +122,7 @@ export default function LessonScreen() {
       badgesUnlocked = data.badgesUnlocked ?? []
       serverXpEarned = data.xpEarned ?? 0
       dailyVisitBonus = data.dailyVisitBonus ?? false
+      isFirstCompletion = data.isFirstCompletion ?? true
     } catch {
       // Progress save failed — still navigate so user isn't stuck
     }
@@ -138,6 +136,7 @@ export default function LessonScreen() {
       pathname: '/lesson/complete',
       params: {
         xpEarned: String(serverXpEarned),
+        isFirstCompletion: isFirstCompletion ? '1' : '0',
         moduleId: lesson?.moduleId ?? '',
         score: String(score),
         nextLessonId: lesson?.nextLessonId ?? '',
@@ -148,7 +147,7 @@ export default function LessonScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerSideBtn} onPress={() => router.back()}>
@@ -341,7 +340,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   segmentActive: {
-    backgroundColor: '#EAB308',
+    backgroundColor: GOLD,
   },
   segmentInactive: {
     backgroundColor: '#D1D5DB',

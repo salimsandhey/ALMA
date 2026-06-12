@@ -18,13 +18,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Ionicons } from '@expo/vector-icons'
 import { api } from '../../lib/api'
 import TTSButton from '../../components/TTSButton'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const GREY = '#6B7280'
-const GREEN = '#16A34A'
-const RED = '#EF4444'
-const BG = '#F3F4F6'
+import { NAVY, GOLD, GREY, GREEN, RED, BG } from '../../constants/colors'
 
 // ─── Speech recognition (graceful fallback if not in native build) ────────────
 const _speechMod = (() => {

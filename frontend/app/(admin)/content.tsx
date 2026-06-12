@@ -11,11 +11,7 @@ import { useRouter } from 'expo-router'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { deleteToken } from '../../lib/storage'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const BG = '#F3F4F6'
-const CARD = '#FFFFFF'
+import { NAVY, GOLD, BG, CARD } from '../../constants/colors'
 
 type ContentItem = {
   id: string
@@ -137,7 +133,7 @@ export default function ContentScreen() {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.cardTitle}>{item.title}</Text>
-          <Text style={styles.cardUrl} numberOfLines={1}>{item.url}</Text>
+          <Text style={styles.cardUrl} numberOfLines={1} ellipsizeMode="tail">{item.url}</Text>
           <View style={[styles.typeBadge, item.type === 'VIDEO' ? styles.videoBadge : styles.articleBadge]}>
             <Text style={styles.typeBadgeText}>{item.type === 'VIDEO' ? 'Video' : 'Article'}</Text>
           </View>
@@ -332,13 +328,13 @@ const styles = StyleSheet.create({
   videoBadge: { backgroundColor: '#DBEAFE' },
   articleBadge: { backgroundColor: '#F3F4F6' },
   typeBadgeText: { fontSize: 10, fontWeight: '600', color: '#374151' },
-  cardActions: { flexDirection: 'row', gap: 8, paddingTop: 4 },
+  cardActions: { flexDirection: 'column', gap: 4, paddingTop: 0, alignItems: 'flex-end', flexShrink: 0, width: 40 },
   actionBtn: { padding: 6 },
   empty: { textAlign: 'center', color: '#9CA3AF', marginTop: 40 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalSheet: {
     backgroundColor: CARD, borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    padding: 20, paddingBottom: 32, maxHeight: '90%',
+    padding: 20, paddingBottom: 32, maxHeight: '85%',
   },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   modalTitle: { fontSize: 17, fontWeight: '700', color: '#1F2937' },

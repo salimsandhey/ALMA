@@ -11,12 +11,7 @@ import { useRouter } from 'expo-router'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { deleteToken } from '../../lib/storage'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const BG = '#F3F4F6'
-const CARD = '#FFFFFF'
-const RED = '#EF4444'
+import { NAVY, GOLD, BG, CARD, RED } from '../../constants/colors'
 
 type Song = {
   id: string
@@ -107,7 +102,7 @@ export default function SongsScreen() {
         <TouchableOpacity style={styles.cardHeader} onPress={() => setExpandedId(expanded ? null : s.id)} activeOpacity={0.8}>
           <Text style={styles.songEmoji}>{s.emoji}</Text>
           <View style={{ flex: 1 }}>
-            <Text style={styles.songTitle}>{s.title}</Text>
+            <Text style={styles.songTitle} numberOfLines={1}>{s.title}</Text>
             <Text style={styles.songMeta}>{s.artist} · {s.genre} · {s.lyrics.length} lines</Text>
           </View>
           <Switch
@@ -126,7 +121,7 @@ export default function SongsScreen() {
 
             {/* YouTube URL */}
             <Text style={styles.expandedLabel}>YouTube URL</Text>
-            <Text style={styles.expandedValue} numberOfLines={1}>{s.youtubeUrl}</Text>
+            <Text style={styles.expandedValue} numberOfLines={1} ellipsizeMode="middle">{s.youtubeUrl}</Text>
 
             {/* Lyrics preview */}
             <Text style={[styles.expandedLabel, { marginTop: 10 }]}>Lyrics ({s.lyrics.length} lines)</Text>
@@ -313,7 +308,7 @@ const styles = StyleSheet.create({
   deleteBtn: { padding: 4 },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end', position: 'relative' },
-  modalSheet: { backgroundColor: CARD, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 20, paddingBottom: 36, maxHeight: '94%' },
+  modalSheet: { backgroundColor: CARD, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 20, paddingBottom: 36, maxHeight: '85%' },
   modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#D1D5DB', alignSelf: 'center', marginBottom: 12 },
   modalHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   modalTitle: { fontSize: 17, fontWeight: '700', color: '#1F2937' },
@@ -321,8 +316,8 @@ const styles = StyleSheet.create({
   fieldHint: { fontSize: 12, color: '#9CA3AF', marginBottom: 6, marginTop: -4 },
   input: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#1F2937', backgroundColor: '#FAFAFA', marginBottom: 8 },
   emojiTitleRow: { flexDirection: 'row', gap: 8 },
-  emojiInput: { width: 52, fontSize: 24 },
-  lyricsInput: { minHeight: 160, fontFamily: 'monospace' },
+  emojiInput: { width: 48, flexShrink: 0, fontSize: 24 },
+  lyricsInput: { minHeight: 100, maxHeight: 200, fontFamily: 'monospace' },
   lyricsCount: { fontSize: 12, color: '#9CA3AF', textAlign: 'right', marginTop: -4, marginBottom: 8 },
   publishRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
   saveBtn: { backgroundColor: GOLD, borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 16 },

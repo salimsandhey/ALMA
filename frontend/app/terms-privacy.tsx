@@ -1,15 +1,11 @@
 import React, { useState } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useRouter } from 'expo-router'
+import { useRouter, useLocalSearchParams } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { Ionicons } from '@expo/vector-icons'
 import { api } from '../lib/api'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const BG = '#F3F4F6'
-const GREY = '#6B7280'
+import { NAVY, GOLD, BG, GREY } from '../constants/colors'
 
 type Section = { title: string; body: string }
 
@@ -35,7 +31,8 @@ const FALLBACK_PRIVACY: Section[] = [
 
 export default function TermsPrivacy() {
   const router = useRouter()
-  const [tab, setTab] = useState<'terms' | 'privacy'>('terms')
+  const { tab: initialTab } = useLocalSearchParams<{ tab?: 'terms' | 'privacy' }>()
+  const [tab, setTab] = useState<'terms' | 'privacy'>(initialTab === 'privacy' ? 'privacy' : 'terms')
 
   const { data, isLoading } = useQuery({
     queryKey: ['legal'],

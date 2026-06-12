@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { TouchableOpacity, View, Animated, StyleSheet, StyleProp, ViewStyle } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import * as Speech from 'expo-speech'
-import { useVoiceStore, getSpeakOptions } from '../stores/voiceStore'
+import { useVoiceStore } from '../stores/voiceStore'
+import { playTTS, PlayState } from '../lib/tts'
 
 interface Props {
   text: string
@@ -20,11 +20,14 @@ export default function TTSButton({
   style,
 }: Props) {
   const voiceGender = useVoiceStore((s) => s.voiceGender)
-  const [playing, setPlaying] = useState(false)
+  const [playState, setPlayState] = useState<PlayState>('idle')
+  const cancelRef = useRef<(() => void) | null>(null)
   const bar1 = useRef(new Animated.Value(0.4)).current
   const bar2 = useRef(new Animated.Value(0.4)).current
   const bar3 = useRef(new Animated.Value(0.4)).current
   const animsRef = useRef<Animated.CompositeAnimation[]>([])
+
+  const playing = playState === 'playing'
 
   useEffect(() => {
     if (playing) {
@@ -47,18 +50,18 @@ export default function TTSButton({
     return () => { animsRef.current.forEach((a) => a.stop()) }
   }, [playing])
 
+  // Stop on unmount
+  useEffect(() => () => { cancelRef.current?.() }, [])
+
   const handlePress = () => {
-    if (playing) {
-      Speech.stop()
-      setPlaying(false)
+    if (playState !== 'idle') {
+      cancelRef.current?.()
+      cancelRef.current = null
+      setPlayState('idle')
       return
     }
-    Speech.stop()
-    setPlaying(true)
-    Speech.speak(text, {
-      ...getSpeakOptions(voiceGender),
-      onDone: () => setPlaying(false),
-      onError: () => setPlaying(false),
+    playTTS(text, voiceGender, setPlayState).then((cancel) => {
+      cancelRef.current = cancel
     })
   }
 
@@ -66,7 +69,12 @@ export default function TTSButton({
   const barWidth = Math.max(2, Math.round(size * 0.17))
 
   return (
-    <TouchableOpacity onPress={handlePress} activeOpacity={0.7} style={[styles.btn, style]}>
+    <TouchableOpacity
+      onPress={handlePress}
+      activeOpacity={0.7}
+      style={[styles.btn, style]}
+      disabled={playState === 'loading'}
+    >
       {playing ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, height: barHeight }}>
           {[bar1, bar2, bar3].map((bar, i) => (
@@ -83,7 +91,11 @@ export default function TTSButton({
           ))}
         </View>
       ) : (
-        <Ionicons name="volume-medium-outline" size={size} color={idleColor} />
+        <Ionicons
+          name={playState === 'loading' ? 'ellipsis-horizontal' : 'volume-medium-outline'}
+          size={size}
+          color={playState === 'loading' ? color : idleColor}
+        />
       )}
     </TouchableOpacity>
   )

@@ -1,10 +1,11 @@
 import { Tabs } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-
-const NAVY = '#093373'
-const GREY = '#9CA3AF'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { NAVY, GREY } from '../../constants/colors'
 
 export default function AdminLayout() {
+  const insets = useSafeAreaInsets()
+
   return (
     <Tabs
       screenOptions={{
@@ -15,7 +16,7 @@ export default function AdminLayout() {
           backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: '#E5E7EB',
-          paddingBottom: 6,
+          paddingBottom: insets.bottom,
           paddingTop: 6,
           height: 64,
         },

@@ -17,10 +17,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { Ionicons } from '@expo/vector-icons'
 import { api } from '../../lib/api'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const WHITE = '#FFFFFF'
+import { NAVY, GOLD, WHITE } from '../../constants/colors'
 
 function usePasswordRules(value: string) {
   return {

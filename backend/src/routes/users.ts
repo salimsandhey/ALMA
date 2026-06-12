@@ -33,6 +33,7 @@ router.get('/me', verifyJWT, async (req: Request, res: Response): Promise<void> 
         id: true, email: true, displayName: true, avatarUrl: true,
         age: true, gender: true, nativeLanguage: true, country: true, role: true,
         xpTotal: true, streakCount: true, isOnboardingComplete: true, createdAt: true,
+        lastGreetingDate: true,
       },
     })
 

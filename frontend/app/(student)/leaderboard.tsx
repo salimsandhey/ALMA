@@ -9,10 +9,8 @@ import { Ionicons } from '@expo/vector-icons'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { countryFlag } from '../../lib/countries'
+import { NAVY, GOLD, GREY } from '../../constants/colors'
 
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const GREY = '#6B7280'
 const BG = '#F0F4FF'
 
 type LeaderboardEntry = {

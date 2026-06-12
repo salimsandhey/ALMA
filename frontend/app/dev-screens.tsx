@@ -2,10 +2,7 @@ import React from 'react'
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const BG = '#F2F3F7'
+import { NAVY, GOLD, BG } from '../constants/colors'
 
 type ScreenItem = {
   label: string
@@ -47,6 +44,7 @@ const GROUPS: ScreenGroup[] = [
     color: '#059669',
     screens: [
       { label: 'Home', route: '/(student)/home' },
+      { label: 'Voice Test (TTS)', route: '/tts-test' },
       { label: 'Modules', route: '/(student)/modules' },
       { label: 'Music', route: '/(student)/music' },
       { label: 'Profile', route: '/(student)/profile' },

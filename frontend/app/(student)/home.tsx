@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import {
   View,
   Text,
@@ -6,55 +6,47 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  useWindowDimensions,
   type DimensionValue,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
 import Svg, { Circle } from 'react-native-svg'
 import { useRouter } from 'expo-router'
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
-import { countryFlag } from '../../lib/countries'
+import { NAVY, GOLD, GREY } from '../../constants/colors'
 
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const GREY = '#6B7280'
 const BG = '#FFFFFF'
 
-type ModuleItem = {
-  title: string
-  lessonCount: number
-  completionPercent: number
-}
+type ContinueLesson = {
+  moduleTitle: string
+  lessonTitle: string
+  lessonId: string
+} | null
 
-type LeaderboardItem = {
-  userId?: string
-  id?: string
+type TopLearner = {
+  rank: number
+  userId: string
   displayName?: string
-  avatarUrl?: string | null
-  xp?: number
   xpTotal?: number
-  country?: string | null
 }
 
-type SummaryResponse = {
-  xpTotal?: number
-  streakCount?: number
-  completedLessons?: number
-}
-
-type ModulesResponse = {
-  modules?: ModuleItem[]
-}
-
-type LeaderboardResponse = {
-  leaderboard?: LeaderboardItem[]
-  currentUserRank?: number
+type HomeResponse = {
+  xpTotal: number
+  streakCount: number
+  completedLessons: number
+  totalLessons: number
+  completionPercent: number
+  continueLesson: ContinueLesson
+  topLearners: TopLearner[]
+  currentUserRank: number | null
 }
 
 function ProgressRing({ percent }: { percent: number }) {
-  const size = 70
+  const { width: screenWidth } = useWindowDimensions()
+  const ringSize = Math.min(70, screenWidth * 0.18)
+  const size = ringSize
   const strokeWidth = 8
   const radius = (size - strokeWidth) / 2
   const circumference = 2 * Math.PI * radius
@@ -90,8 +82,8 @@ function ProgressRing({ percent }: { percent: number }) {
   )
 }
 
-function SkeletonBox({ height, width = '100%', radius = 12 }: { height: number; width?: DimensionValue; radius?: number }) {
-  return <View style={[styles.skeleton, { height, width, borderRadius: radius }]} />
+function SkeletonBox({ height, minHeight, width = '100%', radius = 12 }: { height?: number; minHeight?: number; width?: DimensionValue; radius?: number }) {
+  return <View style={[styles.skeleton, { height, minHeight, width, borderRadius: radius }]} />
 }
 
 function getInitial(name?: string) {
@@ -109,40 +101,21 @@ function getRankBadge(rank: number) {
 export default function StudentHome() {
   const router = useRouter()
   const { user, setGreetingDone } = useAuthStore()
+  const { width: screenWidth } = useWindowDimensions()
 
-  const resetDailyGreeting = async () => {
-    const today = new Date().toISOString().split('T')[0]
-    await AsyncStorage.removeItem(`greeting_done_${today}`)
-    setGreetingDone(false)
-    router.replace('/daily-greeting')
-  }
-
-  const { data: summary, isLoading: summaryLoading } = useQuery<SummaryResponse>({
-    queryKey: ['progress-summary'],
-    queryFn: () => api.get('/api/progress/summary').then((r) => r.data),
+  const { data: homeData, isLoading: homeLoading } = useQuery<HomeResponse>({
+    queryKey: ['progress-home'],
+    queryFn: () => api.get('/api/progress/home').then((r) => r.data),
   })
 
-  const { data: modulesData, isLoading: modulesLoading } = useQuery<ModulesResponse>({
-    queryKey: ['modules'],
-    queryFn: () => api.get('/api/modules').then((r) => r.data),
-  })
-
-  const { data: leaderboardData, isLoading: leaderboardLoading } = useQuery<LeaderboardResponse>({
-    queryKey: ['leaderboard'],
-    queryFn: () => api.get('/api/leaderboard?limit=5').then((r) => r.data),
-  })
-
-  const xpTotal = summary?.xpTotal ?? user?.xpTotal ?? 0
-  const streakCount = summary?.streakCount ?? user?.streakCount ?? 0
-  const completedLessons = summary?.completedLessons ?? 0
-  const totalLessons = modulesData?.modules?.reduce((sum, m) => sum + (m.lessonCount ?? 0), 0) ?? 56
-  const percent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
-
-  const continueModule = modulesData?.modules?.find((m) => (m.completionPercent ?? 0) < 100)
-  const continueLessonTitle = continueModule?.title ?? 'Start Learning'
-
-  const leaderboard = leaderboardData?.leaderboard ?? []
-  const currentUserRank = leaderboardData?.currentUserRank
+  const xpTotal = homeData?.xpTotal ?? user?.xpTotal ?? 0
+  const streakCount = homeData?.streakCount ?? user?.streakCount ?? 0
+  const completedLessons = homeData?.completedLessons ?? 0
+  const totalLessons = homeData?.totalLessons ?? 0
+  const percent = homeData?.completionPercent ?? 0
+  const continueLesson = homeData?.continueLesson ?? null
+  const leaderboard = homeData?.topLearners ?? []
+  const currentUserRank = homeData?.currentUserRank
 
   const displayName = user?.displayName?.trim() || 'Learner'
   const userInitial = getInitial(displayName)
@@ -163,12 +136,12 @@ export default function StudentHome() {
           )}
         </View>
 
-        <Text style={styles.greeting}>{`Hey, ${displayName} \uD83D\uDC4B`}</Text>
+        <Text style={[styles.greeting, { fontSize: screenWidth < 375 ? 22 : 26 }]}>{`Hey, ${displayName} \uD83D\uDC4B`}</Text>
 
-        {summaryLoading ? (
+        {homeLoading ? (
           <View style={styles.statsRow}>
-            <SkeletonBox height={96} radius={16} width="48%" />
-            <SkeletonBox height={96} radius={16} width="48%" />
+            <SkeletonBox minHeight={80} radius={16} width="48%" />
+            <SkeletonBox minHeight={80} radius={16} width="48%" />
           </View>
         ) : (
           <View style={styles.statsRow}>
@@ -185,8 +158,8 @@ export default function StudentHome() {
           </View>
         )}
 
-        {modulesLoading ? (
-          <SkeletonBox height={220} radius={20} />
+        {homeLoading ? (
+          <SkeletonBox minHeight={180} radius={20} />
         ) : (
           <View style={styles.progressCard}>
             <View style={styles.progressHeaderRow}>
@@ -200,11 +173,22 @@ export default function StudentHome() {
 
             <View style={styles.progressDivider} />
 
-            <TouchableOpacity style={styles.continueRow} activeOpacity={0.85}>
+            <TouchableOpacity
+              style={styles.continueRow}
+              activeOpacity={0.85}
+              onPress={() => continueLesson
+                ? router.push({ pathname: '/lesson/[id]', params: { id: continueLesson.lessonId } })
+                : router.push('/(student)/learn')
+              }
+            >
               <Text style={styles.continueEmoji}>{'\uD83D\uDC31'}</Text>
               <View style={styles.continueTextWrap}>
-                <Text style={styles.continueKicker}>CONTINUE LEARNING</Text>
-                <Text style={styles.continueTitle}>{continueLessonTitle}</Text>
+                <Text style={styles.continueKicker} numberOfLines={1}>
+                  {continueLesson ? continueLesson.moduleTitle.toUpperCase() : 'CONTINUE LEARNING'}
+                </Text>
+                <Text style={styles.continueTitle} numberOfLines={1}>
+                  {continueLesson ? continueLesson.lessonTitle : 'Start Learning'}
+                </Text>
               </View>
               <Text style={styles.continueArrow}>{'\u203A'}</Text>
             </TouchableOpacity>
@@ -224,12 +208,6 @@ export default function StudentHome() {
           </TouchableOpacity>
         </View>
 
-        {__DEV__ && (
-          <TouchableOpacity style={styles.devResetBtn} onPress={resetDailyGreeting} activeOpacity={0.7}>
-            <Text style={styles.devResetText}>🔁 [DEV] Reset Daily Greeting</Text>
-          </TouchableOpacity>
-        )}
-
         <TouchableOpacity style={styles.challengeRow} activeOpacity={0.85} onPress={() => router.push('/daily-challenge')}>
           <View style={styles.challengeIconWrap}>
             <Text style={styles.challengeIcon}>{'\u26A1'}</Text>
@@ -241,6 +219,17 @@ export default function StudentHome() {
           <Text style={styles.challengeChevron}>{'\u203A'}</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity style={styles.voiceTestRow} activeOpacity={0.85} onPress={() => router.push('/tts-test')}>
+          <View style={styles.voiceTestIconWrap}>
+            <Text style={{ fontSize: 18 }}>🔊</Text>
+          </View>
+          <View style={styles.challengeTextWrap}>
+            <Text style={styles.challengeTitle}>Voice Test</Text>
+            <Text style={styles.challengeSubtitle}>Test Kokoro TTS — male & female voices</Text>
+          </View>
+          <Text style={styles.challengeChevron}>›</Text>
+        </TouchableOpacity>
+
         <View style={styles.topLearnersHeader}>
           <Text style={styles.topLearnersTitle}>{'\uD83C\uDFC6 Top Learners'}</Text>
           <TouchableOpacity activeOpacity={0.8} onPress={() => router.push('/(student)/leaderboard')}>
@@ -248,7 +237,7 @@ export default function StudentHome() {
           </TouchableOpacity>
         </View>
 
-        {leaderboardLoading ? (
+        {homeLoading ? (
           <View style={styles.leaderboardList}>
             {Array.from({ length: 5 }).map((_, idx) => (
               <SkeletonBox key={idx} height={52} radius={12} />
@@ -256,44 +245,32 @@ export default function StudentHome() {
           </View>
         ) : (
           <View style={styles.leaderboardList}>
-            {leaderboard.map((item, idx) => {
-              const rank = idx + 1
-              const medal = getRankBadge(rank)
+            {leaderboard.map((item) => {
+              const medal = getRankBadge(item.rank)
               const name = item.displayName || 'Learner'
               const initial = getInitial(name)
-              const xp = item.xp ?? item.xpTotal ?? 0
-              const uid = item.userId ?? item.id ?? `${name}-${rank}`
-              const isCurrentUser =
-                (user?.id && (item.userId === user.id || item.id === user.id)) ||
-                (!!currentUserRank && currentUserRank === rank)
-              const flag = item.country ? countryFlag(item.country) : null
+              const xp = item.xpTotal ?? 0
+              const isCurrentUser = user?.id ? item.userId === user.id : false
 
               return (
                 <View
-                  key={uid}
+                  key={item.userId}
                   style={[styles.learnerRow, isCurrentUser && styles.currentUserRow]}
                 >
                   {medal ? (
                     <Text style={styles.medalText}>{medal}</Text>
                   ) : (
                     <View style={styles.rankCircle}>
-                      <Text style={styles.rankCircleText}>{rank}</Text>
+                      <Text style={styles.rankCircleText}>{item.rank}</Text>
                     </View>
                   )}
 
-                  {item.avatarUrl ? (
-                    <Image source={{ uri: item.avatarUrl }} style={styles.learnerAvatar} />
-                  ) : (
-                    <View style={styles.learnerAvatar}>
-                      <Text style={styles.learnerAvatarText}>{initial}</Text>
-                    </View>
-                  )}
+                  <View style={styles.learnerAvatar}>
+                    <Text style={styles.learnerAvatarText}>{initial}</Text>
+                  </View>
 
                   <View style={styles.learnerNameRow}>
-                    <Text style={styles.learnerName} numberOfLines={1}>
-                      {name}
-                    </Text>
-                    {flag ? <Text style={styles.learnerFlag}>{flag}</Text> : null}
+                    <Text style={styles.learnerName} numberOfLines={1}>{name}</Text>
                   </View>
 
                   <Text style={styles.learnerXp}>{`${xp} pts`}</Text>
@@ -303,9 +280,6 @@ export default function StudentHome() {
           </View>
         )}
 
-        <TouchableOpacity style={styles.devButton} activeOpacity={0.8} onPress={() => router.push('/dev-screens')}>
-          <Text style={styles.devButtonText}>All Screens</Text>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   )
@@ -366,7 +340,6 @@ const styles = StyleSheet.create({
   },
   greeting: {
     marginTop: 8,
-    fontSize: 26,
     fontWeight: '800',
     color: NAVY,
   },
@@ -521,21 +494,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
   },
-  devResetBtn: {
-    alignSelf: 'center',
-    marginTop: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: '#FEF3C7',
-    borderWidth: 1,
-    borderColor: '#FCD34D',
-  },
-  devResetText: {
-    color: '#92400E',
-    fontSize: 12,
-    fontWeight: '600',
-  },
   challengeRow: {
     marginTop: 12,
     backgroundColor: '#FFFFFF',
@@ -574,6 +532,23 @@ const styles = StyleSheet.create({
   challengeChevron: {
     color: GREY,
     fontSize: 16,
+  },
+  voiceTestRow: {
+    marginTop: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    ...baseCardShadow,
+  },
+  voiceTestIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   topLearnersHeader: {
     marginTop: 24,
@@ -653,9 +628,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flexShrink: 1,
   },
-  learnerFlag: {
-    fontSize: 14,
-  },
   learnerXp: {
     color: GOLD,
     fontSize: 14,
@@ -664,20 +636,5 @@ const styles = StyleSheet.create({
   skeleton: {
     marginTop: 16,
     backgroundColor: 'rgba(11,31,75,0.15)',
-  },
-  devButton: {
-    marginTop: 24,
-    borderWidth: 1.5,
-    borderColor: NAVY,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    opacity: 0.5,
-  },
-  devButtonText: {
-    color: NAVY,
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.5,
   },
 })

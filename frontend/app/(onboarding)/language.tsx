@@ -12,13 +12,9 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
+import { NAVY, GOLD, BG, WHITE } from '../../constants/colors'
 
 type Language = { id: string; code: string; label: string; flag: string; isSuggested: boolean; orderIndex: number }
-
-const NAVY = '#093373'
-const GOLD = '#F5A623'
-const BG = '#F2F3F7'
-const WHITE = '#FFFFFF'
 
 type Gender = 'MALE' | 'FEMALE' | 'PREFER_NOT_TO_SAY'
 
@@ -70,9 +66,18 @@ export default function OnboardingLanguageScreen() {
   const filteredList = useMemo(() => {
     const q = search.toLowerCase().trim()
     if (!q) return null
-    return allLanguages.filter(
-      (l) => l.label.toLowerCase().includes(q) || l.code.toLowerCase().includes(q)
-    )
+    const displayNames = (() => {
+      try { return new Intl.DisplayNames(['en'], { type: 'language' }) }
+      catch { return null }
+    })()
+    return allLanguages.filter((l) => {
+      const englishName = displayNames?.of(l.code)?.toLowerCase() ?? ''
+      return (
+        l.label.toLowerCase().includes(q) ||
+        l.code.toLowerCase().includes(q) ||
+        englishName.includes(q)
+      )
+    })
   }, [search, allLanguages])
 
   const handleContinue = () => {

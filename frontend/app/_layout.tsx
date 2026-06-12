@@ -3,7 +3,6 @@ import { Stack, useRouter, useSegments } from 'expo-router'
 import SplashScreen from '../components/SplashScreen'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import * as Linking from 'expo-linking'
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { getToken, deleteToken, saveToken } from '../lib/storage'
 import { useAuthStore } from '../stores/authStore'
@@ -38,10 +37,8 @@ export default function RootLayout() {
 
         useAuthStore.getState().setAuth(savedToken, me)
 
-        // Check if daily greeting was already done today
         const today = new Date().toISOString().split('T')[0]
-        const done = await AsyncStorage.getItem(`greeting_done_${today}`)
-        useAuthStore.getState().setGreetingDone(done === 'true')
+        useAuthStore.getState().setGreetingDone(me.lastGreetingDate === today)
       } catch (error: any) {
         if (error?.response?.status === 401) {
           await deleteToken()
@@ -114,6 +111,7 @@ export default function RootLayout() {
       'badges', 'edit-profile',
       'feedback', 'how-to-use', 'terms-privacy', 'intro-slides', 'dev-screens',
       'daily-greeting', 'coach-chat', 'daily-challenge', 'entertainment',
+      'tts-test',
     ]
 
     if (!token || !user) {

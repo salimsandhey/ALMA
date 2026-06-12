@@ -93,7 +93,7 @@ export default function FlashcardGame({ card, onComplete, xpReward }: GameCardPr
       showBanner(`The word is "${card.targetWord ?? card.word}"`, false)
       setAnswered(true)
       trackSpeech('speech_fail', { cardId: card.id, gameType: 'FLASHCARD', attempt: retryCount + 1, score: Math.round(score * 100) })
-      onComplete(card.id, false, xpReward)
+      onComplete(card.id, false, 0)
     }
   }
 
