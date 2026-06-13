@@ -7,12 +7,12 @@ import {
   checkGrammar,
   warmupChat,
   scorePronunciation,
-  getHint,
+  getHelp,
   checkRateLimit,
   dailyGreetingChat,
   coachChat,
   getCoachStatus,
-  startCoachSession,
+  getSettings,
 } from '../services/aiService'
 import { awardXP } from '../services/xpService'
 
@@ -28,7 +28,8 @@ router.post('/daily-greeting', async (req: Request, res: Response): Promise<void
     return
   }
   const userId = req.user!.userId
-  const limited = await checkRateLimit(`rl:greeting:${userId}`, 20)
+  const settings = await getSettings()
+  const limited = await checkRateLimit(`rl:greeting:${userId}`, settings.greetingDailyLimit)
   if (!limited.allowed) {
     res.status(429).json({ error: 'Daily greeting limit reached.', code: 'RATE_LIMITED' })
     return
@@ -66,21 +67,6 @@ router.get('/coach/status', async (req: Request, res: Response): Promise<void> =
   }
 })
 
-// POST /api/ai/coach/new-session
-router.post('/coach/new-session', async (req: Request, res: Response): Promise<void> => {
-  const userId = req.user!.userId
-  try {
-    const result = await startCoachSession(userId)
-    if (!result.allowed) {
-      res.status(429).json({ error: 'Daily session limit reached.', code: 'SESSION_LIMIT', sessionsUsed: result.sessionsUsed })
-      return
-    }
-    res.json(result)
-  } catch {
-    res.status(500).json({ error: 'Could not start session', code: 'INTERNAL_ERROR' })
-  }
-})
-
 // POST /api/ai/coach/message — non-streaming coach response with inline feedback
 router.post('/coach/message', async (req: Request, res: Response): Promise<void> => {
   const { messages } = req.body
@@ -90,23 +76,9 @@ router.post('/coach/message', async (req: Request, res: Response): Promise<void>
   }
 
   const userId = req.user!.userId
+  const settings = await getSettings()
 
-  try {
-    const status = await getCoachStatus(userId)
-    if (!status.canChat) {
-      res.status(429).json({
-        error: status.messagesRemaining <= 0
-          ? 'Daily message limit reached. Come back tomorrow!'
-          : 'Daily session limit reached. Come back tomorrow!',
-        code: status.messagesRemaining <= 0 ? 'OUT_OF_MESSAGES' : 'SESSION_LIMIT',
-      })
-      return
-    }
-  } catch (err) {
-    // Fail-safe fallback if Redis query fails
-  }
-
-  const { allowed, remaining } = await checkRateLimit(`rl:coach-msg:${userId}`, 30)
+  const { allowed, remaining } = await checkRateLimit(`rl:coach-msg:${userId}`, settings.coachDailyLimit)
   if (!allowed) {
     res.status(429).json({ error: 'Daily message limit reached. Come back tomorrow!', code: 'OUT_OF_MESSAGES' })
     return
@@ -131,7 +103,8 @@ router.post('/coach', async (req: Request, res: Response): Promise<void> => {
   }
 
   const userId = req.user!.userId
-  const { allowed } = await checkRateLimit(`rl:coach-msg:${userId}`, 30)
+  const settings = await getSettings()
+  const { allowed } = await checkRateLimit(`rl:coach-msg:${userId}`, settings.coachDailyLimit)
   if (!allowed) {
     res.status(429).json({ error: 'Daily message limit reached.', code: 'RATE_LIMITED' })
     return
@@ -157,7 +130,8 @@ router.post('/grammar-check', async (req: Request, res: Response): Promise<void>
   }
 
   const userId = req.user!.userId
-  const { allowed } = await checkRateLimit(`rl:coach:${userId}`, 30)
+  const settings = await getSettings()
+  const { allowed } = await checkRateLimit(`rl:coach:${userId}`, settings.grammarDailyLimit)
   if (!allowed) {
     res.status(429).json({ error: 'Daily grammar check limit reached. Please try again tomorrow.', code: 'RATE_LIMITED' })
     return
@@ -186,7 +160,8 @@ router.post('/warmup', async (req: Request, res: Response): Promise<void> => {
   }
 
   const userId = req.user!.userId
-  const { allowed } = await checkRateLimit(`rl:warmup:${userId}`, 3)
+  const settings = await getSettings()
+  const { allowed } = await checkRateLimit(`rl:warmup:${userId}`, settings.warmupDailyLimit)
   if (!allowed) {
     res.status(429).json({ error: 'Daily warm-up limit reached.', code: 'RATE_LIMITED' })
     return
@@ -210,7 +185,8 @@ router.post('/pronunciation', async (req: Request, res: Response): Promise<void>
   }
 
   const userId = req.user!.userId
-  const { allowed } = await checkRateLimit(`rl:pronunciation:${userId}`, 50)
+  const settings = await getSettings()
+  const { allowed } = await checkRateLimit(`rl:pronunciation:${userId}`, settings.pronunciationDailyLimit)
   if (!allowed) {
     res.status(429).json({ error: 'Daily pronunciation limit reached.', code: 'RATE_LIMITED' })
     return
@@ -224,8 +200,8 @@ router.post('/pronunciation', async (req: Request, res: Response): Promise<void>
   }
 })
 
-// POST /api/ai/hint
-router.post('/hint', async (req: Request, res: Response): Promise<void> => {
+// POST /api/ai/help
+router.post('/help', async (req: Request, res: Response): Promise<void> => {
   const schema = z.object({
     gameType: z.string(),
     cardContent: z.record(z.any()),
@@ -237,16 +213,17 @@ router.post('/hint', async (req: Request, res: Response): Promise<void> => {
   }
 
   const userId = req.user!.userId
-  const { allowed } = await checkRateLimit(`rl:hint:${userId}`, 5)
+  const settings = await getSettings()
+  const { allowed } = await checkRateLimit(`rl:hint:${userId}`, settings.hintDailyLimit)
   if (!allowed) {
-    res.status(429).json({ error: 'Daily hint limit reached.', code: 'RATE_LIMITED' })
+    res.status(429).json({ error: 'Daily help limit reached.', code: 'RATE_LIMITED' })
     return
   }
 
   try {
-    const hint = await getHint(userId, parsed.data.gameType, parsed.data.cardContent)
-    res.json({ hint })
-  } catch (err) {
+    const explanation = await getHelp(userId, parsed.data.gameType, parsed.data.cardContent)
+    res.json({ explanation })
+  } catch {
     res.status(500).json({ error: 'AI service error', code: 'INTERNAL_ERROR' })
   }
 })

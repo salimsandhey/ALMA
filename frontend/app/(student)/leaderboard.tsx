@@ -1,10 +1,10 @@
-import React from 'react'
+import React, { useCallback } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useRouter } from 'expo-router'
-import { useQuery } from '@tanstack/react-query'
+import { useRouter, useFocusEffect } from 'expo-router'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Ionicons } from '@expo/vector-icons'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
@@ -136,12 +136,19 @@ const podStyles = StyleSheet.create({
 
 export default function Leaderboard() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { user } = useAuthStore()
 
   const { data, isLoading } = useQuery<LeaderboardResponse>({
     queryKey: ['leaderboard-full'],
     queryFn: () => api.get('/api/leaderboard?limit=50').then((r) => r.data),
   })
+
+  useFocusEffect(
+    useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: ['leaderboard-full'] })
+    }, [queryClient])
+  )
 
   const leaderboard = data?.leaderboard ?? []
   const currentUserRank = data?.currentUserRank ?? null

@@ -17,6 +17,7 @@ type ButtonState = 'default' | 'correct' | 'wrong'
 export default function TrueFalseGame({ card, onComplete, xpReward, currentIndex = 0, totalCards = 1 }: GameCardProps) {
   const [timeLeft, setTimeLeft] = useState(7)
   const [answered, setAnswered] = useState(false)
+  const answeredRef = useRef(false)
   const [trueState, setTrueState] = useState<ButtonState>('default')
   const [falseState, setFalseState] = useState<ButtonState>('default')
   const [showExplanation, setShowExplanation] = useState(false)
@@ -33,7 +34,6 @@ export default function TrueFalseGame({ card, onComplete, xpReward, currentIndex
       setTimeLeft((t) => {
         if (t <= 1) {
           clearInterval(timerRef.current!)
-          handleAnswer(null)
           return 0
         }
         return t - 1
@@ -41,6 +41,11 @@ export default function TrueFalseGame({ card, onComplete, xpReward, currentIndex
     }, 1000)
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [])
+
+  // Separate effect: trigger handleAnswer when timer reaches 0
+  useEffect(() => {
+    if (timeLeft === 0) handleAnswer(null)
+  }, [timeLeft])
 
   const showBanner = (text: string, correct: boolean) => {
     setBannerText(text)
@@ -50,7 +55,8 @@ export default function TrueFalseGame({ card, onComplete, xpReward, currentIndex
   }
 
   const handleAnswer = (chosen: boolean | null) => {
-    if (answered) return
+    if (answeredRef.current) return
+    answeredRef.current = true
     setAnswered(true)
     if (timerRef.current) clearInterval(timerRef.current)
     const isCorrect = chosen !== null && chosen === card.isTrue

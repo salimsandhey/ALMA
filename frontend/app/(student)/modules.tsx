@@ -7,9 +7,9 @@ import {
   Animated,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useRouter } from 'expo-router'
-import { useQuery } from '@tanstack/react-query'
-import { useRef, useEffect } from 'react'
+import { useRouter, useFocusEffect } from 'expo-router'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRef, useEffect, useCallback } from 'react'
 import { api } from '../../lib/api'
 import { NAVY, TEAL, GOLD, WHITE, GREY } from '../../constants/colors'
 
@@ -142,10 +142,18 @@ function ModuleCard({ module, index, isLocked }: { module: Module; index: number
 }
 
 export default function Modules() {
+  const queryClient = useQueryClient()
+
   const { data, isLoading } = useQuery({
     queryKey: ['modules'],
     queryFn: () => api.get('/api/modules').then((r) => r.data),
   })
+
+  useFocusEffect(
+    useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: ['modules'] })
+    }, [queryClient])
+  )
 
   const modules: Module[] = data?.modules ?? []
 

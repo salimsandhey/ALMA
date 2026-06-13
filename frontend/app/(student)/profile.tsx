@@ -4,9 +4,9 @@ import {
   Switch, Share, Image, useWindowDimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useRouter } from 'expo-router'
+import { useRouter, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { deleteToken } from '../../lib/storage'
 import { useAuthStore } from '../../stores/authStore'
 import { useVoiceStore, VoiceGender } from '../../stores/voiceStore'
@@ -48,6 +48,7 @@ type Language = { code: string; label: string; flag: string }
 
 export default function Profile() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { user } = useAuthStore()
   const { voiceGender, setVoiceGender } = useVoiceStore()
 
@@ -76,6 +77,13 @@ export default function Profile() {
     queryKey: ['modules-progress'],
     queryFn: () => api.get('/api/modules').then((r) => r.data),
   })
+
+  useFocusEffect(
+    useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: ['profile'] })
+      queryClient.invalidateQueries({ queryKey: ['modules-progress'] })
+    }, [queryClient])
+  )
 
   const donePercent = modulesData?.modules?.length
     ? Math.round((modulesData.modules.filter((m: any) => m.completed).length / modulesData.modules.length) * 100)

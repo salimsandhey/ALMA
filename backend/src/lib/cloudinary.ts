@@ -32,17 +32,4 @@ export async function uploadLessonImage(fileBuffer: Buffer, publicId: string): P
   })
 }
 
-export async function uploadTTSAudio(audioBuffer: Buffer, publicId: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      { folder: 'alma/tts', public_id: publicId, overwrite: false, resource_type: 'video', format: 'mp3' },
-      (error, result) => {
-        if (error || !result) return reject(error ?? new Error('Upload failed'))
-        resolve(result.secure_url)
-      }
-    )
-    stream.end(audioBuffer)
-  })
-}
-
 export default cloudinary

@@ -77,7 +77,7 @@ export default function FillBlankGame({ card, onComplete, xpReward }: GameCardPr
 
   const options = useMemo(() => {
     const distractors: string[] = card.distractors ?? []
-    const all = [card.correctAnswer, ...distractors.slice(0, 3)]
+    const all = [...new Set([card.correctAnswer, ...distractors])].slice(0, 4)
     return all.sort(() => Math.random() - 0.5)
   }, [card.id])
 
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
   blank: { borderBottomWidth: 2.5, borderBottomColor: GOLD, minWidth: 80, height: 28, marginHorizontal: 6 },
   filledWord: { fontSize: 18, fontWeight: '700', borderBottomWidth: 2, borderBottomColor: TEAL, minWidth: 60, textAlign: 'center', lineHeight: 28 },
   hint: { color: GREY, fontSize: 12, fontStyle: 'italic', marginTop: 8, textAlign: 'center' },
-  pillsRow: { flexDirection: 'row', flexWrap: 'nowrap', justifyContent: 'space-between', gap: 8, marginVertical: 16 },
+  pillsRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginVertical: 16 },
   pill: { borderRadius: 999, paddingHorizontal: 18, paddingVertical: 12, borderWidth: 1.5, borderColor: '#D1D5DB', backgroundColor: '#fff', minWidth: 74, alignItems: 'center' },
   pillCorrect: { borderColor: '#0D9488', backgroundColor: '#CCFBF1' },
   pillText: { color: '#093373', fontSize: 15, fontWeight: '600' },

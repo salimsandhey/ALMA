@@ -89,7 +89,19 @@ export default function ChallengesScreen() {
   const toggleActive = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
       api.patch(`/api/admin/challenges/${id}`, { isActive }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-challenges'] }),
+    onMutate: async ({ id, isActive }) => {
+      await queryClient.cancelQueries({ queryKey: ['admin-challenges'] })
+      const previous = queryClient.getQueryData(['admin-challenges'])
+      queryClient.setQueryData(['admin-challenges'], (old: any) => ({
+        ...old,
+        challenges: old?.challenges?.map((c: Challenge) => c.id === id ? { ...c, isActive } : c) ?? [],
+      }))
+      return { previous }
+    },
+    onError: (_err, _vars, context: any) => {
+      if (context?.previous) queryClient.setQueryData(['admin-challenges'], context.previous)
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['admin-challenges'] }),
   })
 
   const isFormValid = question.trim().length >= 5 && sampleAnswer.trim().length >= 2 && keywordsText.trim().length > 0

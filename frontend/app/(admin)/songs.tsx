@@ -84,7 +84,19 @@ export default function SongsScreen() {
   const togglePublish = useMutation({
     mutationFn: ({ id, isPublished }: { id: string; isPublished: boolean }) =>
       api.patch(`/api/admin/songs/${id}`, { isPublished }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-songs'] }),
+    onMutate: async ({ id, isPublished }) => {
+      await queryClient.cancelQueries({ queryKey: ['admin-songs'] })
+      const previous = queryClient.getQueryData(['admin-songs'])
+      queryClient.setQueryData(['admin-songs'], (old: any) => ({
+        ...old,
+        songs: old?.songs?.map((s: Song) => s.id === id ? { ...s, isPublished } : s) ?? [],
+      }))
+      return { previous }
+    },
+    onError: (_err, _vars, context: any) => {
+      if (context?.previous) queryClient.setQueryData(['admin-songs'], context.previous)
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['admin-songs'] }),
   })
 
   const confirmDelete = (s: Song) =>

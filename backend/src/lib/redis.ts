@@ -43,6 +43,19 @@ class InMemoryRedis {
       this.store.set(key, item)
     }
   }
+
+  async del(...keys: string[]): Promise<number> {
+    let count = 0
+    for (const key of keys) {
+      if (this.store.delete(key)) count++
+    }
+    return count
+  }
+
+  async set(key: string, value: any, opts?: { ex?: number }): Promise<void> {
+    const expiresAt = opts?.ex ? Date.now() + opts.ex * 1000 : undefined
+    this.store.set(key, { value, expiresAt })
+  }
 }
 
 const hasRedisConfig =

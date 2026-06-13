@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
-import { View, Text, Image, Animated, StyleSheet } from 'react-native'
+import { View, Text, Image, TouchableOpacity, Animated, StyleSheet } from 'react-native'
 import TTSButton from '../TTSButton'
 import MicButton from './MicButton'
 import { resolveLessonImage } from '../../lib/localLessonImages'
@@ -28,7 +28,7 @@ function shuffle<T>(arr: T[]): T[] {
 type PillState = 'default' | 'correct' | 'wrong'
 
 export default function WordMatchGame({ card, onComplete, xpReward }: GameCardProps) {
-  const options = useMemo(() => shuffle([card.correctWord, ...(card.distractors ?? [])]).slice(0, 4), [card.id])
+  const options = useMemo(() => shuffle([...new Set([card.correctWord, ...(card.distractors ?? [])])]).slice(0, 4), [card.id])
   const [pillStates, setPillStates] = useState<Record<string, PillState>>({})
   const [answered, setAnswered] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
@@ -114,12 +114,14 @@ export default function WordMatchGame({ card, onComplete, xpReward }: GameCardPr
         {options.map((opt) => {
           const ps = pillStyle(opt)
           return (
-            <View
+            <TouchableOpacity
               key={opt}
+              onPress={() => !answered && handleSTTResult(opt)}
+              disabled={answered}
               style={[styles.pill, { backgroundColor: ps.bg, borderColor: ps.border }]}
             >
               <Text style={[styles.pillText, { color: ps.text }]}>{opt}</Text>
-            </View>
+            </TouchableOpacity>
           )
         })}
       </View>

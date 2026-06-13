@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons'
 import * as Speech from 'expo-speech'
 import { api } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
+import { useVoiceStore, getSpeakOptions } from '../stores/voiceStore'
 import { NAVY, GOLD } from '../constants/colors'
 
 const SESSION_SECONDS = 60
@@ -33,6 +34,7 @@ function formatTime(s: number) {
 export default function DailyGreeting() {
   const router = useRouter()
   const { setGreetingDone } = useAuthStore()
+  const voiceGender = useVoiceStore((s) => s.voiceGender)
   const [screen, setScreen] = useState<'intro' | 'chat'>('intro')
   const [messages, setMessages] = useState<Msg[]>([])
   const [loading, setLoading] = useState(false)
@@ -97,14 +99,12 @@ export default function DailyGreeting() {
     Speech.stop()
     setSpeaking(true)
     Speech.speak(text, {
-      language: 'en-US',
-      pitch: 1.0,
-      rate: 0.9,
+      ...getSpeakOptions(voiceGender),
       onDone: () => setSpeaking(false),
       onStopped: () => setSpeaking(false),
       onError: () => setSpeaking(false),
     })
-  }, [])
+  }, [voiceGender])
 
   const fetchAlmaReply = useCallback(async (msgs: Msg[]) => {
     setLoading(true)

@@ -27,12 +27,12 @@ import adminChallengesRouter from './routes/admin/challenges'
 import adminSongsRouter from './routes/admin/songs'
 import adminAiUsageRouter from './routes/admin/ai-usage'
 import adminLegalRouter from './routes/admin/legal'
+import adminSettingsRouter from './routes/admin/settings'
 import legalRouter from './routes/legal'
 import musicRouter from './routes/music'
 import challengesRouter from './routes/challenges'
 import entertainmentRouter from './routes/entertainment'
 import referenceRouter from './routes/reference'
-import ttsRouter from './routes/tts'
 
 const app = express()
 
@@ -64,12 +64,12 @@ app.use('/api/admin/challenges', adminChallengesRouter)
 app.use('/api/admin/songs', adminSongsRouter)
 app.use('/api/admin/ai-usage', adminAiUsageRouter)
 app.use('/api/admin/legal', adminLegalRouter)
+app.use('/api/admin/settings', adminSettingsRouter)
 app.use('/api/legal', legalRouter)
 app.use('/api/music', musicRouter)
 app.use('/api/challenges', challengesRouter)
 app.use('/api/entertainment', entertainmentRouter)
 app.use('/api', referenceRouter)
-app.use('/api/tts', ttsRouter)
 
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date() })
@@ -84,5 +84,19 @@ const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })
+
+// Delete unverified accounts older than 24 hours — runs every hour
+import { prisma } from './lib/prisma'
+setInterval(async () => {
+  try {
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    const { count } = await prisma.user.deleteMany({
+      where: { isEmailVerified: false, createdAt: { lt: cutoff } },
+    })
+    if (count > 0) console.log(`[cleanup] Deleted ${count} unverified account(s) older than 24h`)
+  } catch (err) {
+    console.error('[cleanup] Failed to delete unverified accounts:', err)
+  }
+}, 60 * 60 * 1000)
 
 export default app

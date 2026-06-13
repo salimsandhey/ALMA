@@ -4,165 +4,212 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  FlatList,
   Dimensions,
-  ListRenderItemInfo,
+  Image,
+  FlatList,
+  StatusBar,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { useAuthStore } from '../stores/authStore'
-import { NAVY, GOLD, WHITE } from '../constants/colors'
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window')
+const { width: W, height: H } = Dimensions.get('window')
 
-interface Slide {
-  id: string
-  emoji: string
-  title: string
-  subtitle: string
-}
+const GOLD = '#F5C518'
+const BG   = '#093373'
+const CIRCLE_SIZE   = W * 0.65
+const ILLUS_SIZE    = W * 0.80
 
-const SLIDES: Slide[] = [
+const SLIDES = [
   {
     id: '1',
-    emoji: '👋',
-    title: "Hey, I'm ALMA",
-    subtitle: 'Your personal English coach built for the hospitality industry. I\'m here to help you speak with confidence.',
+    image: require('../assets/onboarding/slide-1.png'),
+    title: "Hey, I'm ALMA —\nyour English buddy!",
+    subtitle:
+      "Think of me as a friend who helps you speak English better. Chat with me anytime, and I'll gently help you sound more natural — no pressure, no judgment!",
   },
   {
     id: '2',
-    emoji: '🎮',
-    title: 'English can actually be fun',
-    subtitle: 'Bite-sized games, voice challenges, and real dialogues — learning that feels like play, not homework.',
+    image: require('../assets/onboarding/slide-2.png'),
+    title: 'Learning English\ncan actually be fun',
+    subtitle:
+      "Earn ALMA Points, collect badges, and challenge yourself with games that feel more like play than study. The more you do, the better you get — it's that simple!",
   },
   {
     id: '3',
-    emoji: '🏨',
-    title: 'English you\'ll use at work',
-    subtitle: 'From hotel check-ins to restaurant orders — every lesson teaches phrases you\'ll use with real guests.',
+    image: require('../assets/onboarding/slide-3.png'),
+    title: "English you'll\nactually use at work",
+    subtitle:
+      "From welcoming hotel guests to taking a restaurant order — every lesson is built around real situations you'll face in tourism. Let's get you ready!",
   },
 ]
 
 export default function IntroSlidesScreen() {
   const { token } = useAuthStore()
-  const router = useRouter()
-  const flatListRef = useRef<FlatList>(null)
+  const router    = useRouter()
+  const listRef   = useRef<FlatList>(null)
   const [activeIndex, setActiveIndex] = useState(0)
 
-  // Redirect to auth if not logged in — useEffect is reliable after navigation is ready
   useEffect(() => {
-    if (!token) {
-      router.replace('/(auth)')
-    }
+    if (!token) router.replace('/(auth)')
   }, [token])
 
-  // Render nothing while the redirect is in progress
   if (!token) return null
 
-  const handleFinish = () => {
-    router.replace('/(student)/home')
-  }
+  const isFirst = activeIndex === 0
+  const isLast  = activeIndex === SLIDES.length - 1
 
-  const handleNext = () => {
-    if (activeIndex < SLIDES.length - 1) {
-      flatListRef.current?.scrollToIndex({ index: activeIndex + 1, animated: true })
-    } else {
-      handleFinish()
-    }
+  const goTo = (index: number) => {
+    listRef.current?.scrollToIndex({ index, animated: true })
   }
 
   const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
-    if (viewableItems.length > 0) {
-      setActiveIndex(viewableItems[0].index ?? 0)
-    }
+    if (viewableItems[0]) setActiveIndex(viewableItems[0].index ?? 0)
   }).current
 
-  const renderItem = ({ item }: ListRenderItemInfo<Slide>) => (
+  const renderItem = ({ item }: { item: (typeof SLIDES)[0] }) => (
     <View style={styles.slide}>
-      <Text style={styles.slideEmoji}>{item.emoji}</Text>
-      <Text style={styles.slideTitle}>{item.title}</Text>
-      <Text style={styles.slideSubtitle}>{item.subtitle}</Text>
+      {/* Circle background behind image — image overflows */}
+      <View style={styles.imageWrapper}>
+        <View style={styles.imageCircle} />
+        <Image source={item.image} style={styles.illustration} resizeMode="contain" />
+      </View>
+
+      <Text style={styles.title}>{item.title}</Text>
+      <Text style={styles.subtitle}>{item.subtitle}</Text>
     </View>
   )
 
-  const isLast = activeIndex === SLIDES.length - 1
-
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.container}>
-        {/* Slides */}
-        <FlatList
-          ref={flatListRef}
-          data={SLIDES}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onViewableItemsChanged={onViewableItemsChanged}
-          viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
-          style={styles.flatList}
-        />
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-        {/* Dots */}
-        <View style={styles.dotsRow}>
-          {SLIDES.map((_, i) => (
-            <View
-              key={i}
-              style={[styles.dot, i === activeIndex ? styles.dotActive : styles.dotInactive]}
-            />
-          ))}
-        </View>
+      {/* Decorative circles — top-right and bottom-left */}
+      <View style={styles.circleRight} />
+      <View style={styles.circleLeft} />
 
-        {/* CTA */}
-        <TouchableOpacity style={styles.ctaBtn} onPress={handleNext} activeOpacity={0.9}>
-          <Text style={styles.ctaText}>{isLast ? "Let's Go! 🚀" : 'Next'}</Text>
+      {/* Swipeable slides */}
+      <FlatList
+        ref={listRef}
+        data={SLIDES}
+        renderItem={renderItem}
+        keyExtractor={item => item.id}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+        style={{ flex: 1 }}
+        bounces={false}
+        decelerationRate="fast"
+      />
+
+      {/* Dots */}
+      <View style={styles.dotsRow}>
+        {SLIDES.map((_, i) => (
+          <View
+            key={i}
+            style={[styles.dot, i === activeIndex ? styles.dotActive : styles.dotInactive]}
+          />
+        ))}
+      </View>
+
+      {/* Buttons */}
+      <View style={[styles.btnRow, isFirst && styles.btnRowSingle]}>
+        {!isFirst && (
+          <TouchableOpacity onPress={() => goTo(activeIndex - 1)} style={styles.backBtn} activeOpacity={0.7}>
+            <Text style={styles.backText}>Back</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          onPress={() => isLast ? router.replace('/(student)/home') : goTo(activeIndex + 1)}
+          style={[styles.nextBtn, isFirst && styles.nextBtnFull]}
+          activeOpacity={0.9}
+        >
+          <Text style={styles.nextText}>{isLast ? 'Get Started' : 'Next'}</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: NAVY,
-  },
   container: {
     flex: 1,
-    alignItems: 'center',
+    backgroundColor: BG,
   },
-  flatList: {
-    flex: 1,
+
+  /* ── Corner decorations ── */
+  circleRight: {
+    position: 'absolute',
+    width:  W * 0.65,
+    height: W * 0.65,
+    borderRadius: W * 0.35,
+    backgroundColor: '#1A52C4',
+    top:   -W * 0.30,
+    right: -W * 0.300,
+    opacity: 0.45,
   },
+  circleLeft: {
+    position: 'absolute',
+    width:  W * 0.55,
+    height: W * 0.55,
+    borderRadius: W * 0.275,
+    backgroundColor: '#1A52C4',
+    bottom: -W * 0.25,
+    left:   -W * 0.25,
+    opacity: 0.35,
+  },
+
+  /* ── Slide ── */
   slide: {
-    width: SCREEN_WIDTH,
+    width: W,
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 36,
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+    paddingTop: 60,
   },
-  slideEmoji: {
-    fontSize: 72,
+
+  /* ── Illustration ── */
+  imageWrapper: {
+    width: ILLUS_SIZE,
+    height: ILLUS_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 32,
   },
-  slideTitle: {
-    color: WHITE,
-    fontSize: 28,
+  imageCircle: {
+    position: 'absolute',
+    width:  CIRCLE_SIZE,
+    height: CIRCLE_SIZE,
+    borderRadius: CIRCLE_SIZE / 2,
+    backgroundColor: 'rgba(255,255,255,0.11)',
+  },
+  illustration: {
+    width:  ILLUS_SIZE,
+    height: ILLUS_SIZE,
+  },
+
+  /* ── Text ── */
+  title: {
+    color: '#FFFFFF',
+    fontSize: 26,
     fontWeight: '800',
     textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 36,
+    lineHeight: 34,
+    marginBottom: 14,
   },
-  slideSubtitle: {
+  subtitle: {
     color: 'rgba(255,255,255,0.65)',
-    fontSize: 16,
+    fontSize: 14,
     textAlign: 'center',
-    lineHeight: 24,
-    maxWidth: 300,
+    lineHeight: 22,
   },
+
+  /* ── Dots ── */
   dotsRow: {
     flexDirection: 'row',
+    justifyContent: 'center',
     gap: 8,
     marginBottom: 24,
   },
@@ -178,17 +225,41 @@ const styles = StyleSheet.create({
     width: 8,
     backgroundColor: 'rgba(255,255,255,0.3)',
   },
-  ctaBtn: {
+
+  /* ── Buttons ── */
+  btnRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 28,
+    paddingBottom: 40,
+  },
+  btnRowSingle: {
+    justifyContent: 'center',
+  },
+  backBtn: {
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+  },
+  backText: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  nextBtn: {
     backgroundColor: GOLD,
     borderRadius: 30,
-    paddingVertical: 18,
-    width: SCREEN_WIDTH - 48,
+    paddingVertical: 16,
+    paddingHorizontal: 40,
     alignItems: 'center',
-    marginBottom: 32,
   },
-  ctaText: {
-    color: NAVY,
-    fontSize: 17,
+  nextBtnFull: {
+    flex: 1,
+    paddingHorizontal: 0,
+  },
+  nextText: {
+    color: BG,
+    fontSize: 16,
     fontWeight: '800',
   },
 })

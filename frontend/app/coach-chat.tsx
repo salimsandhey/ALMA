@@ -44,8 +44,6 @@ type ChatMessage = {
 type CoachStatus = {
   messagesUsed: number
   messagesRemaining: number
-  sessionsUsed: number
-  sessionsRemaining: number
   canChat: boolean
 }
 
@@ -61,7 +59,7 @@ export default function CoachChat() {
   const [isLoading, setIsLoading] = useState(false)
   const [isInitializing, setIsInitializing] = useState(true)
   const [status, setStatus] = useState<CoachStatus | null>(null)
-  const [outOfCredits, setOutOfCredits] = useState<'messages' | 'sessions' | null>(null)
+  const [outOfCredits, setOutOfCredits] = useState(false)
   const [listening, setListening] = useState(false)
   const [interimText, setInterimText] = useState('')
   const scrollRef = useRef<ScrollView>(null)
@@ -118,25 +116,15 @@ export default function CoachChat() {
 
   const initialize = async () => {
     try {
-      // Check current status
       const { data: statusData } = await api.get('/api/ai/coach/status')
       setStatus(statusData)
 
       if (!statusData.canChat) {
-        setOutOfCredits(statusData.messagesRemaining <= 0 ? 'messages' : 'sessions')
+        setOutOfCredits(true)
         setIsInitializing(false)
         return
       }
 
-      // Start a new session
-      const sessionRes = await api.post('/api/ai/coach/new-session').catch(() => null)
-      if (sessionRes?.status === 429) {
-        setOutOfCredits('sessions')
-        setIsInitializing(false)
-        return
-      }
-
-      // Get opening message
       await fetchAlmaReply([])
     } catch {
       await fetchAlmaReply([])
@@ -165,13 +153,13 @@ export default function CoachChat() {
       })
 
       if (data.messagesRemaining !== undefined) {
-        setStatus((prev) => prev ? { ...prev, messagesRemaining: data.messagesRemaining, messagesUsed: 50 - data.messagesRemaining } : prev)
+        setStatus((prev) => prev ? { ...prev, messagesRemaining: data.messagesRemaining } : prev)
       }
 
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
     } catch (err: any) {
       if (err?.response?.status === 429) {
-        setOutOfCredits('messages')
+        setOutOfCredits(true)
       }
     } finally {
       setIsLoading(false)
@@ -182,7 +170,7 @@ export default function CoachChat() {
     const content = (text ?? inputText).trim()
     if (!content || isLoading) return
     if (status?.messagesRemaining === 0) {
-      setOutOfCredits('messages')
+      setOutOfCredits(true)
       return
     }
 
@@ -264,13 +252,9 @@ export default function CoachChat() {
         </View>
         <View style={styles.outOfCreditsContainer}>
           <Text style={styles.outOfCreditsEmoji}>🌙</Text>
-          <Text style={styles.outOfCreditsTitle}>
-            {outOfCredits === 'messages' ? "You're out of messages for today!" : "You've reached your session limit!"}
-          </Text>
+          <Text style={styles.outOfCreditsTitle}>You're out of messages for today!</Text>
           <Text style={styles.outOfCreditsSubtitle}>
-            {outOfCredits === 'messages'
-              ? "You've used all 50 messages for today. Come back tomorrow to keep practicing!"
-              : "You've had 2 ALMA Coach sessions today. Come back tomorrow for more practice!"}
+            You've used all your ALMA Coach messages for today. Come back tomorrow to keep practicing!
           </Text>
           <TouchableOpacity style={styles.backHomeBtn} onPress={() => router.replace('/(student)/home')}>
             <Text style={styles.backHomeBtnText}>Back to Home</Text>
@@ -327,7 +311,7 @@ export default function CoachChat() {
       {/* Chat */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
         <ScrollView

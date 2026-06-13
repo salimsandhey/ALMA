@@ -9,7 +9,13 @@ import { useAuthStore } from '../stores/authStore'
 import { useVoiceStore } from '../stores/voiceStore'
 import { api } from '../lib/api'
 
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 0,
+    },
+  },
+})
 
 export default function RootLayout() {
   const { token, user, greetingDoneToday, setGreetingDone } = useAuthStore()
@@ -111,7 +117,6 @@ export default function RootLayout() {
       'badges', 'edit-profile',
       'feedback', 'how-to-use', 'terms-privacy', 'intro-slides', 'dev-screens',
       'daily-greeting', 'coach-chat', 'daily-challenge', 'entertainment',
-      'tts-test',
     ]
 
     if (!token || !user) {

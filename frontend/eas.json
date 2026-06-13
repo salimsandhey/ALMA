@@ -15,6 +15,9 @@
       }
     },
     "production": {
+      "ios": {
+        "simulator": false
+      },
       "android": {
         "buildType": "apk"
       },
@@ -24,6 +27,12 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "salimsandhey@gmail.com",
+        "ascAppId": "6779780789",
+        "appleTeamId": "M6FXN66SFA"
+      }
+    }
   }
 }

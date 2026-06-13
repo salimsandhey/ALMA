@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react'
 import {
   View, Text, TouchableOpacity, Animated, StyleSheet,
   TextInput, Modal,
@@ -17,6 +17,11 @@ const useSpeechHook: (event: string, cb: (e: any) => void) => void =
 
 const IS_NATIVE = SpeechModule !== null
 
+export interface MicButtonRef {
+  startListening: () => Promise<void>
+  stopListening: () => void
+}
+
 interface MicButtonProps {
   onResult: (text: string) => void
   onInterim?: (text: string) => void
@@ -26,14 +31,14 @@ interface MicButtonProps {
   tone?: 'teal' | 'yellow'
 }
 
-export default function MicButton({
+const MicButton = forwardRef<MicButtonRef, MicButtonProps>(function MicButton({
   onResult,
   onInterim,
   onStateChange,
   disabled,
   label = 'Tap mic to pronounce',
   tone = 'teal',
-}: MicButtonProps) {
+}, ref) {
   const [listening, setListening] = useState(false)
   const [fallbackVisible, setFallbackVisible] = useState(false)
   const [fallbackText, setFallbackText] = useState('')
@@ -89,23 +94,13 @@ export default function MicButton({
     }
   }, [listening])
 
-  const handlePress = async () => {
-    if (disabled) return
-
+  const startListening = async () => {
     if (!IS_NATIVE) {
       onStateChange?.('failed')
       setFallbackText('')
       setFallbackVisible(true)
       return
     }
-
-    if (listening) {
-      SpeechModule.stop()
-      setListening(false)
-      onStateChange?.('processing')
-      return
-    }
-
     try {
       const perm = await SpeechModule.requestPermissionsAsync()
       if (!perm.granted) {
@@ -115,7 +110,7 @@ export default function MicButton({
         return
       }
     } catch {
-      // continue
+      // continue — permission already granted
     }
 
     setListening(true)
@@ -135,6 +130,25 @@ export default function MicButton({
       setFallbackText('')
       setFallbackVisible(true)
     }
+  }
+
+  const stopListening = () => {
+    if (IS_NATIVE && listening) {
+      SpeechModule.stop()
+    }
+    setListening(false)
+    onStateChange?.('processing')
+  }
+
+  useImperativeHandle(ref, () => ({ startListening, stopListening }))
+
+  const handlePress = async () => {
+    if (disabled) return
+    if (listening) {
+      stopListening()
+      return
+    }
+    await startListening()
   }
 
   const handleFallbackSubmit = () => {
@@ -209,7 +223,9 @@ export default function MicButton({
       </Modal>
     </View>
   )
-}
+})
+
+export default MicButton
 
 const styles = StyleSheet.create({
   wrapper: { alignItems: 'center' },

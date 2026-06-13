@@ -7,10 +7,12 @@ import {
   ActivityIndicator,
   StyleSheet,
   Alert,
+  Modal,
 } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter, useLocalSearchParams } from 'expo-router'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { useLessonStore } from '../../stores/lessonStore'
 import { NAVY, TEAL, GOLD, BG, WHITE, GREY } from '../../constants/colors'
@@ -44,8 +46,29 @@ const GAME_COMPONENTS: Record<string, React.ComponentType<any>> = {
 
 export default function LessonScreen() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { id } = useLocalSearchParams<{ id: string }>()
   const [cardCompleted, setCardCompleted] = useState(false)
+  const [helpVisible, setHelpVisible] = useState(false)
+  const [helpText, setHelpText] = useState('')
+
+  const helpMutation = useMutation({
+    mutationFn: async ({ gameType, cardContent }: { gameType: string; cardContent: any }) => {
+      const { data } = await api.post('/api/ai/help', { gameType, cardContent })
+      return data.explanation as string
+    },
+    onSuccess: (explanation) => {
+      setHelpText(explanation)
+      setHelpVisible(true)
+    },
+    onError: (err: any) => {
+      if (err?.response?.status === 429) {
+        Alert.alert("Help Limit Reached", "You've used all your help requests for today. Come back tomorrow!")
+      } else {
+        Alert.alert("Couldn't load help", "Please try again.")
+      }
+    },
+  })
 
   const { data: lesson } = useQuery({
     queryKey: ['lesson', id],
@@ -110,6 +133,9 @@ export default function LessonScreen() {
   }
 
   const handleFinish = async () => {
+    // Read cardResults directly from store to avoid stale closure (DIALOGUE auto-advances
+    // via setTimeout before the component re-renders with the updated hook value)
+    const { cardResults: currentCardResults } = useLessonStore.getState()
     let badgesUnlocked: string[] = []
     let serverXpEarned = 0
     let dailyVisitBonus = false
@@ -117,7 +143,7 @@ export default function LessonScreen() {
     try {
       const { data } = await api.post('/api/progress/lesson/complete', {
         lessonId: id,
-        cardResults,
+        cardResults: currentCardResults,
       })
       badgesUnlocked = data.badgesUnlocked ?? []
       serverXpEarned = data.xpEarned ?? 0
@@ -126,10 +152,14 @@ export default function LessonScreen() {
     } catch {
       // Progress save failed — still navigate so user isn't stuck
     }
+    queryClient.invalidateQueries({ queryKey: ['progress-home'] })
+    queryClient.invalidateQueries({ queryKey: ['modules'] })
+    queryClient.invalidateQueries({ queryKey: ['modules-progress'] })
+    queryClient.invalidateQueries({ queryKey: ['profile'] })
     const score =
-      cardResults.length > 0
+      currentCardResults.length > 0
         ? Math.round(
-            (cardResults.filter(r => r.correct).length / cardResults.length) * 100
+            (currentCardResults.filter(r => r.correct).length / currentCardResults.length) * 100
           )
         : 0
     router.replace({
@@ -238,26 +268,60 @@ export default function LessonScreen() {
 
       {/* Bottom bar — hidden for dialogue (auto-advances on completion) */}
       {!isDialogue && <View style={styles.bottomBar}>
+        <View style={styles.bottomSide}>
+          <TouchableOpacity
+            onPress={prevCard}
+            disabled={currentCardIndex === 0}
+            style={[currentCardIndex === 0 && styles.disabledOpacity]}
+          >
+            <Text style={styles.prevBtnText}>‹ Prev</Text>
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity
-          onPress={prevCard}
-          disabled={currentCardIndex === 0}
-          style={[styles.prevBtn, currentCardIndex === 0 && styles.disabledOpacity]}
+          style={styles.helpBtn}
+          onPress={() => {
+            if (currentCard) {
+              helpMutation.mutate({ gameType: currentGameType, cardContent: currentCard })
+            }
+          }}
+          disabled={helpMutation.isPending}
         >
-          <Text style={styles.prevBtnText}>‹ Prev</Text>
+          {helpMutation.isPending
+            ? <ActivityIndicator size="small" color={NAVY} />
+            : <><Ionicons name="help-circle-outline" size={18} color={NAVY} /><Text style={styles.helpBtnText}>Help</Text></>
+          }
         </TouchableOpacity>
 
-        <View style={{ flex: 1 }} />
-
-        <TouchableOpacity
-          onPress={handleNext}
-          disabled={!cardCompleted}
-          style={[styles.nextBtn, !cardCompleted && styles.nextBtnDisabled]}
-        >
-          <Text style={[styles.nextBtnText, !cardCompleted && styles.nextBtnTextDisabled]}>
-            {isLastCard ? 'Finish' : 'Next ›'}
-          </Text>
-        </TouchableOpacity>
+        <View style={[styles.bottomSide, { alignItems: 'flex-end' }]}>
+          <TouchableOpacity
+            onPress={handleNext}
+            disabled={!cardCompleted}
+            style={[styles.nextBtn, !cardCompleted && styles.nextBtnDisabled]}
+          >
+            <Text style={[styles.nextBtnText, !cardCompleted && styles.nextBtnTextDisabled]}>
+              {isLastCard ? 'Finish' : 'Next ›'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>}
+
+      {/* Help modal */}
+      <Modal visible={helpVisible} transparent animationType="slide" onRequestClose={() => setHelpVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setHelpVisible(false)}>
+          <TouchableOpacity style={styles.modalSheet} activeOpacity={1}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Ionicons name="help-circle" size={22} color={NAVY} />
+              <Text style={styles.modalTitle}>Question Help</Text>
+              <TouchableOpacity onPress={() => setHelpVisible(false)}>
+                <Ionicons name="close" size={22} color={GREY} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalBody}>{helpText}</Text>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
 
       <BottomNavBar />
     </SafeAreaView>
@@ -354,8 +418,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
   },
-  prevBtn: {
-    // no background, just text
+  bottomSide: {
+    flex: 1,
   },
   prevBtnText: {
     color: GREY,
@@ -387,5 +451,58 @@ const styles = StyleSheet.create({
   },
   nextBtnTextDisabled: {
     color: '#9CA3AF',
+  },
+  helpBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+  },
+  helpBtnText: {
+    color: NAVY,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+    gap: 16,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E5E7EB',
+    alignSelf: 'center',
+    marginBottom: 4,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  modalTitle: {
+    flex: 1,
+    color: NAVY,
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  modalBody: {
+    color: '#374151',
+    fontSize: 15,
+    lineHeight: 24,
   },
 })

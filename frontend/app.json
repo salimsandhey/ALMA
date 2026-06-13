@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "ALMA",
+    "name": "ALMA: Speak English Fluently",
     "slug": "alma-app",
     "scheme": "alma",
     "version": "1.0.0",
@@ -30,9 +30,11 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.alma.learn",
+      "appleTeamId": "M6FXN66SFA",
       "infoPlist": {
         "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition.",
-        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone."
+        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "splash": {

@@ -409,6 +409,21 @@ model LegalContent {
 }
 
 // ─────────────────────────────────────────────
+// APP SETTINGS
+// ─────────────────────────────────────────────
+
+model AppSettings {
+  id                      String   @id @default("singleton")
+  coachDailyLimit         Int      @default(30)
+  greetingDailyLimit      Int      @default(20)
+  grammarDailyLimit       Int      @default(30)
+  warmupDailyLimit        Int      @default(3)
+  pronunciationDailyLimit Int      @default(50)
+  hintDailyLimit          Int      @default(5)
+  updatedAt               DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────
 // AI USAGE LOG
 // ─────────────────────────────────────────────
 

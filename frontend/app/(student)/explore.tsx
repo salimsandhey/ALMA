@@ -9,8 +9,8 @@ import {
   ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useQuery } from '@tanstack/react-query'
-import { useRouter } from 'expo-router'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRouter, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { api } from '../../lib/api'
 import { NAVY, GOLD, GREY, GREEN, BG } from '../../constants/colors'
@@ -96,10 +96,18 @@ function ContentCard({ item }: { item: EntertainmentItem }) {
 }
 
 export default function EntertainmentScreen() {
+  const queryClient = useQueryClient()
+
   const { data, isLoading, error, refetch } = useQuery<EntertainmentResponse>({
     queryKey: ['entertainment'],
     queryFn: () => api.get('/api/entertainment').then((r) => r.data),
   })
+
+  useFocusEffect(
+    useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: ['entertainment'] })
+    }, [queryClient])
+  )
 
   const videos = data?.items.filter((i) => i.type === 'VIDEO') ?? []
   const articles = data?.items.filter((i) => i.type === 'ARTICLE') ?? []

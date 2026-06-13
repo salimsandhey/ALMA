@@ -147,9 +147,22 @@ export default function StudentsScreen() {
     mutationFn: async ({ userId, isActive }: { userId: string; isActive: boolean }) => {
       await api.patch(`/api/admin/students/${userId}/status`, { isActive })
     },
+    onMutate: ({ userId, isActive }) => {
+      // Flip the badge in the visible list immediately
+      setAllStudents((prev) => prev.map((s) => s.id === userId ? { ...s, isActive } : s))
+    },
     onSuccess: () => {
+      // Reset to page 1 so the list refetches clean
+      setCurrentPage(1)
+      setAllStudents([])
+      setHasMore(true)
       queryClient.invalidateQueries({ queryKey: ['admin-students'] })
       queryClient.invalidateQueries({ queryKey: ['admin-student-detail', selectedId] })
+      setSelectedId(null)
+    },
+    onError: () => {
+      // Revert by refetching the current page
+      queryClient.invalidateQueries({ queryKey: ['admin-students'] })
     },
   })
 
@@ -492,8 +505,22 @@ export default function StudentsScreen() {
                 <TouchableOpacity
                   style={[styles.toggleBtn, detail.isActive ? styles.deactivateBtn : styles.activateBtn]}
                   onPress={() => {
-                    toggleStatus.mutate({ userId: detail.id, isActive: !detail.isActive })
-                    setSelectedId(null)
+                    if (detail.isActive) {
+                      Alert.alert(
+                        'Deactivate Account',
+                        `Are you sure you want to deactivate ${detail.displayName}'s account? They will not be able to log in until reactivated.`,
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          {
+                            text: 'Deactivate',
+                            style: 'destructive',
+                            onPress: () => toggleStatus.mutate({ userId: detail.id, isActive: false }),
+                          },
+                        ]
+                      )
+                    } else {
+                      toggleStatus.mutate({ userId: detail.id, isActive: true })
+                    }
                   }}
                 >
                   <Text style={styles.toggleBtnText}>

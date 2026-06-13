@@ -23,7 +23,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     const limitNum = Math.min(50, Math.max(1, Number(limit)))
     const skip = (pageNum - 1) * limitNum
 
-    const where: any = { role: 'STUDENT' }
+    const where: any = { role: 'STUDENT', isEmailVerified: true }
     if (search) {
       where.OR = [
         { displayName: { contains: String(search), mode: 'insensitive' } },

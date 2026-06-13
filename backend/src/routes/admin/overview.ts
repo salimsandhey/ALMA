@@ -15,9 +15,9 @@ router.get('/', async (_req: Request, res: Response): Promise<void> => {
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
 
     const [totalStudents, activeToday, activeThisWeek, lessonsCompletedThisWeek] = await Promise.all([
-      prisma.user.count({ where: { role: 'STUDENT' } }),
-      prisma.user.count({ where: { role: 'STUDENT', lastActiveDate: { gte: todayStart } } }),
-      prisma.user.count({ where: { role: 'STUDENT', lastActiveDate: { gte: oneWeekAgo } } }),
+      prisma.user.count({ where: { role: 'STUDENT', isEmailVerified: true } }),
+      prisma.user.count({ where: { role: 'STUDENT', isEmailVerified: true, lastActiveDate: { gte: todayStart } } }),
+      prisma.user.count({ where: { role: 'STUDENT', isEmailVerified: true, lastActiveDate: { gte: oneWeekAgo } } }),
       prisma.lessonProgress.count({ where: { isCompleted: true, completedAt: { gte: oneWeekAgo } } }),
     ])
 
@@ -31,7 +31,7 @@ router.get('/', async (_req: Request, res: Response): Promise<void> => {
 
     // Needs help: inactive students with < 20% completion
     const allStudents = await prisma.user.findMany({
-      where: { role: 'STUDENT' },
+      where: { role: 'STUDENT', isEmailVerified: true },
       select: {
         id: true,
         displayName: true,
@@ -132,7 +132,7 @@ router.get('/', async (_req: Request, res: Response): Promise<void> => {
 router.get('/report', async (_req: Request, res: Response): Promise<void> => {
   try {
     const students = await prisma.user.findMany({
-      where: { role: 'STUDENT' },
+      where: { role: 'STUDENT', isEmailVerified: true },
       orderBy: { xpTotal: 'desc' },
       select: {
         displayName: true, email: true, country: true, nativeLanguage: true,

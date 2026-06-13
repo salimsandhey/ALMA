@@ -44,7 +44,6 @@ const GROUPS: ScreenGroup[] = [
     color: '#059669',
     screens: [
       { label: 'Home', route: '/(student)/home' },
-      { label: 'Voice Test (TTS)', route: '/tts-test' },
       { label: 'Modules', route: '/(student)/modules' },
       { label: 'Music', route: '/(student)/music' },
       { label: 'Profile', route: '/(student)/profile' },

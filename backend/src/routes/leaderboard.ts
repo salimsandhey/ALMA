@@ -13,7 +13,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     const limit = Math.min(Number(req.query.limit) || 50, 100)
 
     const users = await prisma.user.findMany({
-      where: { isActive: true, role: 'STUDENT' },
+      where: { isActive: true, role: 'STUDENT', isEmailVerified: true },
       orderBy: { xpTotal: 'desc' },
       take: limit,
       select: { id: true, displayName: true, avatarUrl: true, xpTotal: true, country: true },

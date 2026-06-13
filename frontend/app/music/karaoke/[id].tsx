@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '../../../lib/api'
 import { Song } from '../../../lib/songs'
 import { useMusicStore } from '../../../stores/musicStore'
-import MicButton from '../../../components/lesson/MicButton'
+import MicButton, { MicButtonRef } from '../../../components/lesson/MicButton'
 import BottomNavBar from '../../../components/BottomNavBar'
 import { similarity } from '../../../lib/fuzzy'
 import { SpeechState } from '../../../lib/speech'
@@ -41,6 +41,11 @@ export default function KaraokeScreen() {
   const [interimText, setInterimText] = useState('')
   const [lastSpoken, setLastSpoken] = useState('')
   const [scoring, setScoring] = useState(false)
+  const [sessionStarted, setSessionStarted] = useState(false)
+
+  const micRef = useRef<MicButtonRef>(null)
+  // Use a ref so the setTimeout closure always sees the latest value
+  const sessionStartedRef = useRef(false)
 
   useEffect(() => {
     if (song && currentSong?.id !== song.id) {
@@ -73,9 +78,24 @@ export default function KaraokeScreen() {
     }
   }
 
+  const handleSessionStart = () => {
+    sessionStartedRef.current = true
+    setSessionStarted(true)
+  }
+
+  const handleStopSession = () => {
+    micRef.current?.stopListening()
+    sessionStartedRef.current = false
+    setSessionStarted(false)
+    setSpeechState('idle')
+    setInterimText('')
+    setLastSpoken('')
+    // Navigate to results with whatever was scored so far
+    router.replace({ pathname: '/music/results/[id]', params: { id: song.id } })
+  }
+
   const handleSTTResult = async (spoken: string) => {
     if (!spoken.trim()) {
-      // Fallback if empty speech
       handleScoringResult(0, '')
       return
     }
@@ -112,7 +132,6 @@ export default function KaraokeScreen() {
       spoken: spoken || '(no speech detected)',
     })
 
-    // Auto-advance after a short delay (800ms)
     setTimeout(() => {
       setInterimText('')
       setLastSpoken('')
@@ -123,6 +142,12 @@ export default function KaraokeScreen() {
         router.replace({ pathname: '/music/results/[id]', params: { id: song.id } })
       } else {
         nextLine()
+        // Auto-restart mic for the next line if session is still active
+        if (sessionStartedRef.current) {
+          setTimeout(() => {
+            micRef.current?.startListening()
+          }, 300)
+        }
       }
     }, 800)
   }
@@ -140,7 +165,14 @@ export default function KaraokeScreen() {
           <Text style={styles.headerTitle}>🎵 Music</Text>
           <Text style={styles.headerSubtitle}>Sing line by line</Text>
         </View>
-        <View style={{ width: 40 }} />
+        {sessionStarted ? (
+          <TouchableOpacity style={styles.stopBtn} onPress={handleStopSession} activeOpacity={0.7}>
+            <Ionicons name="stop-circle-outline" size={18} color="#EF4444" />
+            <Text style={styles.stopBtnText}>Stop</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 60 }} />
+        )}
       </View>
 
       {/* Song Mini Card */}
@@ -211,14 +243,26 @@ export default function KaraokeScreen() {
 
             <View style={styles.micWrapper}>
               <MicButton
+                ref={micRef}
                 onResult={handleSTTResult}
                 onInterim={setInterimText}
-                onStateChange={setSpeechState}
+                onStateChange={(state) => {
+                  setSpeechState(state)
+                  if (state === 'listening' && !sessionStartedRef.current) {
+                    handleSessionStart()
+                  }
+                }}
                 disabled={speechState === 'processing' || speechState === 'success'}
                 tone="yellow"
-                label="Tap mic to start singing"
+                label={sessionStarted ? 'Listening for next line...' : 'Tap mic to start singing'}
               />
             </View>
+
+            {sessionStarted && (
+              <Text style={styles.sessionHint}>
+                Mic restarts automatically — just keep singing
+              </Text>
+            )}
           </>
         )}
       </View>
@@ -262,6 +306,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textLight,
     marginTop: 2,
+  },
+  stopBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EF4444',
+    width: 60,
+    justifyContent: 'center',
+  },
+  stopBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#EF4444',
   },
   miniCard: {
     backgroundColor: Colors.midBlue,
@@ -417,6 +478,12 @@ const styles = StyleSheet.create({
     height: 100,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  sessionHint: {
+    fontSize: 11,
+    color: Colors.textLight,
+    textAlign: 'center',
+    marginTop: 4,
   },
   errorText: {
     fontSize: 16,

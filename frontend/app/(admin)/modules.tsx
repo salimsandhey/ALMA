@@ -110,7 +110,19 @@ function ModuleListView({ onLogout, onNew, onEdit }: {
   })
   const toggle = useMutation({
     mutationFn: ({ id, v }: { id: string; v: boolean }) => api.patch(`/api/admin/modules/${id}`, { isPublished: v }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-modules'] }),
+    onMutate: async ({ id, v }) => {
+      await queryClient.cancelQueries({ queryKey: ['admin-modules'] })
+      const previous = queryClient.getQueryData(['admin-modules'])
+      queryClient.setQueryData(['admin-modules'], (old: any) => ({
+        ...old,
+        modules: old?.modules?.map((m: ModuleItem) => m.id === id ? { ...m, isPublished: v } : m) ?? [],
+      }))
+      return { previous }
+    },
+    onError: (_err, _vars, context: any) => {
+      if (context?.previous) queryClient.setQueryData(['admin-modules'], context.previous)
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['admin-modules'] }),
   })
 
   const confirmDel = (m: ModuleItem) =>
@@ -228,6 +240,7 @@ function ModuleEditorView({ moduleId, onBack, onEditLesson, onAddLesson, onLogou
     onSuccess: (id) => {
       setSavedModuleId(id)
       queryClient.invalidateQueries({ queryKey: ['admin-modules'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-module-lessons', id] })
       Alert.alert('Saved', 'Module info saved. Now add lessons below.')
     },
   })

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useCallback } from 'react'
 import {
   View,
   Text,
@@ -10,9 +10,9 @@ import {
   type DimensionValue,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Svg, { Circle } from 'react-native-svg'
-import { useRouter } from 'expo-router'
+import { useRouter, useFocusEffect } from 'expo-router'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { NAVY, GOLD, GREY } from '../../constants/colors'
@@ -100,6 +100,7 @@ function getRankBadge(rank: number) {
 
 export default function StudentHome() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { user, setGreetingDone } = useAuthStore()
   const { width: screenWidth } = useWindowDimensions()
 
@@ -107,6 +108,12 @@ export default function StudentHome() {
     queryKey: ['progress-home'],
     queryFn: () => api.get('/api/progress/home').then((r) => r.data),
   })
+
+  useFocusEffect(
+    useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: ['progress-home'] })
+    }, [queryClient])
+  )
 
   const xpTotal = homeData?.xpTotal ?? user?.xpTotal ?? 0
   const streakCount = homeData?.streakCount ?? user?.streakCount ?? 0
@@ -124,16 +131,25 @@ export default function StudentHome() {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <View style={styles.topRow}>
-          <View style={styles.levelBadge}>
-            <Text style={styles.levelBadgeText}>BEGINNER</Text>
-          </View>
-          {user?.avatarUrl ? (
-            <Image source={{ uri: user.avatarUrl }} style={styles.avatarCircle} />
-          ) : (
-            <View style={styles.avatarCircle}>
-              <Text style={styles.avatarInitial}>{userInitial}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={styles.levelBadge}>
+              <Text style={styles.levelBadgeText}>BEGINNER</Text>
             </View>
-          )}
+            {__DEV__ && (
+              <TouchableOpacity onPress={() => router.push('/dev-screens' as any)} style={styles.devBtn}>
+                <Text style={styles.devBtnText}>DEV</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <TouchableOpacity onPress={() => router.push('/(student)/profile')} activeOpacity={0.8}>
+            {user?.avatarUrl ? (
+              <Image source={{ uri: user.avatarUrl }} style={styles.avatarCircle} />
+            ) : (
+              <View style={styles.avatarCircle}>
+                <Text style={styles.avatarInitial}>{userInitial}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
 
         <Text style={[styles.greeting, { fontSize: screenWidth < 375 ? 22 : 26 }]}>{`Hey, ${displayName} \uD83D\uDC4B`}</Text>
@@ -214,20 +230,9 @@ export default function StudentHome() {
           </View>
           <View style={styles.challengeTextWrap}>
             <Text style={styles.challengeTitle}>Daily Challenge</Text>
-            <Text style={styles.challengeSubtitle}>Quick quiz \u2014 earn bonus ALMA Points</Text>
+            <Text style={styles.challengeSubtitle}>Quick quiz - earn bonus ALMA Points</Text>
           </View>
           <Text style={styles.challengeChevron}>{'\u203A'}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.voiceTestRow} activeOpacity={0.85} onPress={() => router.push('/tts-test')}>
-          <View style={styles.voiceTestIconWrap}>
-            <Text style={{ fontSize: 18 }}>🔊</Text>
-          </View>
-          <View style={styles.challengeTextWrap}>
-            <Text style={styles.challengeTitle}>Voice Test</Text>
-            <Text style={styles.challengeSubtitle}>Test Kokoro TTS — male & female voices</Text>
-          </View>
-          <Text style={styles.challengeChevron}>›</Text>
         </TouchableOpacity>
 
         <View style={styles.topLearnersHeader}>
@@ -318,6 +323,18 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 10,
     paddingVertical: 4,
+  },
+  devBtn: {
+    backgroundColor: '#EF4444',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  devBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   levelBadgeText: {
     color: NAVY,
@@ -532,23 +549,6 @@ const styles = StyleSheet.create({
   challengeChevron: {
     color: GREY,
     fontSize: 16,
-  },
-  voiceTestRow: {
-    marginTop: 12,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    ...baseCardShadow,
-  },
-  voiceTestIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#EEF2FF',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   topLearnersHeader: {
     marginTop: 24,

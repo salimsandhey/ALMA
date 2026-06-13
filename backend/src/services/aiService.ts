@@ -2,6 +2,53 @@ import genAI from '../lib/gemini'
 import { redis } from '../lib/redis'
 import { prisma } from '../lib/prisma'
 
+const SETTINGS_CACHE_KEY = 'app:settings'
+const SETTINGS_TTL = 60
+
+type AppSettingsValues = {
+  coachDailyLimit: number
+  greetingDailyLimit: number
+  grammarDailyLimit: number
+  warmupDailyLimit: number
+  pronunciationDailyLimit: number
+  hintDailyLimit: number
+}
+
+const DEFAULT_SETTINGS: AppSettingsValues = {
+  coachDailyLimit: 30,
+  greetingDailyLimit: 20,
+  grammarDailyLimit: 30,
+  warmupDailyLimit: 3,
+  pronunciationDailyLimit: 50,
+  hintDailyLimit: 5,
+}
+
+export async function getSettings(): Promise<AppSettingsValues> {
+  try {
+    const cached = await redis.get(SETTINGS_CACHE_KEY)
+    if (cached) return JSON.parse(cached as string)
+
+    const row = await prisma.appSettings.upsert({
+      where: { id: 'singleton' },
+      update: {},
+      create: { id: 'singleton', ...DEFAULT_SETTINGS },
+    })
+
+    const settings: AppSettingsValues = {
+      coachDailyLimit: row.coachDailyLimit,
+      greetingDailyLimit: row.greetingDailyLimit,
+      grammarDailyLimit: row.grammarDailyLimit,
+      warmupDailyLimit: row.warmupDailyLimit,
+      pronunciationDailyLimit: row.pronunciationDailyLimit,
+      hintDailyLimit: row.hintDailyLimit,
+    }
+    await redis.setex(SETTINGS_CACHE_KEY, SETTINGS_TTL, JSON.stringify(settings))
+    return settings
+  } catch {
+    return DEFAULT_SETTINGS
+  }
+}
+
 export async function checkRateLimit(
   key: string,
   limit: number,
@@ -99,9 +146,11 @@ Rules:
 - When ending, include the exact string [SESSION_COMPLETE] at the end of your message
 - Always address the student by their name if provided`
 
-const HINT_SYSTEM_PROMPT = `You are a helpful English tutor. A student is stuck on a lesson exercise. Give them one short, helpful hint without revealing the exact answer.
+const HELP_SYSTEM_PROMPT = `You are a helpful English tutor assistant. A student is stuck on a game question in an English learning app for tourism and hospitality workers.
 
-Keep the hint to 1-2 sentences. Use simple English. Do not include the answer directly.`
+Your job: explain clearly what the question is asking and what concept it is testing. Write your explanation in the student's native language (specified in the request). Keep it to 2-3 short sentences. Do NOT reveal the exact answer — help them understand the question so they can answer it themselves.
+
+Always respond in the student's native language. If the native language is English or unknown, respond in English.`
 
 const PRONUNCIATION_SYSTEM_PROMPT = `You are evaluating whether a student's spoken response matches the target phrase in a language learning app. The student is a non-native English speaker.
 
@@ -383,26 +432,15 @@ export async function coachChat(
 export async function getCoachStatus(userId: string): Promise<{
   messagesUsed: number
   messagesRemaining: number
-  sessionsUsed: number
-  sessionsRemaining: number
   canChat: boolean
 }> {
-  const [msgRaw, sessionRaw] = await Promise.all([
+  const [msgRaw, settings] = await Promise.all([
     redis.get(`rl:coach-msg:${userId}`),
-    redis.get(`rl:coach-session:${userId}`),
+    getSettings(),
   ])
   const messagesUsed = parseInt((msgRaw as string | null) ?? '0')
-  const sessionsUsed = parseInt((sessionRaw as string | null) ?? '0')
-  const messagesRemaining = Math.max(0, 50 - messagesUsed)
-  const sessionsRemaining = Math.max(0, 2 - sessionsUsed)
-  return { messagesUsed, messagesRemaining, sessionsUsed, sessionsRemaining, canChat: messagesRemaining > 0 && sessionsRemaining > 0 }
-}
-
-export async function startCoachSession(userId: string): Promise<{ allowed: boolean; sessionsUsed: number }> {
-  const key = `rl:coach-session:${userId}`
-  const current = await redis.incr(key)
-  if (current === 1) await redis.expire(key, 86400)
-  return { allowed: current <= 2, sessionsUsed: current }
+  const messagesRemaining = Math.max(0, settings.coachDailyLimit - messagesUsed)
+  return { messagesUsed, messagesRemaining, canChat: messagesRemaining > 0 }
 }
 
 export async function warmupChat(userId: string, messages: Array<{ role: string; content: string }>): Promise<{ reply: string; sessionEnded: boolean; xpAwarded: number }> {
@@ -557,28 +595,39 @@ export async function gradeQuizAnswersWithAI(answers: QuizAnswerInput[]): Promis
   }
 }
 
-export async function getHint(userId: string, gameType: string, cardContent: Record<string, any>): Promise<string> {
+export async function getHelp(userId: string, gameType: string, cardContent: Record<string, any>): Promise<string> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { nativeLanguage: true },
+  })
+  const nativeLang = user?.nativeLanguage ?? 'English'
+
   try {
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
-      systemInstruction: HINT_SYSTEM_PROMPT,
+      systemInstruction: HELP_SYSTEM_PROMPT,
     })
 
+    const prompt = `Student's native language: ${nativeLang}
+Game type: ${gameType}
+Card content: ${JSON.stringify(cardContent)}
+
+Explain what this question is asking in ${nativeLang}.`
+
     const response = await model.generateContent({
-      contents: [{
-        role: 'user',
-        parts: [{ text: `Game type: ${gameType}\nCard content: ${JSON.stringify(cardContent)}\nPlease give a helpful hint.` }],
-      }],
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
-        maxOutputTokens: 100,
+        maxOutputTokens: 200,
+        // @ts-ignore
+        thinkingConfig: { thinkingBudget: 0 },
       },
     })
 
-    const hint = response.response.text().trim()
+    const explanation = response.response.text().trim()
     const { inputTokens, outputTokens } = extractTokens(response.response)
-    await logAIUsage(userId, 'hint', inputTokens, outputTokens)
-    return hint
+    await logAIUsage(userId, 'help', inputTokens, outputTokens)
+    return explanation
   } catch {
-    return 'Think carefully about the context and what you have learned so far!'
+    return 'Read the question carefully and think about what word or phrase fits best.'
   }
 }
