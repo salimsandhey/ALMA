@@ -48,14 +48,6 @@ const SECTIONS = [
     color: '#059669',
     bg: '#ECFDF5',
   },
-  {
-    key: 'ai-limits',
-    title: 'AI Daily Limits',
-    subtitle: 'Configure per-user daily limits for all AI features',
-    icon: 'options-outline' as const,
-    color: '#6366F1',
-    bg: '#EEF2FF',
-  },
 ]
 
 export default function MoreScreen() {

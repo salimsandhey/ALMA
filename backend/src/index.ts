@@ -27,7 +27,6 @@ import adminChallengesRouter from './routes/admin/challenges'
 import adminSongsRouter from './routes/admin/songs'
 import adminAiUsageRouter from './routes/admin/ai-usage'
 import adminLegalRouter from './routes/admin/legal'
-import adminSettingsRouter from './routes/admin/settings'
 import legalRouter from './routes/legal'
 import musicRouter from './routes/music'
 import challengesRouter from './routes/challenges'
@@ -64,7 +63,6 @@ app.use('/api/admin/challenges', adminChallengesRouter)
 app.use('/api/admin/songs', adminSongsRouter)
 app.use('/api/admin/ai-usage', adminAiUsageRouter)
 app.use('/api/admin/legal', adminLegalRouter)
-app.use('/api/admin/settings', adminSettingsRouter)
 app.use('/api/legal', legalRouter)
 app.use('/api/music', musicRouter)
 app.use('/api/challenges', challengesRouter)

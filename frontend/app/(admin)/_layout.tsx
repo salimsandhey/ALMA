@@ -65,7 +65,6 @@ export default function AdminLayout() {
       <Tabs.Screen name="songs"      options={{ href: null }} />
       <Tabs.Screen name="ai-usage"   options={{ href: null }} />
       <Tabs.Screen name="legal"      options={{ href: null }} />
-      <Tabs.Screen name="ai-limits"  options={{ href: null }} />
     </Tabs>
   )
 }

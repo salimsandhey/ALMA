@@ -2,51 +2,13 @@ import genAI from '../lib/gemini'
 import { redis } from '../lib/redis'
 import { prisma } from '../lib/prisma'
 
-const SETTINGS_CACHE_KEY = 'app:settings'
-const SETTINGS_TTL = 60
-
-type AppSettingsValues = {
-  coachDailyLimit: number
-  greetingDailyLimit: number
-  grammarDailyLimit: number
-  warmupDailyLimit: number
-  pronunciationDailyLimit: number
-  hintDailyLimit: number
-}
-
-const DEFAULT_SETTINGS: AppSettingsValues = {
-  coachDailyLimit: 30,
-  greetingDailyLimit: 20,
-  grammarDailyLimit: 30,
-  warmupDailyLimit: 3,
-  pronunciationDailyLimit: 50,
-  hintDailyLimit: 5,
-}
-
-export async function getSettings(): Promise<AppSettingsValues> {
-  try {
-    const cached = await redis.get(SETTINGS_CACHE_KEY)
-    if (cached) return JSON.parse(cached as string)
-
-    const row = await prisma.appSettings.upsert({
-      where: { id: 'singleton' },
-      update: {},
-      create: { id: 'singleton', ...DEFAULT_SETTINGS },
-    })
-
-    const settings: AppSettingsValues = {
-      coachDailyLimit: row.coachDailyLimit,
-      greetingDailyLimit: row.greetingDailyLimit,
-      grammarDailyLimit: row.grammarDailyLimit,
-      warmupDailyLimit: row.warmupDailyLimit,
-      pronunciationDailyLimit: row.pronunciationDailyLimit,
-      hintDailyLimit: row.hintDailyLimit,
-    }
-    await redis.setex(SETTINGS_CACHE_KEY, SETTINGS_TTL, JSON.stringify(settings))
-    return settings
-  } catch {
-    return DEFAULT_SETTINGS
-  }
+export const DAILY_LIMITS = {
+  coach: 30,
+  greeting: 20,
+  grammar: 30,
+  warmup: 3,
+  pronunciation: 50,
+  hint: 5,
 }
 
 export async function checkRateLimit(
@@ -434,12 +396,9 @@ export async function getCoachStatus(userId: string): Promise<{
   messagesRemaining: number
   canChat: boolean
 }> {
-  const [msgRaw, settings] = await Promise.all([
-    redis.get(`rl:coach-msg:${userId}`),
-    getSettings(),
-  ])
+  const msgRaw = await redis.get(`rl:coach-msg:${userId}`)
   const messagesUsed = parseInt((msgRaw as string | null) ?? '0')
-  const messagesRemaining = Math.max(0, settings.coachDailyLimit - messagesUsed)
+  const messagesRemaining = Math.max(0, DAILY_LIMITS.coach - messagesUsed)
   return { messagesUsed, messagesRemaining, canChat: messagesRemaining > 0 }
 }
 

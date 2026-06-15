@@ -24,8 +24,6 @@ ENV NODE_ENV=production
 
 COPY package*.json ./
 RUN npm ci --omit=dev
-# keep ts-node for seed script
-RUN npm install --save-dev ts-node typescript
 
 COPY tsconfig.json ./
 COPY --from=builder /app/dist ./dist
