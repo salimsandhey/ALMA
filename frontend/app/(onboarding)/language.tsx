@@ -16,6 +16,31 @@ import { NAVY, GOLD, BG, WHITE } from '../../constants/colors'
 
 type Language = { id: string; code: string; label: string; flag: string; isSuggested: boolean; orderIndex: number }
 
+const LANG_ENGLISH_NAMES: Record<string, string> = {
+  af: 'afrikaans', ak: 'akan twi', sq: 'albanian shqip', am: 'amharic',
+  ar: 'arabic', hy: 'armenian', az: 'azerbaijani', bn: 'bengali',
+  be: 'belarusian', bs: 'bosnian', bg: 'bulgarian', my: 'burmese myanmar',
+  km: 'khmer cambodian', zh: 'chinese mandarin', 'zh-TW': 'chinese traditional',
+  hr: 'croatian', cs: 'czech', da: 'danish', nl: 'dutch',
+  en: 'english', et: 'estonian', tl: 'filipino tagalog', fi: 'finnish',
+  fr: 'french', ka: 'georgian', de: 'german', el: 'greek',
+  gu: 'gujarati', ht: 'haitian creole', ha: 'hausa', he: 'hebrew',
+  hi: 'hindi', hu: 'hungarian', is: 'icelandic', id: 'indonesian',
+  ga: 'irish gaelic', it: 'italian', ja: 'japanese', jv: 'javanese',
+  kn: 'kannada', kk: 'kazakh', ko: 'korean', ku: 'kurdish',
+  lo: 'lao', lv: 'latvian', lt: 'lithuanian', mg: 'malagasy',
+  ms: 'malay', ml: 'malayalam', mt: 'maltese', ne: 'nepali',
+  no: 'norwegian', om: 'oromo', or: 'odia', fa: 'persian farsi',
+  pl: 'polish', pt: 'portuguese', pa: 'punjabi', ro: 'romanian',
+  ru: 'russian', rw: 'kinyarwanda', sr: 'serbian', si: 'sinhala',
+  sk: 'slovak', sl: 'slovenian', so: 'somali', es: 'spanish',
+  st: 'sesotho', sw: 'swahili', sv: 'swedish', tg: 'tajik',
+  ta: 'tamil', te: 'telugu', th: 'thai', tr: 'turkish',
+  tk: 'turkmen', uk: 'ukrainian', ur: 'urdu', uz: 'uzbek',
+  vi: 'vietnamese', cy: 'welsh', ig: 'igbo', yo: 'yoruba',
+  zu: 'zulu', ps: 'pashto dari',
+}
+
 type Gender = 'MALE' | 'FEMALE' | 'PREFER_NOT_TO_SAY'
 
 function ProgressBar({ step }: { step: 1 | 2 | 3 | 4 }) {
@@ -66,12 +91,8 @@ export default function OnboardingLanguageScreen() {
   const filteredList = useMemo(() => {
     const q = search.toLowerCase().trim()
     if (!q) return null
-    const displayNames = (() => {
-      try { return new Intl.DisplayNames(['en'], { type: 'language' }) }
-      catch { return null }
-    })()
     return allLanguages.filter((l) => {
-      const englishName = displayNames?.of(l.code)?.toLowerCase() ?? ''
+      const englishName = LANG_ENGLISH_NAMES[l.code] ?? ''
       return (
         l.label.toLowerCase().includes(q) ||
         l.code.toLowerCase().includes(q) ||

@@ -13,6 +13,31 @@ import { useAuthStore } from '../stores/authStore'
 import { countryFlag } from '../lib/countries'
 import { NAVY, GOLD, BG, GREY } from '../constants/colors'
 
+const LANG_ENGLISH_NAMES: Record<string, string> = {
+  af: 'afrikaans', ak: 'akan twi', sq: 'albanian shqip', am: 'amharic',
+  ar: 'arabic', hy: 'armenian', az: 'azerbaijani', bn: 'bengali',
+  be: 'belarusian', bs: 'bosnian', bg: 'bulgarian', my: 'burmese myanmar',
+  km: 'khmer cambodian', zh: 'chinese mandarin', 'zh-TW': 'chinese traditional',
+  hr: 'croatian', cs: 'czech', da: 'danish', nl: 'dutch',
+  en: 'english', et: 'estonian', tl: 'filipino tagalog', fi: 'finnish',
+  fr: 'french', ka: 'georgian', de: 'german', el: 'greek',
+  gu: 'gujarati', ht: 'haitian creole', ha: 'hausa', he: 'hebrew',
+  hi: 'hindi', hu: 'hungarian', is: 'icelandic', id: 'indonesian',
+  ga: 'irish gaelic', it: 'italian', ja: 'japanese', jv: 'javanese',
+  kn: 'kannada', kk: 'kazakh', ko: 'korean', ku: 'kurdish',
+  lo: 'lao', lv: 'latvian', lt: 'lithuanian', mg: 'malagasy',
+  ms: 'malay', ml: 'malayalam', mt: 'maltese', ne: 'nepali',
+  no: 'norwegian', om: 'oromo', or: 'odia', fa: 'persian farsi',
+  pl: 'polish', pt: 'portuguese', pa: 'punjabi', ro: 'romanian',
+  ru: 'russian', rw: 'kinyarwanda', sr: 'serbian', si: 'sinhala',
+  sk: 'slovak', sl: 'slovenian', so: 'somali', es: 'spanish',
+  st: 'sesotho', sw: 'swahili', sv: 'swedish', tg: 'tajik',
+  ta: 'tamil', te: 'telugu', th: 'thai', tr: 'turkish',
+  tk: 'turkmen', uk: 'ukrainian', ur: 'urdu', uz: 'uzbek',
+  vi: 'vietnamese', cy: 'welsh', ig: 'igbo', yo: 'yoruba',
+  zu: 'zulu', ps: 'pashto dari',
+}
+
 const GENDERS = [
   { value: 'MALE', label: 'Male' },
   { value: 'FEMALE', label: 'Female' },
@@ -184,7 +209,10 @@ export default function EditProfile() {
   const filteredLanguages = useMemo(() => {
     const q = pickerSearch.toLowerCase()
     if (!q) return allLanguages
-    return allLanguages.filter((l) => l.label.toLowerCase().includes(q) || l.code.toLowerCase().includes(q))
+    return allLanguages.filter((l) => {
+      const englishName = LANG_ENGLISH_NAMES[l.code] ?? ''
+      return l.label.toLowerCase().includes(q) || l.code.toLowerCase().includes(q) || englishName.includes(q)
+    })
   }, [pickerSearch, allLanguages])
 
   const selectedCountryName = allCountries.find((c) => c.code === country)?.name ?? country
