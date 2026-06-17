@@ -23,7 +23,7 @@ export interface MicButtonRef {
 }
 
 interface MicButtonProps {
-  onResult: (text: string) => void
+  onResult: (texts: string[]) => void
   onInterim?: (text: string) => void
   onStateChange?: (state: SpeechState) => void
   disabled?: boolean
@@ -47,15 +47,18 @@ const MicButton = forwardRef<MicButtonRef, MicButtonProps>(function MicButton({
   const pulseLoop = useRef<Animated.CompositeAnimation | null>(null)
 
   useSpeechHook('result', (e: any) => {
-    const transcript: string = e.results?.[0]?.transcript ?? ''
-    if (!transcript) return
-    if (e.isFinal) {
-      onStateChange?.('processing')
-      onResult(transcript)
-      onInterim?.('')
-    } else {
-      onInterim?.(transcript)
+    if (!e.isFinal) {
+      const interim: string = e.results?.[0]?.transcript ?? ''
+      if (interim) onInterim?.(interim)
+      return
     }
+    const transcripts: string[] = (e.results ?? [])
+      .map((r: any) => r?.transcript ?? '')
+      .filter(Boolean)
+    if (transcripts.length === 0) return
+    onStateChange?.('processing')
+    onResult(transcripts)
+    onInterim?.('')
   })
 
   useSpeechHook('end', () => {
@@ -119,10 +122,10 @@ const MicButton = forwardRef<MicButtonRef, MicButtonProps>(function MicButton({
       await SpeechModule.start({
         lang: 'en-US',
         interimResults: true,
-        maxAlternatives: 1,
+        maxAlternatives: 3,
         continuous: false,
         requiresOnDeviceRecognition: false,
-        addsPunctuation: true,
+        addsPunctuation: false,
       })
     } catch {
       setListening(false)
@@ -155,7 +158,7 @@ const MicButton = forwardRef<MicButtonRef, MicButtonProps>(function MicButton({
     const trimmed = fallbackText.trim()
     if (trimmed) {
       onStateChange?.('processing')
-      onResult(trimmed)
+      onResult([trimmed])
     }
     setFallbackVisible(false)
     setFallbackText('')

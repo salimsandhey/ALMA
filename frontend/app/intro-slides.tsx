@@ -10,7 +10,9 @@ import {
   StatusBar,
 } from 'react-native'
 import { useRouter } from 'expo-router'
+import * as Speech from 'expo-speech'
 import { useAuthStore } from '../stores/authStore'
+import { useVoiceStore, getSpeakOptions } from '../stores/voiceStore'
 
 const { width: W, height: H } = Dimensions.get('window')
 
@@ -45,6 +47,7 @@ const SLIDES = [
 
 export default function IntroSlidesScreen() {
   const { token } = useAuthStore()
+  const voiceGender = useVoiceStore((s) => s.voiceGender)
   const router    = useRouter()
   const listRef   = useRef<FlatList>(null)
   const [activeIndex, setActiveIndex] = useState(0)
@@ -52,6 +55,22 @@ export default function IntroSlidesScreen() {
   useEffect(() => {
     if (!token) router.replace('/(auth)')
   }, [token])
+
+  // Speak the active slide's content. Stop any in-progress speech first
+  // so switching slides never causes two voices to play at once.
+  useEffect(() => {
+    const slide = SLIDES[activeIndex]
+    if (!slide) return
+    Speech.stop()
+    const text = `${slide.title.replace(/\n/g, ' ')}. ${slide.subtitle}`
+    Speech.speak(text, getSpeakOptions(voiceGender))
+    return () => { Speech.stop() }
+  }, [activeIndex, voiceGender])
+
+  // Stop speech when leaving the screen entirely.
+  useEffect(() => {
+    return () => { Speech.stop() }
+  }, [])
 
   if (!token) return null
 

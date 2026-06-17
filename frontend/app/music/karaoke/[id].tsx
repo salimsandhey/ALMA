@@ -171,7 +171,7 @@ export default function KaraokeScreen() {
             <Text style={styles.stopBtnText}>Stop</Text>
           </TouchableOpacity>
         ) : (
-          <View style={{ width: 60 }} />
+          <View style={{ width: 72 }} />
         )}
       </View>
 
@@ -279,9 +279,8 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     backgroundColor: Colors.white,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
@@ -295,16 +294,17 @@ const styles = StyleSheet.create({
   },
   headerText: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    marginLeft: 8,
   },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 21,
+    fontWeight: '800',
     color: Colors.navy,
   },
   headerSubtitle: {
     fontSize: 12,
-    color: Colors.textLight,
+    color: '#98A2B3',
     marginTop: 2,
   },
   stopBtn: {
@@ -325,8 +325,9 @@ const styles = StyleSheet.create({
     color: '#EF4444',
   },
   miniCard: {
-    backgroundColor: Colors.midBlue,
-    padding: 12,
+    backgroundColor: '#184B96',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     marginHorizontal: 20,
     marginTop: 16,
     borderRadius: 16,
@@ -336,44 +337,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   miniEmoji: {
-    fontSize: 24,
-    marginRight: 10,
+    fontSize: 18,
+    marginRight: 8,
   },
   miniText: {
     flex: 1,
   },
   miniTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: Colors.white,
   },
   miniGenre: {
-    fontSize: 11,
-    color: '#94A3B8',
-    marginTop: 2,
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.65)',
+    marginTop: 1,
   },
   listenBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     backgroundColor: Colors.white,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
   },
   listenBadgeText: {
     fontSize: 10,
-    fontWeight: '600',
-    color: Colors.textDark,
+    fontWeight: '700',
+    color: '#1F2937',
   },
   progressContainer: {
     marginHorizontal: 20,
-    marginTop: 16,
+    marginTop: 14,
   },
   progressText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: Colors.textMid,
+    fontWeight: '700',
+    color: '#1F2937',
     marginBottom: 6,
   },
   progressTrack: {
@@ -390,8 +391,9 @@ const styles = StyleSheet.create({
   lyricsArea: {
     flex: 1,
     paddingHorizontal: 20,
-    justifyContent: 'center',
-    gap: 16,
+    justifyContent: 'flex-start',
+    gap: 14,
+    marginTop: 18,
   },
   currentLyricCard: {
     backgroundColor: Colors.white,
@@ -406,17 +408,19 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   singThisLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
-    color: Colors.textLight,
-    letterSpacing: 1,
-    marginBottom: 10,
+    color: '#6B7280',
+    letterSpacing: 0.8,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   currentLyricText: {
-    fontSize: 22,
+    fontSize: 19,
     fontWeight: '800',
     color: Colors.navy,
-    lineHeight: 30,
+    lineHeight: 27,
+    textAlign: 'center',
   },
   nextLyricCard: {
     backgroundColor: '#E5E7EB',
@@ -426,21 +430,22 @@ const styles = StyleSheet.create({
   },
   upNextLabel: {
     fontSize: 10,
-    fontWeight: '700',
-    color: Colors.textMid,
+    fontWeight: '800',
+    color: '#4B5563',
     letterSpacing: 0.5,
     marginBottom: 4,
   },
   nextLyricText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.textDark,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
   },
   recordArea: {
     backgroundColor: Colors.white,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    paddingVertical: 24,
+    paddingTop: 20,
+    paddingBottom: 24,
     paddingHorizontal: 20,
     alignItems: 'center',
     elevation: 10,
@@ -450,12 +455,12 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
   },
   micWrapper: {
-    marginTop: 12,
-    marginBottom: 8,
+    marginTop: 10,
+    marginBottom: 6,
   },
   interimText: {
     fontSize: 14,
-    color: Colors.textMid,
+    color: '#6B7280',
     textAlign: 'center',
     height: 40,
     paddingHorizontal: 20,
@@ -470,7 +475,7 @@ const styles = StyleSheet.create({
   },
   scoringText: {
     fontSize: 14,
-    color: Colors.textMid,
+    color: '#6B7280',
     fontWeight: '600',
     marginTop: 8,
   },
@@ -481,13 +486,13 @@ const styles = StyleSheet.create({
   },
   sessionHint: {
     fontSize: 11,
-    color: Colors.textLight,
+    color: '#98A2B3',
     textAlign: 'center',
     marginTop: 4,
   },
   errorText: {
     fontSize: 16,
-    color: Colors.textLight,
+    color: '#98A2B3',
     textAlign: 'center',
     marginTop: 40,
   },

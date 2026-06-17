@@ -56,7 +56,7 @@ export default function Badges() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={22} color="#111827" />
+          <Ionicons name="chevron-back" size={24} color="#98A2B3" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Badges</Text>
         <View style={styles.headerSpacer} />
@@ -89,7 +89,7 @@ export default function Badges() {
           {locked.length > 0 ? (
             <>
               <View style={styles.sectionHeader}>
-                <Ionicons name="lock-closed" size={16} color={GREY} />
+                <Ionicons name="lock-closed" size={16} color={GOLD} />
                 <Text style={[styles.sectionTitle, styles.lockedSectionTitle]}>Locked</Text>
               </View>
               <View style={styles.grid}>
@@ -137,94 +137,94 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 14,
     backgroundColor: BG,
   },
-  backBtn: { padding: 4 },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: '#111827' },
-  headerSpacer: { width: 30 },
+  backBtn: { padding: 4, marginLeft: -2 },
+  headerTitle: { fontSize: 21, fontWeight: '800', color: '#1C2340' },
+  headerSpacer: { width: 32 },
   loader: { marginTop: 60 },
-  body: { paddingHorizontal: 16, paddingTop: 16 },
+  body: { paddingHorizontal: 20, paddingTop: 10 },
   banner: {
     backgroundColor: GOLD,
-    borderRadius: 18,
-    paddingVertical: 24,
+    borderRadius: 22,
+    minHeight: 130,
+    paddingVertical: 18,
     paddingHorizontal: 20,
     alignItems: 'center',
-    marginBottom: 24,
+    justifyContent: 'center',
+    marginBottom: 22,
   },
-  bannerCount: { fontSize: 52, fontWeight: '900', color: '#1F2937', lineHeight: 56 },
-  bannerLabel: { fontSize: 16, fontWeight: '700', color: '#1F2937', marginTop: 4 },
-  bannerSub: { fontSize: 13, color: 'rgba(0,0,0,0.55)', marginTop: 4 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#1F2937' },
-  lockedSectionTitle: { color: GREY },
+  bannerCount: { fontSize: 48, fontWeight: '900', color: '#16214B', lineHeight: 52 },
+  bannerLabel: { fontSize: 15, fontWeight: '800', color: '#3A362C', marginTop: 2 },
+  bannerSub: { fontSize: 13, color: '#6D5A20', marginTop: 2 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  sectionTitle: { fontSize: 15, fontWeight: '800', color: '#1C2340' },
+  lockedSectionTitle: { color: '#98A2B3' },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 28,
+    gap: 12,
+    marginBottom: 16,
   },
   badgeCard: {
-    width: '30.5%',
-    borderRadius: 16,
-    paddingHorizontal: 8,
-    paddingTop: 24,
-    paddingBottom: 20,
+    width: '30.8%',
+    minHeight: 136,
+    borderRadius: 18,
+    paddingHorizontal: 10,
+    paddingTop: 18,
+    paddingBottom: 16,
     alignItems: 'center',
   },
   badgeCardEarned: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: GOLD,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
   },
   badgeCardLocked: {
-    backgroundColor: '#F4F6FA',
+    backgroundColor: 'rgba(255,255,255,0.62)',
   },
   badgeImageWrap: {
-    width: 44,
-    height: 44,
+    width: 54,
+    height: 54,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   badgeImage: {
-    width: 28,
-    height: 28,
+    width: 34,
+    height: 34,
   },
   badgeImageLocked: {
-    opacity: 0.55,
+    opacity: 0.4,
   },
   badgeFallback: {
-    width: 44,
-    height: 44,
+    width: 54,
+    height: 54,
     justifyContent: 'center',
     alignItems: 'center',
   },
   badgeName: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#1C2340',
     textAlign: 'center',
     marginBottom: 4,
+    lineHeight: 16,
   },
   badgeNameLocked: {
-    color: '#94A3B8',
+    color: '#9EA5B4',
   },
   badgeDesc: {
-    fontSize: 9,
-    color: GREY,
+    fontSize: 10,
+    color: '#5E6472',
     textAlign: 'center',
     lineHeight: 13,
   },
   badgeDescLocked: {
-    color: '#CBD5E1',
+    color: '#B9C0CC',
   },
-  bottomSpacer: { height: 48 },
+  bottomSpacer: { height: 40 },
 })

@@ -7,7 +7,7 @@ import TTSButton from '../TTSButton'
 import MicButton from './MicButton'
 import DiffView from './DiffView'
 import ConfidenceBadge from './ConfidenceBadge'
-import { similarity } from '../../lib/fuzzy'
+import { pickBest } from '../../lib/fuzzy'
 import { SpeechState } from '../../lib/speech'
 import { trackSpeech } from '../../lib/speechAnalytics'
 
@@ -43,6 +43,7 @@ export default function DialogueGame({ card, onComplete, xpReward }: any) {
   const [retryCount, setRetryCount] = useState(0)
   const scrollRef = useRef<ScrollView>(null)
   const micStartRef = useRef<number>(0)
+  const helpUsed = useRef(false)
 
   const voiceOpts = () => getSpeakOptions(useVoiceStore.getState().voiceGender)
 
@@ -59,7 +60,7 @@ export default function DialogueGame({ card, onComplete, xpReward }: any) {
   const advanceToNext = (nextIdx: number) => {
     if (nextIdx >= segments.length) {
       setPhase('done')
-      onComplete(card.id, true, xpReward)
+      onComplete(card.id, true, helpUsed.current ? Math.ceil(xpReward / 2) : xpReward)
       return
     }
     const nextSeg = segments[nextIdx]
@@ -82,11 +83,11 @@ export default function DialogueGame({ card, onComplete, xpReward }: any) {
     }
   }
 
-  const handleSTTResult = (spoken: string) => {
+  const handleSTTResult = (transcripts: string[]) => {
     if (!currentSeg || phase !== 'user-input') return
     const durationMs = micStartRef.current ? Date.now() - micStartRef.current : undefined
+    const { text: spoken, score } = pickBest(transcripts, currentSeg.expected)
     setLastSpoken(spoken)
-    const score = similarity(spoken, currentSeg.expected)
     setLastScore(score)
     trackSpeech('speech_captured', { cardId: card.id, gameType: 'DIALOGUE', attempt: retryCount + 1, durationMs })
     trackSpeech('speech_scored', { cardId: card.id, gameType: 'DIALOGUE', attempt: retryCount + 1, score: Math.round(score * 100) })
@@ -157,10 +158,6 @@ export default function DialogueGame({ card, onComplete, xpReward }: any) {
 
           <View style={styles.expectedCard}>
             <Text style={styles.expectedText}>{currentSeg.expected}</Text>
-            <View style={styles.hearBtn}>
-              <TTSButton text={currentSeg.expected} size={14} color="#143F86" idleColor="#143F86" />
-              <Text style={styles.hearBtnText}> Hear example</Text>
-            </View>
           </View>
 
           <MicButton
@@ -183,9 +180,18 @@ export default function DialogueGame({ card, onComplete, xpReward }: any) {
             </View>
           ) : null}
 
-          <TouchableOpacity style={styles.helpBtn}>
+          <TouchableOpacity
+            style={styles.helpBtn}
+            onPress={() => {
+              if (currentSeg?.expected) {
+                helpUsed.current = true
+                Speech.speak(currentSeg.expected, voiceOpts())
+              }
+            }}
+            activeOpacity={0.7}
+          >
             <Ionicons name="help-circle-outline" size={14} color="#9CA3AF" />
-            <Text style={styles.helpBtnText}> Help</Text>
+            <Text style={styles.helpBtnText}> Help (−½ XP)</Text>
           </TouchableOpacity>
         </View>
       ) : null}

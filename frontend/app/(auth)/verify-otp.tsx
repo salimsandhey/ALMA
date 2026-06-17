@@ -19,7 +19,7 @@ import { saveToken } from '../../lib/storage'
 import { useAuthStore } from '../../stores/authStore'
 import { NAVY, GOLD, WHITE } from '../../constants/colors'
 
-const RESEND_SECONDS = 47
+const RESEND_SECONDS = 60
 
 export default function VerifyOtp() {
   const router = useRouter()

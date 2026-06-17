@@ -1,3 +1,49 @@
+// Contraction → expanded form. Applied before apostrophe stripping so "I'm" → "i am", not "im".
+const CONTRACTIONS: [RegExp, string][] = [
+  [/\bi'm\b/g, 'i am'],
+  [/\bi've\b/g, 'i have'],
+  [/\bi'll\b/g, 'i will'],
+  [/\bi'd\b/g, 'i would'],
+  [/\bhe's\b/g, 'he is'],
+  [/\bshe's\b/g, 'she is'],
+  [/\bit's\b/g, 'it is'],
+  [/\bthat's\b/g, 'that is'],
+  [/\bthere's\b/g, 'there is'],
+  [/\bhere's\b/g, 'here is'],
+  [/\bwhat's\b/g, 'what is'],
+  [/\bwhere's\b/g, 'where is'],
+  [/\bhow's\b/g, 'how is'],
+  [/\bthey're\b/g, 'they are'],
+  [/\bwe're\b/g, 'we are'],
+  [/\byou're\b/g, 'you are'],
+  [/\bdon't\b/g, 'do not'],
+  [/\bdoesn't\b/g, 'does not'],
+  [/\bdidn't\b/g, 'did not'],
+  [/\bwon't\b/g, 'will not'],
+  [/\bcan't\b/g, 'cannot'],
+  [/\bcouldn't\b/g, 'could not'],
+  [/\bwouldn't\b/g, 'would not'],
+  [/\bshouldn't\b/g, 'should not'],
+  [/\bisn't\b/g, 'is not'],
+  [/\baren't\b/g, 'are not'],
+  [/\bwasn't\b/g, 'was not'],
+  [/\bweren't\b/g, 'were not'],
+  [/\bhaven't\b/g, 'have not'],
+  [/\bhasn't\b/g, 'has not'],
+  [/\bhadn't\b/g, 'had not'],
+  [/\bthey've\b/g, 'they have'],
+  [/\bwe've\b/g, 'we have'],
+  [/\byou've\b/g, 'you have'],
+  [/\bhe'd\b/g, 'he would'],
+  [/\bshe'd\b/g, 'she would'],
+  [/\bthey'd\b/g, 'they would'],
+  [/\bwe'd\b/g, 'we would'],
+  [/\byou'd\b/g, 'you would'],
+  [/\blet's\b/g, 'let us'],
+]
+
+const FILLER_RE = /\b(um+|uh+|er|ah|hmm+|like|you know|well|so|okay|ok|right)\b/g
+
 function levenshteinDistance(a: string, b: string): number {
   const m = a.length
   const n = b.length
@@ -26,17 +72,19 @@ function wordSim(a: string, b: string): number {
 }
 
 function normalizeStr(s: string): string {
-  return s
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
+  let n = s.toLowerCase()
+  // Expand contractions before stripping apostrophes
+  for (const [pattern, replacement] of CONTRACTIONS) n = n.replace(pattern, replacement)
+  // Strip non-alphanumeric (removes remaining apostrophes and punctuation)
+  n = n.replace(/[^a-z0-9\s]/g, '')
+  // Remove filler words
+  n = n.replace(FILLER_RE, '')
+  return n.replace(/\s+/g, ' ').trim()
 }
 
 /**
  * Returns a similarity score [0, 1] between two strings.
- * Uses word-level levenshtein matching to avoid false positives from
- * substring coincidences and character-count overlap.
+ * Normalises contractions and filler words before comparison.
  */
 export function similarity(a: string, b: string): number {
   const aN = normalizeStr(a)
@@ -60,10 +108,28 @@ export function similarity(a: string, b: string): number {
   const stringSim = maxLen === 0 ? 1 : 1 - levenshteinDistance(aN, bN) / maxLen
 
   if (aWords.length === 1) {
-    // Single-word target: word-level match is the authoritative signal
     return avgWordMatch
   }
 
-  // Multi-word: blend word coverage with string similarity
   return Math.max(avgWordMatch * 0.7 + stringSim * 0.3, stringSim)
+}
+
+/**
+ * Given multiple STT alternative transcripts, returns the one that scores
+ * highest against `target`, along with its score.
+ */
+export function pickBest(
+  transcripts: string[],
+  target: string
+): { text: string; score: number } {
+  let best = transcripts[0]
+  let bestScore = similarity(transcripts[0], target)
+  for (let i = 1; i < transcripts.length; i++) {
+    const s = similarity(transcripts[i], target)
+    if (s > bestScore) {
+      bestScore = s
+      best = transcripts[i]
+    }
+  }
+  return { text: best, score: bestScore }
 }

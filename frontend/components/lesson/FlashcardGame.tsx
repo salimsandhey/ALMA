@@ -3,16 +3,13 @@ import {
   View,
   Text,
   Image,
-  TouchableOpacity,
   Animated,
   StyleSheet,
 } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
-import TTSButton from '../TTSButton'
 import MicButton from './MicButton'
 import DiffView from './DiffView'
 import ConfidenceBadge from './ConfidenceBadge'
-import { similarity } from '../../lib/fuzzy'
+import { pickBest } from '../../lib/fuzzy'
 import { resolveLessonImage } from '../../lib/localLessonImages'
 import { SpeechState, stateLabel } from '../../lib/speech'
 import { trackSpeech } from '../../lib/speechAnalytics'
@@ -70,11 +67,11 @@ export default function FlashcardGame({ card, onComplete, xpReward }: GameCardPr
     }
   }
 
-  const handleSTTResult = (spoken: string) => {
+  const handleSTTResult = (transcripts: string[]) => {
     if (answered) return
     const durationMs = micStartRef.current ? Date.now() - micStartRef.current : undefined
+    const { text: spoken, score } = pickBest(transcripts, card.targetWord ?? card.word)
     setLastSpoken(spoken)
-    const score = similarity(spoken, card.targetWord ?? card.word)
     setLastScore(score)
     trackSpeech('speech_captured', { cardId: card.id, gameType: 'FLASHCARD', attempt: retryCount + 1, durationMs })
     trackSpeech('speech_scored', { cardId: card.id, gameType: 'FLASHCARD', attempt: retryCount + 1, score: Math.round(score * 100) })
@@ -121,7 +118,6 @@ export default function FlashcardGame({ card, onComplete, xpReward }: GameCardPr
         <View style={styles.content}>
           <View style={styles.wordRow}>
             <Text style={styles.word}>{card.word}</Text>
-            <TTSButton text={card.word} size={22} color={TEAL} idleColor={TEAL} />
           </View>
         </View>
       </View>

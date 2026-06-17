@@ -308,7 +308,7 @@ export default function Login() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Forgot Password?</Text>
             <Text style={styles.modalSubtitle}>
-              Enter your email address and we'll send you a reset link.
+              Enter your email address and we'll send you a one-time code to reset your password.
             </Text>
 
             <TextInput
@@ -333,7 +333,7 @@ export default function Login() {
             >
               {forgotLoading
                 ? <ActivityIndicator color={NAVY} />
-                : <Text style={styles.modalBtnText}>Send Reset Link</Text>
+                : <Text style={styles.modalBtnText}>Send OTP</Text>
               }
             </TouchableOpacity>
             <TouchableOpacity

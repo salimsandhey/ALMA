@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { View, Text, TouchableOpacity, Animated, StyleSheet } from 'react-native'
+import { View, Text, Animated, StyleSheet } from 'react-native'
 import MicButton from './MicButton'
 import { SpeechState, stateLabel } from '../../lib/speech'
 import { trackSpeech } from '../../lib/speechAnalytics'
@@ -84,12 +84,13 @@ export default function TrueFalseGame({ card, onComplete, xpReward, currentIndex
     }
   }
 
-  const handleSTT = (transcript: string) => {
+  const handleSTT = (transcripts: string[]) => {
     if (answered) return
     const durationMs = micStartRef.current ? Date.now() - micStartRef.current : undefined
-    setLastSpoken(transcript)
+    const combined = transcripts.join(' ')
+    setLastSpoken(combined)
     trackSpeech('speech_captured', { cardId: card.id, gameType: 'TRUE_FALSE', attempt: 1, durationMs })
-    const lower = transcript.toLowerCase()
+    const lower = combined.toLowerCase()
     if (lower.includes('true')) handleAnswer(true)
     else if (lower.includes('false')) handleAnswer(false)
   }
@@ -109,8 +110,8 @@ export default function TrueFalseGame({ card, onComplete, xpReward, currentIndex
         <MicButton onResult={handleSTT} onStateChange={handleStateChange} disabled={answered} tone="yellow" label="Tap mic to answer" />
       </View>
       <View style={styles.buttonsRow}>
-        <TouchableOpacity onPress={() => handleAnswer(true)} disabled={answered} style={[styles.answerButton, { backgroundColor: tc.bg, borderColor: tc.border }]}><Text style={[styles.answerButtonText, { color: tc.text }]}>True</Text></TouchableOpacity>
-        <TouchableOpacity onPress={() => handleAnswer(false)} disabled={answered} style={[styles.answerButton, { backgroundColor: fc.bg, borderColor: fc.border }]}><Text style={[styles.answerButtonText, { color: fc.text }]}>False</Text></TouchableOpacity>
+        <View style={[styles.answerButton, { backgroundColor: tc.bg, borderColor: tc.border }]}><Text style={[styles.answerButtonText, { color: tc.text }]}>True</Text></View>
+        <View style={[styles.answerButton, { backgroundColor: fc.bg, borderColor: fc.border }]}><Text style={[styles.answerButtonText, { color: fc.text }]}>False</Text></View>
       </View>
       {showExplanation && card.explanation ? <Text style={styles.explanation}>{card.explanation}</Text> : null}
       {bannerText !== '' && <Animated.View style={[styles.banner, bannerCorrect ? styles.bannerCorrect : styles.bannerWrong, { opacity: bannerOpacity }]}><Text style={[styles.bannerText, { color: bannerCorrect ? '#065F46' : '#991B1B' }]}>{bannerText}</Text></Animated.View>}

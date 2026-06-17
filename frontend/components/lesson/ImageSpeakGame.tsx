@@ -3,7 +3,7 @@ import { View, Text, Image, Animated, StyleSheet } from 'react-native'
 import MicButton from './MicButton'
 import DiffView from './DiffView'
 import ConfidenceBadge from './ConfidenceBadge'
-import { similarity } from '../../lib/fuzzy'
+import { similarity, pickBest } from '../../lib/fuzzy'
 import { resolveLessonImage } from '../../lib/localLessonImages'
 import { SpeechState, stateLabel } from '../../lib/speech'
 import { trackSpeech } from '../../lib/speechAnalytics'
@@ -48,14 +48,24 @@ export default function ImageSpeakGame({ card, onComplete, xpReward }: any) {
     }
   }
 
-  const handleSTTResult = (spoken: string) => {
+  const handleSTTResult = (transcripts: string[]) => {
     if (answered) return
     const durationMs = micStartRef.current ? Date.now() - micStartRef.current : undefined
-    setLastSpoken(spoken)
     const acceptedAnswers: string[] = card.acceptedAnswers ?? []
-    const scores = acceptedAnswers.map((ans) => similarity(spoken, ans))
-    const bestScore = scores.length > 0 ? Math.max(...scores) : 0
-    const matched = acceptedAnswers[scores.indexOf(bestScore)] ?? ''
+    // Find the (transcript, acceptedAnswer) pair with the highest similarity
+    let bestScore = 0
+    let spoken = transcripts[0]
+    let matched = ''
+    for (const t of transcripts) {
+      const scores = acceptedAnswers.map((ans) => similarity(t, ans))
+      const topScore = scores.length > 0 ? Math.max(...scores) : 0
+      if (topScore > bestScore) {
+        bestScore = topScore
+        spoken = t
+        matched = acceptedAnswers[scores.indexOf(topScore)] ?? ''
+      }
+    }
+    setLastSpoken(spoken)
     setBestAnswer(matched)
     setLastScore(bestScore)
     trackSpeech('speech_captured', { cardId: card.id, gameType: 'IMAGE_SPEAK', attempt: retryCount + 1, durationMs })

@@ -128,7 +128,7 @@ export default function StudentHome() {
   const userInitial = getInitial(displayName)
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <View style={styles.topRow}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>

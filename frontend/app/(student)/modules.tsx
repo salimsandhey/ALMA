@@ -158,7 +158,7 @@ export default function Modules() {
   const modules: Module[] = data?.modules ?? []
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}

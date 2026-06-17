@@ -96,35 +96,31 @@ export default function SongDetailScreen() {
           <Text style={styles.largeEmoji}>{song.emoji}</Text>
           <Text style={styles.songTitle}>{song.title}</Text>
           <Text style={styles.artistName}>{song.artist}</Text>
-          <View style={styles.genreChip}>
-            <Text style={styles.genreText}>{song.genre}</Text>
+
+          <View style={styles.btnRow}>
+            <TouchableOpacity
+              style={styles.listenBtn}
+              onPress={handleListenFirst}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="open-outline" size={16} color="#FFFFFF" />
+              <Text style={styles.listenBtnText}>Listen First</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.karaokeBtn}
+              onPress={handleStartKaraoke}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="mic-outline" size={16} color={Colors.navy} />
+              <Text style={styles.karaokeBtnText}>Start Karaoke</Text>
+            </TouchableOpacity>
           </View>
-        </View>
-
-        {/* Action Buttons */}
-        <View style={styles.btnRow}>
-          <TouchableOpacity
-            style={styles.listenBtn}
-            onPress={handleListenFirst}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="logo-youtube" size={18} color="#FF0000" />
-            <Text style={styles.listenBtnText}>Listen First</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.karaokeBtn}
-            onPress={handleStartKaraoke}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="mic-outline" size={18} color={Colors.navy} />
-            <Text style={styles.karaokeBtnText}>Start Karaoke</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Lyrics Preview */}
         <View style={styles.lyricsContainer}>
-          <Text style={styles.lyricsHeader}>Lyrics Preview</Text>
+          <Text style={styles.lyricsHeader}>LYRICS PREVIEW</Text>
           <View style={styles.lyricsBox}>
             {song.lyrics.map((line, idx) => (
               <Text key={idx} style={styles.lyricLine}>
@@ -147,9 +143,8 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     backgroundColor: Colors.white,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
@@ -163,107 +158,96 @@ const styles = StyleSheet.create({
   },
   headerCenter: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    marginLeft: 8,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 21,
     fontWeight: '800',
     color: Colors.navy,
   },
   headerSub: {
-    fontSize: 11,
-    color: Colors.textLight,
-    marginTop: 1,
+    fontSize: 12,
+    color: '#98A2B3',
+    marginTop: 2,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 32,
   },
   songCard: {
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.navy,
     borderRadius: 20,
-    padding: 24,
-    alignItems: 'center',
+    padding: 20,
+    alignItems: 'flex-start',
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
-    marginBottom: 20,
+    marginBottom: 18,
   },
   largeEmoji: {
-    fontSize: 64,
-    marginBottom: 16,
+    fontSize: 34,
+    marginBottom: 8,
   },
   songTitle: {
-    fontSize: 22,
+    fontSize: 21,
     fontWeight: '800',
-    color: Colors.navy,
-    textAlign: 'center',
+    color: '#FFFFFF',
+    textAlign: 'left',
   },
   artistName: {
-    fontSize: 15,
-    color: Colors.textMid,
-    marginTop: 6,
-    textAlign: 'center',
-  },
-  genreChip: {
-    backgroundColor: Colors.lightBlue,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    marginTop: 12,
-  },
-  genreText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.midBlue,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.72)',
+    marginTop: 4,
+    textAlign: 'left',
   },
   btnRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 24,
+    marginTop: 18,
+    width: '100%',
   },
   listenBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: Colors.white,
-    borderColor: '#E5E7EB',
-    borderWidth: 1,
-    borderRadius: 16,
-    height: 50,
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderRadius: 14,
+    height: 40,
   },
   listenBtnText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.textDark,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   karaokeBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
     backgroundColor: Colors.gold,
-    borderRadius: 16,
-    height: 50,
+    borderRadius: 14,
+    height: 40,
     elevation: 1,
   },
   karaokeBtnText: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '700',
     color: Colors.navy,
   },
   lyricsContainer: {
     backgroundColor: Colors.white,
     borderRadius: 20,
-    padding: 20,
+    padding: 18,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -271,17 +255,18 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   lyricsHeader: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.navy,
-    marginBottom: 16,
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#A3AAB8',
+    letterSpacing: 0.6,
+    marginBottom: 12,
   },
   lyricsBox: {
-    gap: 12,
+    gap: 10,
   },
   lyricLine: {
     fontSize: 15,
-    color: Colors.textMid,
+    color: '#1F2937',
     lineHeight: 22,
   },
   errorContainer: {
@@ -291,6 +276,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: Colors.textLight,
+    color: '#98A2B3',
   },
 })

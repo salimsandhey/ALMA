@@ -4,6 +4,7 @@ interface CardResult {
   cardId: string
   correct: boolean
   xpEarned: number
+  helpUsed?: boolean
 }
 
 interface LessonData {
@@ -25,7 +26,7 @@ interface LessonState {
   init: (lesson: LessonData) => void
   nextCard: () => void
   prevCard: () => void
-  recordResult: (cardId: string, correct: boolean, xp: number) => void
+  recordResult: (cardId: string, correct: boolean, xp: number, helpUsed?: boolean) => void
   reset: () => void
 }
 
@@ -46,11 +47,12 @@ export const useLessonStore = create<LessonState>((set, get) => ({
     }
   },
   prevCard: () => set((s) => ({ currentCardIndex: Math.max(0, s.currentCardIndex - 1) })),
-  recordResult: (cardId, correct, xp) => set((s) => {
+  recordResult: (cardId, correct, xp, helpUsed) => set((s) => {
     const existing = s.cardResults.find((r) => r.cardId === cardId)
+    const entry = { cardId, correct, xpEarned: xp, helpUsed }
     const updated = existing
-      ? s.cardResults.map((r) => r.cardId === cardId ? { cardId, correct, xpEarned: xp } : r)
-      : [...s.cardResults, { cardId, correct, xpEarned: xp }]
+      ? s.cardResults.map((r) => r.cardId === cardId ? entry : r)
+      : [...s.cardResults, entry]
     const totalXpEarned = updated.reduce((sum, r) => sum + r.xpEarned, 0)
     return { cardResults: updated, totalXpEarned }
   }),

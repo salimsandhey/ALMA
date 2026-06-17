@@ -15,6 +15,7 @@ const completeLessonSchema = z.object({
   cardResults: z.array(z.object({
     cardId: z.string(),
     correct: z.boolean(),
+    helpUsed: z.boolean().optional(),
   })).optional(),
 })
 
@@ -40,10 +41,19 @@ router.post('/lesson/complete', async (req: Request, res: Response): Promise<voi
       return
     }
 
-    // Server-side XP calculation: lesson.xpReward × (correct / total), 0 if no results
+    // Server-side XP calculation: each correct card earns (xpReward / totalCards),
+    // halved if the student used Help on that card.
     const totalCards = cardResults?.length ?? 0
     const correctCount = cardResults?.filter(r => r.correct).length ?? 0
-    const calculatedXp = totalCards > 0 ? Math.round((correctCount / totalCards) * lesson.xpReward) : 0
+    const xpPerCard = totalCards > 0 ? lesson.xpReward / totalCards : 0
+    const calculatedXp = totalCards > 0
+      ? Math.round(
+          (cardResults ?? []).reduce((sum, r) => {
+            if (!r.correct) return sum
+            return sum + (r.helpUsed ? xpPerCard / 2 : xpPerCard)
+          }, 0)
+        )
+      : 0
     const hasPerfectLessonScore = totalCards > 0 && correctCount === totalCards
 
     const existing = await prisma.lessonProgress.findUnique({

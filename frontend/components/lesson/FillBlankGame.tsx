@@ -1,9 +1,9 @@
 import React, { useState, useRef, useMemo } from 'react'
-import { View, Text, TouchableOpacity, Animated, StyleSheet } from 'react-native'
+import { View, Text, Animated, StyleSheet } from 'react-native'
 import MicButton from './MicButton'
 import DiffView from './DiffView'
 import ConfidenceBadge from './ConfidenceBadge'
-import { similarity } from '../../lib/fuzzy'
+import { pickBest } from '../../lib/fuzzy'
 import { SpeechState, stateLabel } from '../../lib/speech'
 import { trackSpeech } from '../../lib/speechAnalytics'
 import { NAVY, TEAL, GREY, WHITE, GOLD } from '../../constants/colors'
@@ -43,11 +43,11 @@ export default function FillBlankGame({ card, onComplete, xpReward }: GameCardPr
     }
   }
 
-  const handleSTTResult = (spoken: string) => {
+  const handleSTTResult = (transcripts: string[]) => {
     if (answered) return
     const durationMs = micStartRef.current ? Date.now() - micStartRef.current : undefined
+    const { text: spoken, score } = pickBest(transcripts, card.correctAnswer)
     setLastSpoken(spoken)
-    const score = similarity(spoken, card.correctAnswer)
     setLastScore(score)
     trackSpeech('speech_captured', { cardId: card.id, gameType: 'FILL_BLANK', attempt: retryCount + 1, durationMs })
     trackSpeech('speech_scored', { cardId: card.id, gameType: 'FILL_BLANK', attempt: retryCount + 1, score: Math.round(score * 100) })
@@ -102,9 +102,9 @@ export default function FillBlankGame({ card, onComplete, xpReward }: GameCardPr
 
       <View style={styles.pillsRow}>
         {options.map((opt) => (
-          <TouchableOpacity key={opt} onPress={() => !answered && handleSTTResult(opt)} disabled={answered} style={[styles.pill, answered && opt === card.correctAnswer && styles.pillCorrect]}>
+          <View key={opt} style={[styles.pill, answered && opt === card.correctAnswer && styles.pillCorrect]}>
             <Text style={[styles.pillText, answered && opt === card.correctAnswer && styles.pillTextCorrect]}>{opt}</Text>
-          </TouchableOpacity>
+          </View>
         ))}
       </View>
 

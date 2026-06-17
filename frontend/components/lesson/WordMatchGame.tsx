@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
-import { View, Text, Image, TouchableOpacity, Animated, StyleSheet } from 'react-native'
-import TTSButton from '../TTSButton'
+import { View, Text, Image, Animated, StyleSheet } from 'react-native'
 import MicButton from './MicButton'
 import { resolveLessonImage } from '../../lib/localLessonImages'
 import { similarity } from '../../lib/fuzzy'
@@ -57,12 +56,20 @@ export default function WordMatchGame({ card, onComplete, xpReward }: GameCardPr
     Animated.timing(bannerOpacity, { toValue: 1, duration: 300, useNativeDriver: true }).start()
   }
 
-  const handleSTTResult = (spoken: string) => {
+  const handleSTTResult = (transcripts: string[]) => {
     if (answered) return
 
-    const scores = options.map((opt) => similarity(spoken, opt))
-    const bestScore = Math.max(...scores)
-    const chosen = options[scores.indexOf(bestScore)]
+    // Find the (transcript, option) pair with the highest similarity score
+    let bestScore = 0
+    let chosen = options[0]
+    for (const t of transcripts) {
+      const scores = options.map((opt) => similarity(t, opt))
+      const topScore = Math.max(...scores)
+      if (topScore > bestScore) {
+        bestScore = topScore
+        chosen = options[scores.indexOf(topScore)]
+      }
+    }
     const isCorrect = chosen === card.correctWord && bestScore > 0.6
 
     if (isCorrect) {
@@ -105,23 +112,19 @@ export default function WordMatchGame({ card, onComplete, xpReward }: GameCardPr
         ) : (
           <View style={styles.imagePlaceholder}><Text style={styles.imagePlaceholderIcon}>IMG</Text></View>
         )}
-        <View style={styles.content}>
-          <TTSButton text={card.correctWord} size={22} color={TEAL} idleColor={TEAL} />
-        </View>
+        <View style={styles.content} />
       </View>
 
       <View style={styles.pillsRow}>
         {options.map((opt) => {
           const ps = pillStyle(opt)
           return (
-            <TouchableOpacity
+            <View
               key={opt}
-              onPress={() => !answered && handleSTTResult(opt)}
-              disabled={answered}
               style={[styles.pill, { backgroundColor: ps.bg, borderColor: ps.border }]}
             >
               <Text style={[styles.pillText, { color: ps.text }]}>{opt}</Text>
-            </TouchableOpacity>
+            </View>
           )
         })}
       </View>

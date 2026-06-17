@@ -7,13 +7,14 @@ import {
   ActivityIndicator,
   StyleSheet,
   Alert,
-  Modal,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import * as Speech from 'expo-speech'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter, useLocalSearchParams } from 'expo-router'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
+import { useVoiceStore, getSpeakOptions } from '../../stores/voiceStore'
 import { useLessonStore } from '../../stores/lessonStore'
 import { NAVY, TEAL, GOLD, BG, WHITE, GREY } from '../../constants/colors'
 
@@ -25,6 +26,17 @@ import TrueFalseGame from '../../components/lesson/TrueFalseGame'
 import DialogueGame from '../../components/lesson/DialogueGame'
 import ImageSpeakGame from '../../components/lesson/ImageSpeakGame'
 
+
+function getHelpText(card: any, gameType: string): string {
+  switch (gameType) {
+    case 'FLASHCARD':   return card.targetWord ?? card.word ?? ''
+    case 'WORD_MATCH':  return card.correctWord ?? ''
+    case 'FILL_BLANK':  return card.correctAnswer ?? ''
+    case 'TRUE_FALSE':  return card.isTrue ? 'The answer is True' : 'The answer is False'
+    case 'IMAGE_SPEAK': return card.acceptedAnswers?.[0] ?? card.word ?? ''
+    default:            return ''
+  }
+}
 
 const GAME_INSTRUCTIONS: Record<string, string> = {
   FLASHCARD: 'Say the word out loud!',
@@ -48,27 +60,9 @@ export default function LessonScreen() {
   const router = useRouter()
   const queryClient = useQueryClient()
   const { id } = useLocalSearchParams<{ id: string }>()
+  const voiceGender = useVoiceStore((s) => s.voiceGender)
   const [cardCompleted, setCardCompleted] = useState(false)
-  const [helpVisible, setHelpVisible] = useState(false)
-  const [helpText, setHelpText] = useState('')
-
-  const helpMutation = useMutation({
-    mutationFn: async ({ gameType, cardContent }: { gameType: string; cardContent: any }) => {
-      const { data } = await api.post('/api/ai/help', { gameType, cardContent })
-      return data.explanation as string
-    },
-    onSuccess: (explanation) => {
-      setHelpText(explanation)
-      setHelpVisible(true)
-    },
-    onError: (err: any) => {
-      if (err?.response?.status === 429) {
-        Alert.alert("Help Limit Reached", "You've used all your help requests for today. Come back tomorrow!")
-      } else {
-        Alert.alert("Couldn't load help", "Please try again.")
-      }
-    },
-  })
+  const [helpUsed, setHelpUsed] = useState(false)
 
   const { data: lesson } = useQuery({
     queryKey: ['lesson', id],
@@ -89,9 +83,10 @@ export default function LessonScreen() {
     if (lesson) init(lesson)
   }, [lesson])
 
-  // Reset card completion state whenever the card index changes
+  // Reset per-card state whenever the card index changes
   useEffect(() => {
     setCardCompleted(false)
+    setHelpUsed(false)
   }, [currentCardIndex])
 
   if (!lesson) {
@@ -112,7 +107,7 @@ export default function LessonScreen() {
   const isDialogue = currentGameType === 'DIALOGUE'
 
   const handleCardComplete = (cardId: string, correct: boolean, xp: number) => {
-    recordResult(cardId, correct, xp)
+    recordResult(cardId, correct, xp, helpUsed)
     if (isDialogue) {
       // auto-advance without requiring a "Next" tap
       setTimeout(() => {
@@ -279,18 +274,21 @@ export default function LessonScreen() {
         </View>
 
         <TouchableOpacity
-          style={styles.helpBtn}
+          style={[styles.helpBtn, helpUsed && styles.helpBtnUsed]}
           onPress={() => {
-            if (currentCard) {
-              helpMutation.mutate({ gameType: currentGameType, cardContent: currentCard })
-            }
+            if (!currentCard) return
+            const text = getHelpText(currentCard, currentGameType)
+            if (!text) return
+            setHelpUsed(true)
+            Speech.speak(text, getSpeakOptions(voiceGender))
           }}
-          disabled={helpMutation.isPending}
+          disabled={helpUsed}
+          activeOpacity={0.75}
         >
-          {helpMutation.isPending
-            ? <ActivityIndicator size="small" color={NAVY} />
-            : <><Ionicons name="help-circle-outline" size={18} color={NAVY} /><Text style={styles.helpBtnText}>Help</Text></>
-          }
+          <Ionicons name="help-circle-outline" size={18} color={helpUsed ? '#9CA3AF' : NAVY} />
+          <Text style={[styles.helpBtnText, helpUsed && styles.helpBtnUsedText]}>
+            {helpUsed ? 'Help used' : 'Help  −½ XP'}
+          </Text>
         </TouchableOpacity>
 
         <View style={[styles.bottomSide, { alignItems: 'flex-end' }]}>
@@ -305,23 +303,6 @@ export default function LessonScreen() {
           </TouchableOpacity>
         </View>
       </View>}
-
-      {/* Help modal */}
-      <Modal visible={helpVisible} transparent animationType="slide" onRequestClose={() => setHelpVisible(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setHelpVisible(false)}>
-          <TouchableOpacity style={styles.modalSheet} activeOpacity={1}>
-            <View style={styles.modalHandle} />
-            <View style={styles.modalHeader}>
-              <Ionicons name="help-circle" size={22} color={NAVY} />
-              <Text style={styles.modalTitle}>Question Help</Text>
-              <TouchableOpacity onPress={() => setHelpVisible(false)}>
-                <Ionicons name="close" size={22} color={GREY} />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.modalBody}>{helpText}</Text>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
 
       <BottomNavBar />
     </SafeAreaView>
@@ -463,46 +444,17 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     backgroundColor: '#F9FAFB',
   },
+  helpBtnUsed: {
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F3F4F6',
+    opacity: 0.6,
+  },
   helpBtnText: {
     color: NAVY,
     fontSize: 13,
     fontWeight: '600',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    paddingBottom: 40,
-    gap: 16,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#E5E7EB',
-    alignSelf: 'center',
-    marginBottom: 4,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  modalTitle: {
-    flex: 1,
-    color: NAVY,
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  modalBody: {
-    color: '#374151',
-    fontSize: 15,
-    lineHeight: 24,
+  helpBtnUsedText: {
+    color: '#9CA3AF',
   },
 })

@@ -26,6 +26,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     useVoiceStore.getState().loadVoiceGender()
+    useVoiceStore.getState().resolveVoices()
   }, [])
 
   useEffect(() => {

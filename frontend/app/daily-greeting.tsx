@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Animated, Modal,
+  Animated, Modal, Platform, TextInput, KeyboardAvoidingView,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as Speech from 'expo-speech'
+import { Audio } from 'expo-av'
 import { api } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
 import { useVoiceStore, getSpeakOptions } from '../stores/voiceStore'
@@ -44,6 +45,7 @@ export default function DailyGreeting() {
   const [listening, setListening] = useState(false)
   const [speaking, setSpeaking] = useState(false)
   const [interimText, setInterimText] = useState('')
+  const [devText, setDevText] = useState('')
   const lastActivityRef = useRef(Date.now())
   const scrollRef = useRef<ScrollView>(null)
   const pulseAnim = useRef(new Animated.Value(1)).current
@@ -92,13 +94,33 @@ export default function DailyGreeting() {
       setInterimText(transcript)
     }
   })
-  useSpeechHook('end', () => { setListening(false); setInterimText('') })
+  useSpeechHook('end', () => {
+    setListening(false)
+    setInterimText('')
+    // Restore playback session immediately after STT ends so the next TTS call
+    // doesn't have to wait for speakText's own restore (avoids the race window).
+    if (Platform.OS === 'ios') {
+      Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true }).catch(() => {})
+    }
+  })
   useSpeechHook('error', () => { setListening(false); setInterimText('') })
 
-  const speakText = useCallback((text: string) => {
+  const speakText = useCallback(async (text: string) => {
     Speech.stop()
     setSpeaking(true)
-    Speech.speak(text, {
+    // On iOS, expo-speech-recognition leaves the audio session in record mode.
+    // Reclaim the playback session so TTS comes through the speaker at full volume.
+    if (Platform.OS === 'ios') {
+      try {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
+        })
+      } catch { /* non-fatal — proceed anyway */ }
+    }
+    const clean = text.replace(/\p{Emoji}/gu, '').replace(/\s{2,}/g, ' ').trim()
+    Speech.speak(clean, {
       ...getSpeakOptions(voiceGender),
       onDone: () => setSpeaking(false),
       onStopped: () => setSpeaking(false),
@@ -245,9 +267,16 @@ export default function DailyGreeting() {
             </View>
           </View>
         </View>
-        <Text style={[styles.timer, timeLeft <= 10 && styles.timerRed]}>
-          {formatTime(timeLeft)}
-        </Text>
+        <View style={styles.headerRight}>
+          {timeLeft <= 30 && (
+            <TouchableOpacity onPress={markDoneAndGoHome} activeOpacity={0.7} style={styles.skipBtn}>
+              <Text style={styles.skipBtnText}>Skip</Text>
+            </TouchableOpacity>
+          )}
+          <Text style={[styles.timer, timeLeft <= 10 && styles.timerRed]}>
+            {formatTime(timeLeft)}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.divider} />
@@ -322,6 +351,39 @@ export default function DailyGreeting() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Dev-only text input — Expo Go mic workaround */}
+      {__DEV__ && (
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.devInputRow}>
+            <TextInput
+              style={styles.devInput}
+              placeholder="Type response (dev only)..."
+              placeholderTextColor="rgba(255,255,255,0.35)"
+              value={devText}
+              onChangeText={setDevText}
+              editable={!loading && !timeUp}
+              returnKeyType="send"
+              onSubmitEditing={() => {
+                if (!devText.trim()) return
+                handleUserResponse(devText.trim())
+                setDevText('')
+              }}
+            />
+            <TouchableOpacity
+              style={[styles.devSendBtn, (!devText.trim() || loading) && { opacity: 0.4 }]}
+              disabled={!devText.trim() || loading}
+              onPress={() => {
+                handleUserResponse(devText.trim())
+                setDevText('')
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="send" size={18} color={NAVY} />
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      )}
 
       {/* Skip confirmation modal */}
       <Modal visible={showSkipModal} transparent animationType="fade">
@@ -404,6 +466,23 @@ const styles = StyleSheet.create({
     color: '#22C55E',
     fontSize: 12,
     fontWeight: '500',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  skipBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  skipBtnText: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 13,
+    fontWeight: '600',
   },
   timer: {
     color: '#FFFFFF',
@@ -532,6 +611,30 @@ const styles = StyleSheet.create({
   },
   micButtonActive: {
     backgroundColor: '#EF4444',
+  },
+  devInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(245,197,24,0.5)',
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  devInput: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 14,
+    paddingVertical: 8,
+  },
+  devSendBtn: {
+    backgroundColor: GOLD,
+    borderRadius: 8,
+    padding: 8,
   },
   // Intro gate
   introContainer: {

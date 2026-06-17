@@ -338,13 +338,15 @@ router.post('/forgot-password', async (req: Request, res: Response): Promise<voi
   try {
     const user = await prisma.user.findUnique({ where: { email } })
 
-    // Always return 200 — don't reveal whether email exists
-    if (user && user.isEmailVerified) {
-      const code = await createOTP(user.id, 'PASSWORD_RESET')
-      await sendOTPEmail(email, code, 'PASSWORD_RESET')
+    if (!user || !user.isEmailVerified) {
+      res.status(404).json({ error: 'No account found with this email address.', code: 'USER_NOT_FOUND' })
+      return
     }
 
-    res.json({ message: 'If that email exists, a reset code has been sent.', userId: user?.id })
+    const code = await createOTP(user.id, 'PASSWORD_RESET')
+    await sendOTPEmail(email, code, 'PASSWORD_RESET')
+
+    res.json({ message: 'A reset code has been sent to your email.', userId: user.id })
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR' })

@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F2F3F7',
   },
   header: {
-    paddingVertical: 14,
+    paddingVertical: 10,
     backgroundColor: Colors.white,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
@@ -246,11 +246,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 32,
   },
   miniCard: {
-    backgroundColor: Colors.midBlue,
+    backgroundColor: '#184B96',
     padding: 12,
     borderRadius: 16,
     marginBottom: 16,
@@ -288,12 +289,13 @@ const styles = StyleSheet.create({
   listenBadgeText: {
     fontSize: 10,
     fontWeight: '600',
-    color: Colors.textDark,
+    color: '#1F2937',
   },
   scoreCard: {
     backgroundColor: Colors.white,
     borderRadius: 20,
-    padding: 24,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
     alignItems: 'center',
     elevation: 2,
     shadowColor: '#000',
@@ -305,7 +307,7 @@ const styles = StyleSheet.create({
   scoreLabel: {
     fontSize: 11,
     fontWeight: '800',
-    color: Colors.textLight,
+    color: '#98A2B3',
     letterSpacing: 1,
   },
   scoreValue: {
@@ -373,7 +375,7 @@ const styles = StyleSheet.create({
   },
   breakdownItem: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -386,11 +388,12 @@ const styles = StyleSheet.create({
   lyricLineText: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.textDark,
+    color: '#1F2937',
+    lineHeight: 20,
   },
   spokenText: {
     fontSize: 12,
-    color: Colors.textLight,
+    color: '#98A2B3',
     marginTop: 2,
     fontStyle: 'italic',
   },
@@ -408,6 +411,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 1,
+    marginTop: 4,
   },
   tryAgainBtnText: {
     fontSize: 15,
@@ -417,7 +421,7 @@ const styles = StyleSheet.create({
   finishBtn: {
     height: 50,
     backgroundColor: Colors.white,
-    borderColor: Colors.border,
+    borderColor: '#E5E7EB',
     borderWidth: 1,
     borderRadius: 16,
     alignItems: 'center',
@@ -426,11 +430,11 @@ const styles = StyleSheet.create({
   finishBtnText: {
     fontSize: 15,
     fontWeight: '700',
-    color: Colors.textDark,
+    color: '#1F2937',
   },
   errorText: {
     fontSize: 16,
-    color: Colors.textLight,
+    color: '#98A2B3',
     textAlign: 'center',
     marginTop: 40,
   },

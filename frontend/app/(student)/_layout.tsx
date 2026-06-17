@@ -13,6 +13,7 @@ export default function StudentLayout() {
           borderTopColor: '#E5E7EB',
           backgroundColor: '#fff',
           height: 60,
+          paddingTop: 4,
           paddingBottom: 8,
         },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
