@@ -51,6 +51,7 @@ interface Module {
   completedLessons: number
   completionPercent: number
   isCompleted: boolean
+  isLocked: boolean
 }
 
 function SkeletonCard() {
@@ -176,10 +177,9 @@ export default function Modules() {
             <SkeletonCard />
           </>
         ) : (
-          modules.map((module, index) => {
-            const isLocked = false
-            return <ModuleCard key={module.id} module={module} index={index} isLocked={isLocked} />
-          })
+          modules.map((module, index) => (
+            <ModuleCard key={module.id} module={module} index={index} isLocked={module.isLocked} />
+          ))
         )}
       </ScrollView>
     </SafeAreaView>

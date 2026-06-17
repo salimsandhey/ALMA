@@ -42,13 +42,13 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   const userId = req.user!.userId
 
   try {
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
     const recent = await prisma.feedback.findFirst({
-      where: { userId, createdAt: { gte: sevenDaysAgo } },
+      where: { userId, createdAt: { gte: oneDayAgo } },
     })
 
     if (recent) {
-      res.status(429).json({ error: 'You can only submit feedback once every 7 days', code: 'RATE_LIMITED' })
+      res.status(429).json({ error: 'You can only submit feedback once per day', code: 'RATE_LIMITED' })
       return
     }
 

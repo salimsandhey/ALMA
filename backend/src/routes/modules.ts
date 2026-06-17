@@ -29,9 +29,16 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     const completedLessonIds = new Set(lessonProgressRecords.map((p) => p.lessonId))
     const progressMap = new Map(progressRecords.map((p) => [p.moduleId, p]))
 
+    // Build a map of orderIndex → isCompleted for locking logic
+    const completionByOrder = new Map<number, boolean>()
+    modules.forEach((mod) => {
+      completionByOrder.set(mod.orderIndex, progressMap.get(mod.id)?.isCompleted ?? false)
+    })
+
     const result = modules.map((mod) => {
       const completedLessons = mod.lessons.filter((l) => completedLessonIds.has(l.id)).length
       const progress = progressMap.get(mod.id)
+      const isLocked = mod.orderIndex > 1 && !(completionByOrder.get(mod.orderIndex - 1) ?? false)
 
       return {
         id: mod.id,
@@ -46,6 +53,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
           ? Math.round((completedLessons / mod.lessons.length) * 100)
           : 0,
         isCompleted: progress?.isCompleted ?? false,
+        isLocked,
       }
     })
 
@@ -72,6 +80,24 @@ router.get('/:moduleId', async (req: Request, res: Response): Promise<void> => {
     if (!mod || !mod.isPublished) {
       res.status(404).json({ error: 'Module not found', code: 'NOT_FOUND' })
       return
+    }
+
+    // Check if previous module is completed — if not, this module is locked
+    if (mod.orderIndex > 1) {
+      const prevModule = await prisma.module.findFirst({
+        where: { orderIndex: mod.orderIndex - 1, isPublished: true },
+        select: { id: true },
+      })
+      if (prevModule) {
+        const prevProgress = await prisma.moduleProgress.findUnique({
+          where: { userId_moduleId: { userId, moduleId: prevModule.id } },
+          select: { isCompleted: true },
+        })
+        if (!prevProgress?.isCompleted) {
+          res.status(403).json({ error: 'Complete the previous module first', code: 'MODULE_LOCKED' })
+          return
+        }
+      }
     }
 
     const lessonProgress = await prisma.lessonProgress.findMany({
