@@ -137,6 +137,7 @@ const appleJwksClient = jwksClient({
 const appleSchema = z.object({
   identityToken: z.string().min(1),
   displayName: z.string().min(1).max(100).optional(),
+  email: z.string().email().optional(), // fallback when Apple doesn't return email on repeat sign-ins
 })
 
 // ─── POST /api/auth/register ──────────────────────────────────────────────────
@@ -469,7 +470,7 @@ router.post('/apple', async (req: Request, res: Response): Promise<void> => {
     return
   }
 
-  const { identityToken, displayName } = parsed.data
+  const { identityToken, displayName, email: fallbackEmail } = parsed.data
 
   try {
     const decoded = jwt.decode(identityToken, { complete: true })
@@ -488,7 +489,7 @@ router.post('/apple', async (req: Request, res: Response): Promise<void> => {
     }) as jwt.JwtPayload
 
     const appleId = payload.sub
-    const email = payload.email as string | undefined
+    const email = (payload.email as string | undefined) || fallbackEmail
 
     if (!appleId) {
       res.status(401).json({ error: 'Invalid Apple token', code: 'INVALID_APPLE_TOKEN' })

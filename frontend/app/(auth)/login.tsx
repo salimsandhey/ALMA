@@ -145,6 +145,7 @@ export default function Login() {
       const { data } = await api.post('/api/auth/apple', {
         identityToken: credential.identityToken,
         ...(displayName ? { displayName } : {}),
+        ...(credential.email ? { email: credential.email } : {}),
       })
 
       await saveToken(data.token)
