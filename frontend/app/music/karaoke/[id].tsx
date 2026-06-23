@@ -94,7 +94,8 @@ export default function KaraokeScreen() {
     router.replace({ pathname: '/music/results/[id]', params: { id: song.id } })
   }
 
-  const handleSTTResult = async (spoken: string) => {
+  const handleSTTResult = async (transcripts: string[]) => {
+    const spoken = transcripts[0] ?? ''
     if (!spoken.trim()) {
       handleScoringResult(0, '')
       return

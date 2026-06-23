@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   View,
   Text,
@@ -38,8 +38,15 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [appleAvailable, setAppleAvailable] = useState(false)
   const [appleLoading, setAppleLoading] = useState(false)
-
+  const [appleEmailVisible, setAppleEmailVisible] = useState(false)
+  const [appleEmailInput, setAppleEmailInput] = useState('')
+  const [appleEmailError, setAppleEmailError] = useState<string | null>(null)
+  const [pendingAppleCredential, setPendingAppleCredential] = useState<{
+    identityToken: string
+    displayName?: string
+  } | null>(null)
   const [forgotVisible, setForgotVisible] = useState(false)
   const [forgotEmail, setForgotEmail] = useState('')
   const [forgotLoading, setForgotLoading] = useState(false)
@@ -125,6 +132,20 @@ export default function Login() {
     }
   }
 
+  useEffect(() => {
+    AppleAuthentication.isAvailableAsync().then(setAppleAvailable).catch(() => setAppleAvailable(false))
+  }, [])
+
+  const navigateAfterAuth = (user: any) => {
+    if (!user.isOnboardingComplete) {
+      router.replace('/(onboarding)/name')
+    } else if (user.role === 'ADMIN') {
+      router.replace('/(admin)/overview')
+    } else {
+      router.replace('/(student)/home')
+    }
+  }
+
   const handleAppleLogin = async () => {
     setAppleLoading(true)
     setError(null)
@@ -135,32 +156,58 @@ export default function Login() {
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
       })
-
       const displayName = credential.fullName
-        ? [credential.fullName.givenName, credential.fullName.familyName]
-            .filter(Boolean)
-            .join(' ')
+        ? [credential.fullName.givenName, credential.fullName.familyName].filter(Boolean).join(' ')
         : undefined
-
-      const { data } = await api.post('/api/auth/apple', {
-        identityToken: credential.identityToken,
-        ...(displayName ? { displayName } : {}),
-        ...(credential.email ? { email: credential.email } : {}),
-      })
-
-      await saveToken(data.token)
-      useAuthStore.getState().setAuth(data.token, data.user)
-
-      if (!data.user.isOnboardingComplete) {
-        router.replace('/(onboarding)/name')
-      } else if (data.user.role === 'ADMIN') {
-        router.replace('/(admin)/overview')
-      } else {
-        router.replace('/(student)/home')
+      try {
+        const { data } = await api.post('/api/auth/apple', {
+          identityToken: credential.identityToken,
+          ...(displayName ? { displayName } : {}),
+          ...(credential.email ? { email: credential.email } : {}),
+        })
+        await saveToken(data.token)
+        useAuthStore.getState().setAuth(data.token, data.user)
+        navigateAfterAuth(data.user)
+      } catch (apiErr: any) {
+        if (apiErr?.response?.data?.code === 'MISSING_EMAIL') {
+          setPendingAppleCredential({ identityToken: credential.identityToken, displayName })
+          setAppleEmailInput('')
+          setAppleEmailError(null)
+          setAppleEmailVisible(true)
+        } else {
+          setError(getErrorMessage(apiErr, 'Apple sign-in failed'))
+        }
       }
     } catch (e: any) {
       if (e?.code === 'ERR_REQUEST_CANCELED') return
       setError(getErrorMessage(e, 'Apple sign-in failed'))
+    } finally {
+      setAppleLoading(false)
+    }
+  }
+
+  const handleAppleEmailSubmit = async () => {
+    if (!pendingAppleCredential) return
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(appleEmailInput.trim())) {
+      setAppleEmailError('Please enter a valid email address')
+      return
+    }
+    setAppleEmailError(null)
+    setAppleLoading(true)
+    try {
+      const { data } = await api.post('/api/auth/apple', {
+        identityToken: pendingAppleCredential.identityToken,
+        ...(pendingAppleCredential.displayName ? { displayName: pendingAppleCredential.displayName } : {}),
+        email: appleEmailInput.trim(),
+      })
+      setAppleEmailVisible(false)
+      setPendingAppleCredential(null)
+      await saveToken(data.token)
+      useAuthStore.getState().setAuth(data.token, data.user)
+      navigateAfterAuth(data.user)
+    } catch (e: any) {
+      setAppleEmailError(getErrorMessage(e, 'Sign-in failed. Please try again.'))
     } finally {
       setAppleLoading(false)
     }
@@ -279,7 +326,7 @@ export default function Login() {
             <Text style={styles.googleText}>Sign In with Google</Text>
           </TouchableOpacity>
 
-          {Platform.OS === 'ios' && (
+          {appleAvailable && (
             <AppleAuthentication.AppleAuthenticationButton
               buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
               buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
@@ -347,6 +394,51 @@ export default function Login() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={appleEmailVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAppleEmailVisible(false)}
+      >
+        <View style={[styles.modalOverlay, { paddingHorizontal: Math.max(16, screenWidth * 0.07) }]}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Enter your email</Text>
+            <Text style={[styles.modalSubtitle, { marginBottom: 12 }]}>
+              Apple didn't share your email. Please enter it to continue.
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="your@email.com"
+              placeholderTextColor="#999"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              value={appleEmailInput}
+              onChangeText={setAppleEmailInput}
+            />
+            {appleEmailError && <Text style={styles.modalError}>{appleEmailError}</Text>}
+            <TouchableOpacity
+              style={[styles.modalBtn, appleLoading && { opacity: 0.6 }]}
+              onPress={handleAppleEmailSubmit}
+              disabled={appleLoading}
+              activeOpacity={0.8}
+            >
+              {appleLoading
+                ? <ActivityIndicator color="#fff" />
+                : <Text style={styles.modalBtnText}>Continue</Text>
+              }
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalCancelBtn}
+              onPress={() => { setAppleEmailVisible(false); setPendingAppleCredential(null) }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
     </LinearGradient>
   )
 }

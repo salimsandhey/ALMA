@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Switch, Share, Image, useWindowDimensions,
+  Share, Image, useWindowDimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter, useFocusEffect } from 'expo-router'
@@ -178,26 +178,6 @@ export default function Profile() {
           </View>
         </View>
 
-        {/* ── Notifications ── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notifications</Text>
-          <View style={styles.card}>
-            <View style={styles.menuRow}>
-              <View style={styles.menuLeft}>
-                <View style={styles.menuIconBox}>
-                  <Ionicons name="phone-portrait-outline" size={17} color={NAVY} />
-                </View>
-                <Text style={styles.menuLabel}>Push Notifications</Text>
-              </View>
-              <Switch
-                value={false}
-                onValueChange={() => {}}
-                trackColor={{ false: '#E5E7EB', true: NAVY }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
-          </View>
-        </View>
 
         {/* ── Preferences ── */}
         <View style={styles.section}>
