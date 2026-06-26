@@ -2,6 +2,7 @@ import React from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter, usePathname } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { NAVY, LIGHT_GREY } from '../constants/colors'
 
 const TABS = [
@@ -15,8 +16,10 @@ const TABS = [
 export default function BottomNavBar() {
   const router = useRouter()
   const pathname = usePathname()
+  const insets = useSafeAreaInsets()
+  const bottomPad = Math.max(8, insets.bottom)
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { height: 40 + bottomPad, paddingBottom: bottomPad }]}>
       {TABS.map(tab => {
         const active =
           pathname.includes(tab.label.toLowerCase()) ||
@@ -43,9 +46,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
-    height: 60,
     paddingTop: 4,
-    paddingBottom: 8,
   },
   tab: {
     flex: 1,

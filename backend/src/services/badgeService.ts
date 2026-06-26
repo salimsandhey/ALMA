@@ -1,6 +1,8 @@
 import { prisma } from '../lib/prisma'
 
-export async function evaluateAndAward(userId: string, condition: string): Promise<string | null> {
+type AwardedBadge = { name: string; condition: string; description: string }
+
+export async function evaluateAndAward(userId: string, condition: string): Promise<AwardedBadge | null> {
   const badge = await prisma.badge.findFirst({ where: { condition } })
   if (!badge) return null
 
@@ -10,7 +12,7 @@ export async function evaluateAndAward(userId: string, condition: string): Promi
   if (existing) return null
 
   await prisma.userBadge.create({ data: { userId, badgeId: badge.id } })
-  return badge.name
+  return { name: badge.name, condition: badge.condition, description: badge.description }
 }
 
 type BadgeCheckOptions = {
@@ -21,7 +23,7 @@ type BadgeCheckOptions = {
 export async function checkAndAwardBadges(
   userId: string,
   options: BadgeCheckOptions = {},
-): Promise<string[]> {
+): Promise<AwardedBadge[]> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
@@ -35,7 +37,7 @@ export async function checkAndAwardBadges(
   })
   if (!user) return []
 
-  const awarded: string[] = []
+  const awarded: AwardedBadge[] = []
 
   const completedLessons = user.lessonProgress.length
   const completedDialogueLessons = user.lessonProgress.filter(

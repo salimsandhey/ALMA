@@ -97,11 +97,6 @@ export default function DailyGreeting() {
   useSpeechHook('end', () => {
     setListening(false)
     setInterimText('')
-    // Restore playback session immediately after STT ends so the next TTS call
-    // doesn't have to wait for speakText's own restore (avoids the race window).
-    if (Platform.OS === 'ios') {
-      Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true }).catch(() => {})
-    }
   })
   useSpeechHook('error', () => { setListening(false); setInterimText('') })
 
@@ -117,6 +112,8 @@ export default function DailyGreeting() {
           playsInSilentModeIOS: true,
           staysActiveInBackground: false,
         })
+        // Give iOS time to fully commit the session change before TTS starts.
+        await new Promise<void>((r) => setTimeout(r, 80))
       } catch { /* non-fatal — proceed anyway */ }
     }
     const clean = text.replace(/\p{Emoji}/gu, '').replace(/\s{2,}/g, ' ').trim()

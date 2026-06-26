@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import SplashScreen from '../components/SplashScreen'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import * as Linking from 'expo-linking'
+
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { getToken, deleteToken, saveToken } from '../lib/storage'
 import { useAuthStore } from '../stores/authStore'
@@ -33,24 +33,38 @@ export default function RootLayout() {
     const bootstrapAuth = async () => {
       try {
         const savedToken = await getToken()
+        if (!savedToken) return
 
-        if (!savedToken) {
-          return
+        // Retry /me up to 2 times — handles brief network unavailability on cold start
+        let me = null
+        let lastError: any = null
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            const { data } = await api.get('/api/users/me', {
+              headers: { Authorization: `Bearer ${savedToken}` },
+            })
+            me = data
+            break
+          } catch (err: any) {
+            lastError = err
+            // 401 means token is definitely invalid — no point retrying
+            if (err?.response?.status === 401) break
+            // Brief pause before second attempt
+            if (attempt === 0) await new Promise((r) => setTimeout(r, 1500))
+          }
         }
 
-        const { data: me } = await api.get('/api/users/me', {
-          headers: { Authorization: `Bearer ${savedToken}` },
-        })
-
-        useAuthStore.getState().setAuth(savedToken, me)
-
-        const today = new Date().toISOString().split('T')[0]
-        useAuthStore.getState().setGreetingDone(me.lastGreetingDate === today)
-      } catch (error: any) {
-        if (error?.response?.status === 401) {
+        if (me) {
+          useAuthStore.getState().setAuth(savedToken, me)
+          const today = new Date().toISOString().split('T')[0]
+          useAuthStore.getState().setGreetingDone(me.lastGreetingDate === today)
+        } else if (lastError?.response?.status === 401) {
+          // Token is expired/invalid — force logout
           await deleteToken()
+          useAuthStore.getState().clearAuth()
         }
-        useAuthStore.getState().clearAuth()
+        // Network/server errors after retries: token stays in storage,
+        // nav guard shows login screen, but next cold start will retry cleanly
       } finally {
         setBooting(false)
       }
@@ -59,54 +73,6 @@ export default function RootLayout() {
     bootstrapAuth()
   }, [])
 
-  useEffect(() => {
-    const handleAuthDeepLink = async (url: string) => {
-      const parsed = Linking.parse(url)
-      const path = parsed.path ?? ''
-      const tokenParam = parsed.queryParams?.token
-      const incomingToken = Array.isArray(tokenParam) ? tokenParam[0] : tokenParam
-
-      if (!url.startsWith('alma://auth/google-callback') && path !== 'auth/google-callback') {
-        return
-      }
-
-      if (!incomingToken || typeof incomingToken !== 'string') {
-        return
-      }
-
-      try {
-        const { data: me } = await api.get('/api/users/me', {
-          headers: { Authorization: `Bearer ${incomingToken}` },
-        })
-
-        await saveToken(incomingToken)
-        useAuthStore.getState().setAuth(incomingToken, me)
-
-        if (!me.isOnboardingComplete) {
-          router.replace('/(onboarding)/name')
-        } else if (me.role === 'ADMIN') {
-          router.replace('/(admin)/overview')
-        } else {
-          router.replace('/(student)/home')
-        }
-      } catch {
-        await deleteToken()
-        useAuthStore.getState().clearAuth()
-      }
-    }
-
-    Linking.getInitialURL().then(url => {
-      if (url) {
-        handleAuthDeepLink(url)
-      }
-    })
-
-    const subscription = Linking.addEventListener('url', ({ url }) => {
-      handleAuthDeepLink(url)
-    })
-
-    return () => subscription.remove()
-  }, [router])
 
   useEffect(() => {
     if (booting) return
@@ -118,10 +84,14 @@ export default function RootLayout() {
       'badges', 'edit-profile',
       'feedback', 'how-to-use', 'terms-privacy', 'intro-slides', 'dev-screens',
       'daily-greeting', 'coach-chat', 'daily-challenge', 'entertainment',
+      'auth',
     ]
 
     if (!token || !user) {
-      if (currentRoot !== '(auth)') router.replace('/(auth)/login')
+      // Allow the Google OAuth callback route through — it handles its own auth
+      if (currentRoot !== '(auth)' && currentRoot !== 'auth') {
+        router.replace('/(auth)/login')
+      }
       return
     }
 

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { View, Text, Animated, StyleSheet } from 'react-native'
 import MicButton from './MicButton'
+import SpeechPreview from './SpeechPreview'
 import { SpeechState, stateLabel } from '../../lib/speech'
 import { trackSpeech } from '../../lib/speechAnalytics'
 
@@ -106,7 +107,7 @@ export default function TrueFalseGame({ card, onComplete, xpReward, currentIndex
       <View style={styles.card}><Text style={styles.label}>True or False?</Text><Text style={styles.statement}>{card.statement}</Text></View>
       <View style={styles.micWrapper}>
         <Text style={styles.stateText}>{stateLabel(speechState)}</Text>
-        {!!lastSpoken && <Text style={styles.previewText}>You said: {lastSpoken}</Text>}
+        <SpeechPreview interimText="" lastSpoken={answered ? '' : lastSpoken} />
         <MicButton onResult={handleSTT} onStateChange={handleStateChange} disabled={answered} tone="yellow" label="Tap mic to answer" />
       </View>
       <View style={styles.buttonsRow}>

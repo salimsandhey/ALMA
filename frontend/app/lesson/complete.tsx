@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react'
 import {
   View,
   Text,
+  Image,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
@@ -10,15 +11,30 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { NAVY, TEAL, GOLD, BG, WHITE, GREY } from '../../constants/colors'
+import BADGE_METADATA from '../../lib/badgeMetadata'
 
-function BadgePill({ name }: { name: string }) {
+function BadgeCard({ condition, index }: { condition: string; index: number }) {
   const scale = useRef(new Animated.Value(0)).current
   useEffect(() => {
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 80, friction: 7 }).start()
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 70,
+      friction: 7,
+      delay: index * 120,
+    }).start()
   }, [])
+  const meta = BADGE_METADATA[condition]
+  if (!meta) return null
   return (
-    <Animated.View style={[styles.badgePill, { transform: [{ scale }] }]}>
-      <Text style={styles.badgePillText}>🏆 {name}</Text>
+    <Animated.View style={[styles.badgeCard, { transform: [{ scale }] }]}>
+      {meta.image ? (
+        <Image source={meta.image} style={styles.badgeImage} resizeMode="contain" />
+      ) : (
+        <Text style={styles.badgeFallbackEmoji}>🏆</Text>
+      )}
+      <Text style={styles.badgeName}>{meta.name}</Text>
+      <Text style={styles.badgeDesc}>{meta.description}</Text>
     </Animated.View>
   )
 }
@@ -34,7 +50,9 @@ export default function LessonCompleteScreen() {
     badges: string
     dailyVisitBonus: string
   }>()
-  const badgeList = badges ? badges.split(',').filter(Boolean) : []
+  const badgeConditions: string[] = badges
+    ? (badges as string).split(',').filter(Boolean)
+    : []
   const showDailyVisitBonus = dailyVisitBonus === '1'
   const isRepeat = isFirstCompletion === '0'
 
@@ -67,11 +85,11 @@ export default function LessonCompleteScreen() {
         )}
 
         {/* Badge section */}
-        {badgeList.length > 0 && (
+        {badgeConditions.length > 0 && (
           <View style={styles.badgeSection}>
-            <Text style={styles.badgeHeading}>🏅 Badge{badgeList.length > 1 ? 's' : ''} Unlocked!</Text>
-            {badgeList.map((badge, i) => (
-              <BadgePill key={i} name={badge} />
+            <Text style={styles.badgeHeading}>New Badge{badgeConditions.length > 1 ? 's' : ''} Unlocked!</Text>
+            {badgeConditions.map((condition, i) => (
+              <BadgeCard key={condition} condition={condition} index={i} />
             ))}
           </View>
         )}
@@ -195,28 +213,47 @@ const styles = StyleSheet.create({
     marginTop: 20,
     width: '100%',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
   badgeHeading: {
-    color: NAVY,
-    fontSize: 16,
+    color: GREY,
+    fontSize: 13,
     fontWeight: '700',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
     marginBottom: 4,
   },
-  badgePill: {
-    backgroundColor: '#FEF3C7',
+  badgeCard: {
+    backgroundColor: '#FFFBEB',
     borderRadius: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
     borderWidth: 1.5,
     borderColor: GOLD,
     width: '100%',
     alignItems: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    gap: 6,
   },
-  badgePillText: {
+  badgeImage: {
+    width: 72,
+    height: 72,
+    marginBottom: 4,
+  },
+  badgeFallbackEmoji: {
+    fontSize: 52,
+    marginBottom: 4,
+  },
+  badgeName: {
+    color: NAVY,
+    fontSize: 17,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  badgeDesc: {
     color: '#92400E',
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 18,
   },
   bonusCard: {
     flexDirection: 'row',

@@ -11,13 +11,16 @@ import {
   Alert,
   TextInput,
   Modal,
+  Platform,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Ionicons } from '@expo/vector-icons'
+import * as Speech from 'expo-speech'
+import { Audio } from 'expo-av'
 import { api } from '../../lib/api'
-import TTSButton from '../../components/TTSButton'
+import { useVoiceStore, getSpeakOptions } from '../../stores/voiceStore'
 import { NAVY, GOLD, GREY, GREEN, RED, BG } from '../../constants/colors'
 
 // ─── Speech recognition (graceful fallback if not in native build) ────────────
@@ -83,6 +86,7 @@ export default function EntertainmentQuizScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const queryClient = useQueryClient()
+  const voiceGender = useVoiceStore((s) => s.voiceGender)
 
   const [screen, setScreen] = useState<Screen>('loading')
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -96,6 +100,26 @@ export default function EntertainmentQuizScreen() {
 
   const pulseAnim = useRef(new Animated.Value(1)).current
   const pulseLoop = useRef<Animated.CompositeAnimation | null>(null)
+
+  useEffect(() => {
+    return () => { Speech.stop() }
+  }, [])
+
+  const speakText = useCallback(async (text: string) => {
+    Speech.stop()
+    if (Platform.OS === 'ios') {
+      try {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
+        })
+        await new Promise<void>((r) => setTimeout(r, 80))
+      } catch { /* non-fatal */ }
+    }
+    const clean = text.replace(/\p{Emoji}/gu, '').replace(/\s{2,}/g, ' ').trim()
+    Speech.speak(clean, getSpeakOptions(voiceGender))
+  }, [voiceGender])
 
   // STT events
   useSpeechHook('result', (e: any) => {
@@ -126,6 +150,13 @@ export default function EntertainmentQuizScreen() {
       setScreen('pre-quiz')
     }
   }, [content, isError])
+
+  // Auto-speak question when quiz starts or user moves to next question
+  useEffect(() => {
+    if (screen === 'quiz' && content?.questions[currentIndex]) {
+      speakText(content.questions[currentIndex].question)
+    }
+  }, [screen, currentIndex, content, speakText])
 
   useEffect(() => {
     if (listening) {
@@ -162,6 +193,8 @@ export default function EntertainmentQuizScreen() {
 
   const handleMicPress = useCallback(async () => {
     if (submitting) return
+
+    Speech.stop()
 
     if (!IS_NATIVE) {
       Alert.alert('Voice Not Available', 'Voice input requires a development build.')
@@ -334,8 +367,8 @@ export default function EntertainmentQuizScreen() {
           <View style={styles.questionCard}>
             <Text style={styles.questionLabel}>QUESTION {currentIndex + 1} OF {total}</Text>
             <Text style={styles.questionText}>{currentQ.question}</Text>
-            <TouchableOpacity style={styles.hearBtn} activeOpacity={0.8}>
-              <TTSButton text={currentQ.question} size={14} color={GREY} idleColor={GREY} />
+            <TouchableOpacity style={styles.hearBtn} activeOpacity={0.8} onPress={() => speakText(currentQ.question)}>
+              <Ionicons name="volume-medium-outline" size={14} color={GREY} />
               <Text style={styles.hearBtnText}>Hear question</Text>
             </TouchableOpacity>
           </View>
@@ -362,15 +395,17 @@ export default function EntertainmentQuizScreen() {
             {listening ? 'Listening... tap to stop' : hasAnswer ? 'Tap to re-record' : 'Tap mic to speak'}
           </Text>
 
-          <TouchableOpacity
-            style={styles.typeBtn}
-            onPress={() => { setTypeInput(transcript); setTypeModalVisible(true) }}
-            disabled={submitting}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="create-outline" size={15} color={NAVY} />
-            <Text style={styles.typeBtnText}>Type answer instead</Text>
-          </TouchableOpacity>
+          {!IS_NATIVE && (
+            <TouchableOpacity
+              style={styles.typeBtn}
+              onPress={() => { setTypeInput(transcript); setTypeModalVisible(true) }}
+              disabled={submitting}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="create-outline" size={15} color={NAVY} />
+              <Text style={styles.typeBtnText}>Type answer instead</Text>
+            </TouchableOpacity>
+          )}
 
           {hasAnswer && (
             <View style={[styles.transcriptBox, listening && styles.transcriptBoxRecording]}>

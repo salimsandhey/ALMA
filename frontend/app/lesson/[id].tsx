@@ -107,7 +107,7 @@ export default function LessonScreen() {
   const isDialogue = currentGameType === 'DIALOGUE'
 
   const handleCardComplete = (cardId: string, correct: boolean, xp: number) => {
-    recordResult(cardId, correct, xp, helpUsed)
+    recordResult(cardId || `card-${currentCardIndex}`, correct, xp, helpUsed)
     if (isDialogue) {
       // auto-advance without requiring a "Next" tap
       setTimeout(() => {
@@ -131,7 +131,7 @@ export default function LessonScreen() {
     // Read cardResults directly from store to avoid stale closure (DIALOGUE auto-advances
     // via setTimeout before the component re-renders with the updated hook value)
     const { cardResults: currentCardResults } = useLessonStore.getState()
-    let badgesUnlocked: string[] = []
+    let badgesUnlocked: { name: string; condition: string; description: string }[] = []
     let serverXpEarned = 0
     let dailyVisitBonus = false
     let isFirstCompletion = true
@@ -165,7 +165,7 @@ export default function LessonScreen() {
         moduleId: lesson?.moduleId ?? '',
         score: String(score),
         nextLessonId: lesson?.nextLessonId ?? '',
-        badges: badgesUnlocked.join(','),
+        badges: badgesUnlocked.map((b) => b.condition).filter(Boolean).join(','),
         dailyVisitBonus: dailyVisitBonus ? '1' : '0',
       },
     })

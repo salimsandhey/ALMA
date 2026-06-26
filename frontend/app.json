@@ -59,7 +59,21 @@
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.alma.app"
+      "package": "com.alma.app",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": false,
+          "data": [
+            {
+              "scheme": "alma",
+              "host": "auth",
+              "pathPrefix": "/google-callback"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "extra": {
       "router": {},

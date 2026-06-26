@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { View, Text, Image, Animated, StyleSheet } from 'react-native'
 import MicButton from './MicButton'
+import SpeechPreview from './SpeechPreview'
 import { resolveLessonImage } from '../../lib/localLessonImages'
 import { similarity } from '../../lib/fuzzy'
 import { SpeechState, stateLabel } from '../../lib/speech'
@@ -131,7 +132,7 @@ export default function WordMatchGame({ card, onComplete, xpReward }: GameCardPr
 
       <View style={styles.micBlock}>
         <Text style={styles.stateText}>{stateLabel(speechState)}</Text>
-        {!!interimText && <Text style={styles.previewText}>Hearing: {interimText}</Text>}
+        <SpeechPreview interimText={interimText} lastSpoken="" />
         <View style={styles.micWrapper}>
           <MicButton
             onResult={handleSTTResult}

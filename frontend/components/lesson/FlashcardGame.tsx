@@ -7,8 +7,8 @@ import {
   StyleSheet,
 } from 'react-native'
 import MicButton from './MicButton'
-import DiffView from './DiffView'
 import ConfidenceBadge from './ConfidenceBadge'
+import SpeechPreview from './SpeechPreview'
 import { pickBest } from '../../lib/fuzzy'
 import { resolveLessonImage } from '../../lib/localLessonImages'
 import { SpeechState, stateLabel } from '../../lib/speech'
@@ -127,8 +127,7 @@ export default function FlashcardGame({ card, onComplete, xpReward }: GameCardPr
           Now <Text style={styles.instructionStrong}>say the word</Text> out loud
         </Text>
         <Text style={styles.stateText}>{stateLabel(speechState)}</Text>
-        {!!interimText && <Text style={styles.previewText}>Hearing: {interimText}</Text>}
-        {!!lastSpoken && <Text style={styles.previewText}>You said: {lastSpoken}</Text>}
+        <SpeechPreview interimText={interimText} lastSpoken={lastSpoken} />
 
         <View style={styles.micWrapper}>
           <MicButton
@@ -140,12 +139,7 @@ export default function FlashcardGame({ card, onComplete, xpReward }: GameCardPr
             label="Tap mic to pronounce"
           />
         </View>
-        {answered && !!lastSpoken && (
-          <View style={styles.evalRow}>
-            <DiffView target={card.targetWord ?? card.word} spoken={lastSpoken} />
-            {lastScore !== null && <ConfidenceBadge score={lastScore} />}
-          </View>
-        )}
+        {answered && lastScore !== null && <ConfidenceBadge score={lastScore} />}
       </View>
 
       {bannerText !== '' && (

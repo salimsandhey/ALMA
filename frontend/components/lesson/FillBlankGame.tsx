@@ -1,8 +1,8 @@
 import React, { useState, useRef, useMemo } from 'react'
 import { View, Text, Animated, StyleSheet } from 'react-native'
 import MicButton from './MicButton'
-import DiffView from './DiffView'
 import ConfidenceBadge from './ConfidenceBadge'
+import SpeechPreview from './SpeechPreview'
 import { pickBest } from '../../lib/fuzzy'
 import { SpeechState, stateLabel } from '../../lib/speech'
 import { trackSpeech } from '../../lib/speechAnalytics'
@@ -110,15 +110,9 @@ export default function FillBlankGame({ card, onComplete, xpReward }: GameCardPr
 
       <View style={styles.micArea}>
         <Text style={styles.stateText}>{stateLabel(speechState)}</Text>
-        {!!interimText && <Text style={styles.previewText}>Hearing: {interimText}</Text>}
-        {!!lastSpoken && <Text style={styles.previewText}>You said: {lastSpoken}</Text>}
+        <SpeechPreview interimText={interimText} lastSpoken={lastSpoken} />
         <MicButton onResult={handleSTTResult} onInterim={setInterimText} onStateChange={handleStateChange} disabled={answered} tone="yellow" label="Say the missing word" />
-        {answered && !!lastSpoken && (
-          <View style={styles.evalRow}>
-            <DiffView target={card.correctAnswer} spoken={lastSpoken} />
-            {lastScore !== null && <ConfidenceBadge score={lastScore} />}
-          </View>
-        )}
+        {answered && lastScore !== null && <ConfidenceBadge score={lastScore} />}
       </View>
 
       {bannerText !== '' && (

@@ -5,6 +5,7 @@ import * as Speech from 'expo-speech'
 import { useVoiceStore, getSpeakOptions } from '../../stores/voiceStore'
 import TTSButton from '../TTSButton'
 import MicButton from './MicButton'
+import SpeechPreview from './SpeechPreview'
 import DiffView from './DiffView'
 import ConfidenceBadge from './ConfidenceBadge'
 import { pickBest } from '../../lib/fuzzy'
@@ -168,9 +169,7 @@ export default function DialogueGame({ card, onComplete, xpReward }: any) {
             label="Tap to speak your line"
           />
 
-          {interimText !== '' ? (
-            <Text style={styles.hearingText}>Hearing: {interimText}</Text>
-          ) : null}
+          <SpeechPreview interimText={interimText} lastSpoken="" />
 
           {speechState === 'failed' && !!lastSpoken && currentSeg ? (
             <View style={styles.diffBlock}>

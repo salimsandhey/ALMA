@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { View, Text, Image, Animated, StyleSheet } from 'react-native'
 import MicButton from './MicButton'
-import DiffView from './DiffView'
 import ConfidenceBadge from './ConfidenceBadge'
+import SpeechPreview from './SpeechPreview'
 import { similarity, pickBest } from '../../lib/fuzzy'
 import { resolveLessonImage } from '../../lib/localLessonImages'
 import { SpeechState, stateLabel } from '../../lib/speech'
@@ -112,15 +112,9 @@ export default function ImageSpeakGame({ card, onComplete, xpReward }: any) {
       <View style={styles.belowCard}>
         <Text style={styles.prompt}>{card.prompt}</Text>
         <Text style={styles.stateText}>{stateLabel(speechState)}</Text>
-        {!!interimText && <Text style={styles.previewText}>Hearing: {interimText}</Text>}
-        {!!lastSpoken && <Text style={styles.previewText}>You said: {lastSpoken}</Text>}
+        <SpeechPreview interimText={interimText} lastSpoken={lastSpoken} />
         <View style={styles.micWrapper}><MicButton onResult={handleSTTResult} onInterim={setInterimText} onStateChange={handleStateChange} disabled={answered} /></View>
-        {answered && !!lastSpoken && !!bestAnswer && (
-          <View style={styles.evalRow}>
-            <DiffView target={bestAnswer} spoken={lastSpoken} />
-            {lastScore !== null && <ConfidenceBadge score={lastScore} />}
-          </View>
-        )}
+        {answered && lastScore !== null && <ConfidenceBadge score={lastScore} />}
       </View>
       {bannerText !== '' && <Animated.View style={[styles.banner, bannerCorrect ? styles.bannerCorrect : styles.bannerRetry, { opacity: bannerOpacity }]}><Text style={[styles.bannerText, { color: bannerCorrect ? '#065F46' : '#92400E' }]}>{bannerText}</Text></Animated.View>}
     </View>

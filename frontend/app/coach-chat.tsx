@@ -7,9 +7,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import * as Speech from 'expo-speech'
+import { Audio } from 'expo-av'
 import { api } from '../lib/api'
 import TTSButton from '../components/TTSButton'
 import { useAuthStore } from '../stores/authStore'
+import { useVoiceStore, getSpeakOptions } from '../stores/voiceStore'
 import { NAVY, GOLD, GREEN, GREY, BG } from '../constants/colors'
 
 const _speechMod = (() => {
@@ -54,6 +57,7 @@ function uid() {
 export default function CoachChat() {
   const router = useRouter()
   const { user } = useAuthStore()
+  const voiceGender = useVoiceStore((s) => s.voiceGender)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputText, setInputText] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -68,6 +72,26 @@ export default function CoachChat() {
   const pulseOpacity = useRef(new Animated.Value(1)).current
   const pulseLoop = useRef<Animated.CompositeAnimation | null>(null)
   const didMount = useRef(false)
+
+  useEffect(() => {
+    return () => { Speech.stop() }
+  }, [])
+
+  const speakText = useCallback(async (text: string) => {
+    Speech.stop()
+    if (Platform.OS === 'ios') {
+      try {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
+        })
+        await new Promise<void>((r) => setTimeout(r, 80))
+      } catch { /* non-fatal */ }
+    }
+    const clean = text.replace(/\p{Emoji}/gu, '').replace(/\s{2,}/g, ' ').trim()
+    Speech.speak(clean, getSpeakOptions(voiceGender))
+  }, [voiceGender])
 
   // STT events
   useSpeechHook('result', (e: any) => {
@@ -147,16 +171,14 @@ export default function CoachChat() {
         correction: data.correction ?? null,
       }
 
-      setMessages((prev) => {
-        const updated = [...prev, newMsg]
-        return updated
-      })
+      setMessages((prev) => [...prev, newMsg])
 
       if (data.messagesRemaining !== undefined) {
         setStatus((prev) => prev ? { ...prev, messagesRemaining: data.messagesRemaining } : prev)
       }
 
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
+      speakText(data.reply)
     } catch (err: any) {
       if (err?.response?.status === 429) {
         setOutOfCredits(true)
@@ -186,6 +208,9 @@ export default function CoachChat() {
 
   const handleMicPress = async () => {
     if (isLoading) return
+
+    // Stop any ongoing TTS before recording
+    Speech.stop()
 
     if (!IS_NATIVE) {
       // Web/Expo Go fallback: just focus input
@@ -324,7 +349,7 @@ export default function CoachChat() {
             msg.role === 'assistant' ? (
               <AlmaMessage key={msg.id} msg={msg} />
             ) : (
-              <UserMessage key={msg.id} msg={msg} onFeedback={loadGrammarFeedback} onToggle={toggleFeedback} />
+              <UserMessage key={msg.id} msg={msg} onFeedback={loadGrammarFeedback} onToggle={toggleFeedback} onSpeak={speakText} />
             )
           )}
           {isLoading && (
@@ -433,10 +458,12 @@ function UserMessage({
   msg,
   onFeedback,
   onToggle,
+  onSpeak,
 }: {
   msg: ChatMessage
   onFeedback: (m: ChatMessage) => void
   onToggle: (id: string) => void
+  onSpeak: (text: string) => void
 }) {
   const gr = msg.grammarResult
 
@@ -476,6 +503,13 @@ function UserMessage({
                 <View style={[styles.cardTag, { backgroundColor: GOLD }]}>
                   <Text style={styles.cardTagText}>Grammar Check</Text>
                 </View>
+                <TouchableOpacity
+                  onPress={() => onSpeak([gr.correctedText, gr.explanation].filter(Boolean).join('. '))}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={styles.cardSpeakBtn}
+                >
+                  <Ionicons name="volume-medium-outline" size={16} color={GOLD} />
+                </TouchableOpacity>
               </View>
               <View style={styles.cardDiff}>
                 <Text style={styles.cardOriginalText}>{gr.explanation ? msg.content : gr.correctedText}</Text>
@@ -494,6 +528,13 @@ function UserMessage({
                 <View style={[styles.cardTag, { backgroundColor: '#818CF8' }]}>
                   <Text style={styles.cardTagText}>Better to Say</Text>
                 </View>
+                <TouchableOpacity
+                  onPress={() => onSpeak([gr.betterToSay!.corrected, gr.betterToSay!.explanation].filter(Boolean).join('. '))}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={styles.cardSpeakBtn}
+                >
+                  <Ionicons name="volume-medium-outline" size={16} color="#818CF8" />
+                </TouchableOpacity>
               </View>
               <View style={styles.cardDiff}>
                 <Text style={styles.cardOriginalText}>{gr.betterToSay.original}</Text>
@@ -760,6 +801,10 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  cardSpeakBtn: {
+    padding: 2,
   },
   cardTag: {
     borderRadius: 8,

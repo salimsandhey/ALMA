@@ -13,7 +13,7 @@ const completeLessonSchema = z.object({
   lessonId: z.string(),
   xpEarned: z.number().int().min(0).optional(), // kept for compatibility, server recalculates
   cardResults: z.array(z.object({
-    cardId: z.string(),
+    cardId: z.string().optional(),
     correct: z.boolean(),
     helpUsed: z.boolean().optional(),
   })).optional(),
