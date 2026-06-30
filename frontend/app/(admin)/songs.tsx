@@ -20,6 +20,7 @@ type Song = {
   genre: string
   emoji: string
   youtubeUrl: string
+  bgMusicUrl?: string | null
   lyrics: string[]
   isPublished: boolean
   orderIndex: number
@@ -42,6 +43,10 @@ export default function SongsScreen() {
   const [youtubeUrl, setYoutubeUrl] = useState('')
   const [lyricsText, setLyricsText] = useState('')  // one lyric line per line
   const [isPublished, setIsPublished] = useState(true)
+  const [bgMusicUploading, setBgMusicUploading] = useState(false)
+  const [bgMusicUrl, setBgMusicUrl] = useState<string | null>(null)
+  const [bgMusicInput, setBgMusicInput] = useState('')
+  const [showBgMusicInput, setShowBgMusicInput] = useState(false)
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-songs'],
@@ -51,6 +56,9 @@ export default function SongsScreen() {
   const resetForm = () => {
     setTitle(''); setArtist(''); setGenre(''); setEmoji('🎵')
     setYoutubeUrl(''); setLyricsText(''); setIsPublished(true); setEditing(null)
+    setBgMusicUrl(null)
+    setBgMusicInput('')
+    setShowBgMusicInput(false)
   }
 
   const openCreate = () => { resetForm(); setModalVisible(true) }
@@ -59,7 +67,49 @@ export default function SongsScreen() {
     setEditing(s)
     setTitle(s.title); setArtist(s.artist); setGenre(s.genre); setEmoji(s.emoji)
     setYoutubeUrl(s.youtubeUrl); setLyricsText(s.lyrics.join('\n')); setIsPublished(s.isPublished)
+    setBgMusicUrl(s.bgMusicUrl ?? null)
+    setBgMusicInput('')
+    setShowBgMusicInput(false)
     setModalVisible(true)
+  }
+
+  const saveBgMusicUrl = async () => {
+    if (!editing) return
+    const url = bgMusicInput.trim()
+    if (!url.startsWith('http')) {
+      Alert.alert('Invalid URL', 'Please enter a valid audio URL starting with http.')
+      return
+    }
+    setBgMusicUploading(true)
+    try {
+      await api.patch(`/api/admin/songs/${editing.id}`, { bgMusicUrl: url })
+      setBgMusicUrl(url)
+      setBgMusicInput('')
+      setShowBgMusicInput(false)
+      queryClient.invalidateQueries({ queryKey: ['admin-songs'] })
+    } catch {
+      Alert.alert('Error', 'Failed to save background music URL.')
+    } finally {
+      setBgMusicUploading(false)
+    }
+  }
+
+  const removeBgMusic = async () => {
+    if (!editing) return
+    Alert.alert('Remove Music', 'Remove custom background music? The default track will be used.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove', style: 'destructive', onPress: async () => {
+          try {
+            await api.delete(`/api/admin/songs/${editing.id}/bg-music`)
+            setBgMusicUrl(null)
+            queryClient.invalidateQueries({ queryKey: ['admin-songs'] })
+          } catch {
+            Alert.alert('Error', 'Failed to remove background music.')
+          }
+        }
+      }
+    ])
   }
 
   const save = useMutation({
@@ -260,6 +310,62 @@ export default function SongsScreen() {
                   </Text>
                 )}
 
+                <Text style={styles.fieldLabel}>KARAOKE BACKGROUND MUSIC</Text>
+                <Text style={styles.fieldHint}>
+                  Paste a direct audio URL (e.g. from Cloudinary). Leave empty to use the default lo-fi track.
+                </Text>
+
+                {bgMusicUrl ? (
+                  <View style={styles.bgMusicRow}>
+                    <Ionicons name="musical-notes" size={16} color="#10B981" />
+                    <Text style={styles.bgMusicSet} numberOfLines={1}>Custom track set</Text>
+                    <TouchableOpacity onPress={() => setShowBgMusicInput(true)} style={styles.bgMusicEditBtn}>
+                      <Ionicons name="pencil-outline" size={13} color={NAVY} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={removeBgMusic} style={styles.bgMusicRemove}>
+                      <Ionicons name="trash-outline" size={15} color={RED} />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={styles.bgMusicRow}>
+                    <Ionicons name="musical-note-outline" size={16} color="#9CA3AF" />
+                    <Text style={styles.bgMusicDefault}>Using default lo-fi track</Text>
+                    {editing && (
+                      <TouchableOpacity style={styles.uploadBtn} onPress={() => setShowBgMusicInput(true)}>
+                        <Ionicons name="link-outline" size={13} color={NAVY} />
+                        <Text style={styles.uploadBtnText}>Set URL</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+
+                {!editing && (
+                  <Text style={styles.bgMusicHint}>Save the song first, then you can set a custom track.</Text>
+                )}
+
+                {showBgMusicInput && (
+                  <View style={styles.bgMusicInputRow}>
+                    <TextInput
+                      style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                      placeholder="https://res.cloudinary.com/..."
+                      placeholderTextColor="#9CA3AF"
+                      value={bgMusicInput}
+                      onChangeText={setBgMusicInput}
+                      autoCapitalize="none"
+                      keyboardType="url"
+                    />
+                    <TouchableOpacity style={styles.uploadBtn} onPress={saveBgMusicUrl} disabled={bgMusicUploading}>
+                      {bgMusicUploading
+                        ? <ActivityIndicator size="small" color={NAVY} />
+                        : <Text style={styles.uploadBtnText}>Save</Text>
+                      }
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => { setShowBgMusicInput(false); setBgMusicInput('') }}>
+                      <Ionicons name="close" size={18} color="#9CA3AF" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+
                 <View style={styles.publishRow}>
                   <Text style={styles.fieldLabel}>PUBLISHED</Text>
                   <Switch
@@ -331,6 +437,15 @@ const styles = StyleSheet.create({
   emojiInput: { width: 48, flexShrink: 0, fontSize: 24 },
   lyricsInput: { minHeight: 100, maxHeight: 200, fontFamily: 'monospace' },
   lyricsCount: { fontSize: 12, color: '#9CA3AF', textAlign: 'right', marginTop: -4, marginBottom: 8 },
+  bgMusicRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F9FAFB', borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB', padding: 10, marginBottom: 6 },
+  bgMusicSet: { flex: 1, fontSize: 13, color: '#10B981', fontWeight: '600' },
+  bgMusicDefault: { flex: 1, fontSize: 13, color: '#9CA3AF' },
+  bgMusicRemove: { padding: 2 },
+  bgMusicEditBtn: { padding: 2 },
+  bgMusicHint: { fontSize: 11, color: '#9CA3AF', marginBottom: 8 },
+  bgMusicInputRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  uploadBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EFF6FF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  uploadBtnText: { fontSize: 12, fontWeight: '600', color: NAVY },
   publishRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
   saveBtn: { backgroundColor: GOLD, borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 16 },
   saveBtnDisabled: { opacity: 0.4 },

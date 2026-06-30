@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
   logoutBtn: { backgroundColor: 'rgba(255,255,255,0.15)', padding: 8, borderRadius: 8 },
 
   scroll: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 40 },
+  scrollContent: { padding: 16, paddingBottom: 100 },
 
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
   statCard: {

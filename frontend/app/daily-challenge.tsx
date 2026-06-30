@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import {
   View, Text, TouchableOpacity, StyleSheet, ActivityIndicator,
-  Animated, Alert,
+  Animated, Alert, Platform,
 } from 'react-native'
+import { Audio, InterruptionModeIOS } from 'expo-av'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -60,10 +61,21 @@ export default function DailyChallenge() {
     setTranscript(t)
     if (e.isFinal) {
       setListening(false)
+      if (Platform.OS === 'ios') { try { SpeechModule?.abort() } catch {} }
       handleSubmit(t)
     }
   })
-  useSpeechHook('end', () => setListening(false))
+  useSpeechHook('end', () => {
+    setListening(false)
+    if (Platform.OS === 'ios') {
+      Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+        staysActiveInBackground: false,
+      }).catch(() => {})
+    }
+  })
   useSpeechHook('error', () => setListening(false))
 
   useEffect(() => {

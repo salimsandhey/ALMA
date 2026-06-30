@@ -16,7 +16,7 @@ interface GameCardProps {
 type ButtonState = 'default' | 'correct' | 'wrong'
 
 export default function TrueFalseGame({ card, onComplete, xpReward, currentIndex = 0, totalCards = 1 }: GameCardProps) {
-  const [timeLeft, setTimeLeft] = useState(7)
+  const [timeLeft, setTimeLeft] = useState(12)
   const [answered, setAnswered] = useState(false)
   const answeredRef = useRef(false)
   const [trueState, setTrueState] = useState<ButtonState>('default')

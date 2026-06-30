@@ -18,7 +18,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Ionicons } from '@expo/vector-icons'
 import * as Speech from 'expo-speech'
-import { Audio } from 'expo-av'
+import { Audio, InterruptionModeIOS } from 'expo-av'
 import { api } from '../../lib/api'
 import { useVoiceStore, getSpeakOptions } from '../../stores/voiceStore'
 import { NAVY, GOLD, GREY, GREEN, RED, BG } from '../../constants/colors'
@@ -109,12 +109,15 @@ export default function EntertainmentQuizScreen() {
     Speech.stop()
     if (Platform.OS === 'ios') {
       try {
+        await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true })
+        await new Promise<void>((r) => setTimeout(r, 80))
         await Audio.setAudioModeAsync({
           allowsRecordingIOS: false,
           playsInSilentModeIOS: true,
+          interruptionModeIOS: InterruptionModeIOS.DoNotMix,
           staysActiveInBackground: false,
         })
-        await new Promise<void>((r) => setTimeout(r, 80))
+        await new Promise<void>((r) => setTimeout(r, 200))
       } catch { /* non-fatal */ }
     }
     const clean = text.replace(/\p{Emoji}/gu, '').replace(/\s{2,}/g, ' ').trim()
@@ -124,9 +127,22 @@ export default function EntertainmentQuizScreen() {
   // STT events
   useSpeechHook('result', (e: any) => {
     const t: string = e.results?.[0]?.transcript ?? ''
-    if (t) setTranscript(t)
+    if (t) {
+      setTranscript(t)
+      if (e.isFinal && Platform.OS === 'ios') { try { SpeechModule?.abort() } catch {} }
+    }
   })
-  useSpeechHook('end', () => setListening(false))
+  useSpeechHook('end', () => {
+    setListening(false)
+    if (Platform.OS === 'ios') {
+      Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+        staysActiveInBackground: false,
+      }).catch(() => {})
+    }
+  })
   useSpeechHook('error', () => setListening(false))
 
   const { data: content, isError } = useQuery<ContentData>({

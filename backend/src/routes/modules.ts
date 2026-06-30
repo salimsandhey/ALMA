@@ -4,6 +4,9 @@ import { verifyJWT } from '../middleware/auth'
 
 const router = Router()
 
+// Set to false to disable sequential module locking (dev/testing only)
+const MODULE_LOCKING_ENABLED = true
+
 router.use(verifyJWT)
 
 // GET /api/modules
@@ -38,7 +41,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     const result = modules.map((mod) => {
       const completedLessons = mod.lessons.filter((l) => completedLessonIds.has(l.id)).length
       const progress = progressMap.get(mod.id)
-      const isLocked = mod.orderIndex > 1 && !(completionByOrder.get(mod.orderIndex - 1) ?? false)
+      const isLocked = MODULE_LOCKING_ENABLED && mod.orderIndex > 1 && !(completionByOrder.get(mod.orderIndex - 1) ?? false)
 
       return {
         id: mod.id,
@@ -82,8 +85,7 @@ router.get('/:moduleId', async (req: Request, res: Response): Promise<void> => {
       return
     }
 
-    // Check if previous module is completed — if not, this module is locked
-    if (mod.orderIndex > 1) {
+    if (MODULE_LOCKING_ENABLED && mod.orderIndex > 1) {
       const prevModule = await prisma.module.findFirst({
         where: { orderIndex: mod.orderIndex - 1, isPublished: true },
         select: { id: true },

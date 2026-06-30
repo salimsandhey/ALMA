@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "ALMA: Speak English Fluently",
+    "owner": "techsalim",
     "slug": "alma-app",
     "scheme": "alma",
     "version": "1.0.0",
@@ -31,9 +32,11 @@
       "supportsTablet": false,
       "bundleIdentifier": "app.alma.learn",
       "appleTeamId": "M6FXN66SFA",
-      "buildNumber": "6",
+      "buildNumber": "7",
       "entitlements": {
-        "com.apple.developer.applesignin": ["Default"]
+        "com.apple.developer.applesignin": [
+          "Default"
+        ]
       },
       "infoPlist": {
         "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition.",
@@ -71,15 +74,24 @@
               "pathPrefix": "/google-callback"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "c6864962-35c9-46a6-a087-93c0b4da353a"
+        "projectId": "a7caf0bf-019b-4ec0-9270-a9496f43873b"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/a7caf0bf-019b-4ec0-9270-a9496f43873b"
     }
   }
 }

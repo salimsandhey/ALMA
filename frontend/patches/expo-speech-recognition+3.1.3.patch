@@ -1,0 +1,30 @@
+diff --git a/node_modules/expo-speech-recognition/ios/ExpoSpeechRecognizer.swift b/node_modules/expo-speech-recognition/ios/ExpoSpeechRecognizer.swift
+index c474f80..1b86c33 100644
+--- a/node_modules/expo-speech-recognition/ios/ExpoSpeechRecognizer.swift
++++ b/node_modules/expo-speech-recognition/ios/ExpoSpeechRecognizer.swift
+@@ -535,6 +535,11 @@ actor ExpoSpeechRecognizer: ObservableObject {
+     audioEngine?.inputNode.reset()
+     audioEngine?.reset()
+     audioEngine = nil
++    // Restore to playAndRecord+mixWithOthers so background music keeps playing after STT ends
++    do {
++      try AVAudioSession.sharedInstance().setCategory(.playAndRecord, mode: .measurement, options: [.mixWithOthers, .defaultToSpeaker, .allowBluetooth])
++      try AVAudioSession.sharedInstance().setActive(true, options: .notifyOthersOnDeactivation)
++    } catch {}
+     for observer in [audioSessionInterruptionObserver, audioSessionRouteChangeObserver].compactMap({
+       $0
+     }) {
+@@ -612,11 +617,11 @@ actor ExpoSpeechRecognizer: ObservableObject {
+         options: categoryOptions
+       )
+     } else {
+-      // Default to playAndRecord with defaultToSpeaker and allowBluetooth
++      // Default to playAndRecord with mixWithOthers so background audio keeps playing during STT
+       try audioSession.setCategory(
+         .playAndRecord,
+         mode: .measurement,
+-        options: [.defaultToSpeaker, .allowBluetooth]
++        options: [.mixWithOthers, .defaultToSpeaker, .allowBluetooth]
+       )
+     }
+ 

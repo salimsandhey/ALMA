@@ -93,6 +93,26 @@ export default function MoreScreen() {
           </TouchableOpacity>
         ))}
 
+        {__DEV__ && (
+          <>
+            <Text style={[s.sectionLabel, { marginTop: 24 }]}>DEVELOPER</Text>
+            <TouchableOpacity
+              style={[s.card, { borderWidth: 1.5, borderColor: '#F6B80D', borderStyle: 'dashed' }]}
+              onPress={() => router.push('/(admin)/dev-tools' as any)}
+              activeOpacity={0.8}
+            >
+              <View style={[s.iconWrap, { backgroundColor: '#FFFBEB' }]}>
+                <Ionicons name="construct-outline" size={24} color="#D97706" />
+              </View>
+              <View style={s.cardText}>
+                <Text style={[s.cardTitle, { color: '#D97706' }]}>Dev Tools</Text>
+                <Text style={s.cardSub}>Seed emojis, bulk updates, dev utilities</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#D1D5DB" />
+            </TouchableOpacity>
+          </>
+        )}
+
         <Text style={[s.sectionLabel, { marginTop: 24 }]}>ACCOUNT</Text>
         <TouchableOpacity style={[s.card, s.logoutCard]} onPress={handleLogout} activeOpacity={0.8}>
           <View style={[s.iconWrap, { backgroundColor: '#FEE2E2' }]}>

@@ -61,7 +61,11 @@ function formatCost(usd: number): string {
 
 function formatDate(iso: string): string {
   const d = new Date(iso)
-  return `${d.getDate()} ${d.toLocaleString('en', { month: 'short' })}`
+  return String(d.getDate())
+}
+
+function formatMonthLabel(iso: string): string {
+  return new Date(iso).toLocaleString('en', { month: 'short' })
 }
 
 export default function AiUsageScreen() {
@@ -150,7 +154,10 @@ export default function AiUsageScreen() {
                     <View key={day.date} style={s.barCol}>
                       <Text style={s.barCount}>{day.calls > 0 ? day.calls : ''}</Text>
                       <View style={[s.bar, { height: barH, backgroundColor: day.totalTokens > 0 ? NAVY : '#E5E7EB' }]} />
-                      <Text style={s.barDate}>{formatDate(day.date)}</Text>
+                      <View style={s.barLabelWrap}>
+                        <Text style={s.barDay}>{formatDate(day.date)}</Text>
+                        <Text style={s.barMonth}>{formatMonthLabel(day.date)}</Text>
+                      </View>
                     </View>
                   )
                 })}
@@ -254,11 +261,13 @@ const s = StyleSheet.create({
   rowBorder: { borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
 
   // Chart
-  chartArea: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 120, paddingBottom: 20 },
-  barCol:    { flex: 1, alignItems: 'center', gap: 3 },
-  bar:       { width: '100%', borderRadius: 3, minHeight: 4, minWidth: 6, maxWidth: 24 },
-  barDate:   { fontSize: 8, color: '#9CA3AF', textAlign: 'center', transform: [{ rotate: '45deg' }] },
-  barCount:  { fontSize: 8, color: '#6B7280', textAlign: 'center' },
+  chartArea:    { flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 150 },
+  barCol:       { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
+  bar:          { width: '80%', borderRadius: 3, minHeight: 4, maxWidth: 20 },
+  barLabelWrap: { alignItems: 'center', marginTop: 4, height: 28 },
+  barDay:       { fontSize: 8, color: '#374151', fontWeight: '600', textAlign: 'center', lineHeight: 11 },
+  barMonth:     { fontSize: 7, color: '#9CA3AF', textAlign: 'center', lineHeight: 10 },
+  barCount:     { fontSize: 7, color: '#6B7280', textAlign: 'center', marginBottom: 2 },
 
   // By feature
   featureRow:    { paddingVertical: 12 },

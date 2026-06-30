@@ -10,6 +10,7 @@
     "dev": "nodemon",
     "build": "tsc",
     "start": "node dist/index.js",
+    "migrate:data": "node dist/scripts/migrate-data.js",
     "seed": "ts-node --transpile-only prisma/seed.ts"
   },
   "dependencies": {

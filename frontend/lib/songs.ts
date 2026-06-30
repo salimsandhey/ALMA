@@ -5,6 +5,7 @@ export type Song = {
   genre: string
   emoji: string
   youtubeUrl: string
+  bgMusicUrl?: string | null
   lyrics: string[]
 }
 

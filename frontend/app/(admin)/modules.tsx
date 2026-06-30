@@ -13,6 +13,7 @@ import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { deleteToken } from '../../lib/storage'
 import { NAVY, GOLD, BG, CARD, GREEN, RED } from '../../constants/colors'
+import { resolveLessonImage } from '../../lib/localLessonImages'
 
 type GameType = 'FLASHCARD' | 'WORD_MATCH' | 'FILL_BLANK' | 'TRUE_FALSE' | 'DIALOGUE' | 'IMAGE_SPEAK'
 type View = 'list' | 'module' | 'lesson'
@@ -696,8 +697,10 @@ function ImageEmojiPicker({
   const [uploading, setUploading] = useState(false)
   const [showEmojiGrid, setShowEmojiGrid] = useState(false)
 
+  const isLocal  = value.startsWith('local:')
   const isRemote = value.startsWith('http')
-  const isEmoji = !value.startsWith('http') && !value.startsWith('local:') && value.length > 0
+  const isEmoji  = !isRemote && !isLocal && value.length > 0
+  const localSrc = isLocal ? resolveLessonImage(value) : null
 
   const pickImage = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -743,9 +746,25 @@ function ImageEmojiPicker({
 
       {mode === 'image' ? (
         <View>
-          {/* Preview */}
+          {/* Local image preview */}
+          {isLocal && localSrc && (
+            <View style={{ marginBottom: 8 }}>
+              <Image source={localSrc} style={s2.previewImage} resizeMode="cover" />
+              <View style={s2.localBadge}>
+                <Ionicons name="phone-portrait-outline" size={12} color="#065F46" />
+                <Text style={s2.localBadgeText}>Local image (bundled)</Text>
+              </View>
+            </View>
+          )}
+          {/* Cloudinary preview */}
           {isRemote && (
-            <Image source={{ uri: value }} style={s2.previewImage} resizeMode="cover" />
+            <View style={{ marginBottom: 8 }}>
+              <Image source={{ uri: value }} style={s2.previewImage} resizeMode="cover" />
+              <View style={[s2.localBadge, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+                <Ionicons name="cloud-outline" size={12} color="#1D4ED8" />
+                <Text style={[s2.localBadgeText, { color: '#1D4ED8' }]}>Custom image (Cloudinary)</Text>
+              </View>
+            </View>
           )}
           {/* Upload button */}
           <TouchableOpacity style={s2.uploadBtn} onPress={pickImage} disabled={uploading}>
@@ -753,18 +772,19 @@ function ImageEmojiPicker({
               ? <ActivityIndicator size="small" color={NAVY} />
               : <>
                   <Ionicons name="cloud-upload-outline" size={18} color={NAVY} />
-                  <Text style={s2.uploadBtnText}>{isRemote ? 'Replace Image' : 'Upload Image'}</Text>
+                  <Text style={s2.uploadBtnText}>{isRemote ? 'Replace Custom Image' : 'Upload Custom Image'}</Text>
                 </>
             }
           </TouchableOpacity>
-          {/* Or paste URL */}
+          {/* Key / URL field */}
           <TextInput
             style={s.input}
-            placeholder="Or paste image URL (https://...)"
+            placeholder="local:key  or  https://..."
             placeholderTextColor="#9CA3AF"
-            value={isRemote ? value : ''}
+            value={isLocal || isRemote ? value : ''}
             onChangeText={onChange}
             autoCapitalize="none"
+            autoCorrect={false}
           />
         </View>
       ) : (
@@ -880,7 +900,9 @@ const s2 = StyleSheet.create({
   modeBtnActive:    { borderColor: NAVY, backgroundColor: '#EFF6FF' },
   modeBtnText:      { fontSize: 13, color: '#6B7280', fontWeight: '500' },
   modeBtnTextActive:{ color: NAVY, fontWeight: '700' },
-  previewImage:     { width: '100%', height: 140, borderRadius: 10, marginBottom: 8 },
+  previewImage:     { width: '100%', height: 140, borderRadius: 10, marginBottom: 6 },
+  localBadge:       { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#D1FAE5', borderWidth: 1, borderColor: '#6EE7B7', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, marginBottom: 8, alignSelf: 'flex-start' },
+  localBadgeText:   { fontSize: 11, fontWeight: '600', color: '#065F46' },
   uploadBtn:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: NAVY, borderRadius: 10, paddingVertical: 10, marginBottom: 8 },
   uploadBtnText:    { fontSize: 13, fontWeight: '600', color: NAVY },
   gridToggle:       { alignItems: 'center', paddingVertical: 6, marginBottom: 6 },

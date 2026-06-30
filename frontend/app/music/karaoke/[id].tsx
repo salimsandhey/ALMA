@@ -11,6 +11,8 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useQuery } from '@tanstack/react-query'
+import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av'
+import { ExpoSpeechRecognitionModule } from 'expo-speech-recognition'
 import { api } from '../../../lib/api'
 import { Song } from '../../../lib/songs'
 import { useMusicStore } from '../../../stores/musicStore'
@@ -19,6 +21,8 @@ import BottomNavBar from '../../../components/BottomNavBar'
 import { similarity } from '../../../lib/fuzzy'
 import { SpeechState } from '../../../lib/speech'
 import { Colors } from '../../../constants/colors'
+
+const KARAOKE_BG = require('../../../assets/karaoke-bg.mp3')
 
 export default function KaraokeScreen() {
   const router = useRouter()
@@ -46,6 +50,71 @@ export default function KaraokeScreen() {
   const micRef = useRef<MicButtonRef>(null)
   // Use a ref so the setTimeout closure always sees the latest value
   const sessionStartedRef = useRef(false)
+  const bgMusicRef = useRef<Audio.Sound | null>(null)
+
+  // Set karaoke-specific audio mode on enter, restore defaults on leave
+  useEffect(() => {
+    Audio.setAudioModeAsync({
+      allowsRecordingIOS: true,
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: false,
+      interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
+      shouldDuckAndroid: true,
+      interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+    })
+    // Tell expo-speech-recognition to use playAndRecord + mixWithOthers
+    // so it doesn't take over the audio session and interrupt our background music
+    try {
+      ExpoSpeechRecognitionModule.setCategoryIOS({
+        category: 'playAndRecord',
+        categoryOptions: ['mixWithOthers', 'allowBluetooth', 'allowBluetoothA2DP'],
+        mode: 'measurement',
+      })
+    } catch {}
+
+    return () => {
+      // Restore safe defaults so other screens are unaffected
+      Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: false,
+        staysActiveInBackground: false,
+        interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+        shouldDuckAndroid: true,
+        interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+      })
+      try {
+        ExpoSpeechRecognitionModule.setCategoryIOS({
+          category: 'playAndRecord',
+          categoryOptions: ['defaultToSpeaker'],
+          mode: 'default',
+        })
+      } catch {}
+      stopBgMusic()
+    }
+  }, [])
+
+  const startBgMusic = async () => {
+    try {
+      if (bgMusicRef.current) return
+      const source = song?.bgMusicUrl ? { uri: song.bgMusicUrl } : KARAOKE_BG
+      const { sound } = await Audio.Sound.createAsync(source, {
+        isLooping: true,
+        volume: 0.3,
+        shouldPlay: true,
+      })
+      bgMusicRef.current = sound
+    } catch (e) {
+      console.warn('BG music failed to load:', e)
+    }
+  }
+
+  const stopBgMusic = async () => {
+    if (bgMusicRef.current) {
+      await bgMusicRef.current.stopAsync()
+      await bgMusicRef.current.unloadAsync()
+      bgMusicRef.current = null
+    }
+  }
 
   useEffect(() => {
     if (song && currentSong?.id !== song.id) {
@@ -81,6 +150,7 @@ export default function KaraokeScreen() {
   const handleSessionStart = () => {
     sessionStartedRef.current = true
     setSessionStarted(true)
+    startBgMusic()
   }
 
   const handleStopSession = () => {
@@ -90,7 +160,7 @@ export default function KaraokeScreen() {
     setSpeechState('idle')
     setInterimText('')
     setLastSpoken('')
-    // Navigate to results with whatever was scored so far
+    stopBgMusic()
     router.replace({ pathname: '/music/results/[id]', params: { id: song.id } })
   }
 
@@ -140,6 +210,7 @@ export default function KaraokeScreen() {
 
       const isLastLine = safeIndex >= song.lyrics.length - 1
       if (isLastLine) {
+        stopBgMusic()
         router.replace({ pathname: '/music/results/[id]', params: { id: song.id } })
       } else {
         nextLine()
@@ -223,6 +294,15 @@ export default function KaraokeScreen() {
       </View>
 
       {/* Recording Area */}
+      {!sessionStarted && (
+        <View style={styles.headphonesTip}>
+          <Ionicons name="headset-outline" size={18} color="#7C3AED" />
+          <Text style={styles.headphonesTipText}>
+            Wear headphones for the full karaoke experience
+          </Text>
+        </View>
+      )}
+
       <View style={styles.recordArea}>
         {scoring ? (
           <View style={styles.loaderContainer}>
@@ -440,6 +520,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#374151',
+  },
+  headphonesTip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#EDE9FE',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginHorizontal: 20,
+    marginBottom: 12,
+  },
+  headphonesTipText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#5B21B6',
+    lineHeight: 16,
   },
   recordArea: {
     backgroundColor: Colors.white,

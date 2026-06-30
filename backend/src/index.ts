@@ -32,6 +32,7 @@ import musicRouter from './routes/music'
 import challengesRouter from './routes/challenges'
 import entertainmentRouter from './routes/entertainment'
 import referenceRouter from './routes/reference'
+import devRouter from './routes/dev'
 
 const app = express()
 
@@ -68,6 +69,9 @@ app.use('/api/music', musicRouter)
 app.use('/api/challenges', challengesRouter)
 app.use('/api/entertainment', entertainmentRouter)
 app.use('/api', referenceRouter)
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/api/dev', devRouter)
+}
 
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date() })

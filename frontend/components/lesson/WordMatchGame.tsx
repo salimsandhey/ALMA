@@ -110,6 +110,10 @@ export default function WordMatchGame({ card, onComplete, xpReward }: GameCardPr
       <View style={styles.card}>
         {card.imageUrl ? (
           <Image source={resolveLessonImage(card.imageUrl) ?? { uri: card.imageUrl }} style={styles.image} resizeMode="cover" />
+        ) : card.emoji ? (
+          <View style={styles.imagePlaceholder}>
+            <Text style={styles.emojiIcon}>{card.emoji}</Text>
+          </View>
         ) : (
           <View style={styles.imagePlaceholder}><Text style={styles.imagePlaceholderIcon}>IMG</Text></View>
         )}
@@ -165,6 +169,7 @@ const styles = StyleSheet.create({
   image: { width: '100%', height: 180 },
   imagePlaceholder: { width: '100%', height: 180, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   imagePlaceholderIcon: { fontSize: 24, color: '#6B7280' },
+  emojiIcon: { fontSize: 80 },
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20, alignItems: 'center' },
   pillsRow: { flexDirection: 'column', gap: 10 },
   pill: { borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1.5, width: '100%', alignItems: 'center' },

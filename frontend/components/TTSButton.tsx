@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { TouchableOpacity, View, Animated, StyleSheet, StyleProp, ViewStyle } from 'react-native'
+import { TouchableOpacity, View, Animated, StyleSheet, StyleProp, ViewStyle, Platform } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import * as Speech from 'expo-speech'
+import { Audio, InterruptionModeIOS } from 'expo-av'
 import { useVoiceStore, getSpeakOptions } from '../stores/voiceStore'
 
 interface Props {
@@ -47,7 +48,7 @@ export default function TTSButton({
     return () => { animsRef.current.forEach((a) => a.stop()) }
   }, [playing])
 
-  const handlePress = () => {
+  const handlePress = async () => {
     if (playing) {
       Speech.stop()
       setPlaying(false)
@@ -55,6 +56,17 @@ export default function TTSButton({
     }
     Speech.stop()
     setPlaying(true)
+    if (Platform.OS === 'ios') {
+      try {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+          interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+          staysActiveInBackground: false,
+        })
+        await new Promise<void>((r) => setTimeout(r, 200))
+      } catch {}
+    }
     Speech.speak(text, {
       ...getSpeakOptions(voiceGender),
       onDone: () => setPlaying(false),

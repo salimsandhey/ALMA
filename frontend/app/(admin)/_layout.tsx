@@ -5,6 +5,7 @@ import { NAVY, GREY } from '../../constants/colors'
 
 export default function AdminLayout() {
   const insets = useSafeAreaInsets()
+  const bottomPad = insets.bottom
 
   return (
     <Tabs
@@ -16,46 +17,53 @@ export default function AdminLayout() {
           backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: '#E5E7EB',
-          paddingBottom: insets.bottom,
-          paddingTop: 6,
-          height: 64,
+          height: 40 + bottomPad,
+          paddingBottom: bottomPad,
+          elevation: 0,
+          shadowOpacity: 0,
         },
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '500' },
+        tabBarItemStyle: {
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 2,
+        },
+        tabBarIconStyle: { marginBottom: 0 },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '500', marginTop: 0 },
       }}
     >
       <Tabs.Screen
         name="overview"
         options={{
           title: 'Overview',
-          tabBarIcon: ({ color, size }) => <Ionicons name="bar-chart-outline" size={size} color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="bar-chart-outline" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="students"
         options={{
           title: 'Students',
-          tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" size={size} color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="people-outline" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="feedback"
         options={{
           title: 'Feedback',
-          tabBarIcon: ({ color, size }) => <Ionicons name="chatbox-outline" size={size} color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="chatbox-outline" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="content"
         options={{
           title: 'Content',
-          tabBarIcon: ({ color, size }) => <Ionicons name="layers-outline" size={size} color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="layers-outline" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="more"
         options={{
           title: 'More',
-          tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="grid-outline" size={22} color={color} />,
         }}
       />
 
@@ -65,6 +73,7 @@ export default function AdminLayout() {
       <Tabs.Screen name="songs"      options={{ href: null }} />
       <Tabs.Screen name="ai-usage"   options={{ href: null }} />
       <Tabs.Screen name="legal"      options={{ href: null }} />
+      <Tabs.Screen name="dev-tools"  options={{ href: null }} />
     </Tabs>
   )
 }

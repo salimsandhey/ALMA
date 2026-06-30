@@ -32,4 +32,17 @@ export async function uploadLessonImage(fileBuffer: Buffer, publicId: string): P
   })
 }
 
+export async function uploadBgMusic(fileBuffer: Buffer, songId: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: 'alma/karaoke-bg', public_id: `song_${songId}`, overwrite: true, resource_type: 'video' },
+      (error, result) => {
+        if (error || !result) return reject(error || new Error('Upload failed'))
+        resolve(result.secure_url)
+      }
+    )
+    stream.end(fileBuffer)
+  })
+}
+
 export default cloudinary

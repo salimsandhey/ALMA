@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as Speech from 'expo-speech'
-import { Audio } from 'expo-av'
+import { Audio, InterruptionModeIOS } from 'expo-av'
 import { api } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
 import { useVoiceStore, getSpeakOptions } from '../stores/voiceStore'
@@ -89,6 +89,8 @@ export default function DailyGreeting() {
     if (!transcript) return
     if (e.isFinal) {
       setInterimText('')
+      // Force AVAudioEngine to fully release the iOS audio session before TTS.
+      if (Platform.OS === 'ios') { try { SpeechModule?.abort() } catch {} }
       handleUserResponse(transcript)
     } else {
       setInterimText(transcript)
@@ -97,6 +99,16 @@ export default function DailyGreeting() {
   useSpeechHook('end', () => {
     setListening(false)
     setInterimText('')
+    // Immediately reclaim playback session so iOS has maximum time to switch
+    // before TTS starts (which waits on a network call after this fires).
+    if (Platform.OS === 'ios') {
+      Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+        staysActiveInBackground: false,
+      }).catch(() => {})
+    }
   })
   useSpeechHook('error', () => { setListening(false); setInterimText('') })
 
@@ -107,13 +119,18 @@ export default function DailyGreeting() {
     // Reclaim the playback session so TTS comes through the speaker at full volume.
     if (Platform.OS === 'ios') {
       try {
+        // Two-step handoff: take ownership of the recording session first,
+        // then switch within expo-av's control to playback. This is more
+        // reliable than switching from speech-recognition's session directly.
+        await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true })
+        await new Promise<void>((r) => setTimeout(r, 80))
         await Audio.setAudioModeAsync({
           allowsRecordingIOS: false,
           playsInSilentModeIOS: true,
+          interruptionModeIOS: InterruptionModeIOS.DoNotMix,
           staysActiveInBackground: false,
         })
-        // Give iOS time to fully commit the session change before TTS starts.
-        await new Promise<void>((r) => setTimeout(r, 80))
+        await new Promise<void>((r) => setTimeout(r, 200))
       } catch { /* non-fatal — proceed anyway */ }
     }
     const clean = text.replace(/\p{Emoji}/gu, '').replace(/\s{2,}/g, ' ').trim()
