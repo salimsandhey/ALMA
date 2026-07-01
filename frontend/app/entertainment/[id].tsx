@@ -17,10 +17,9 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Ionicons } from '@expo/vector-icons'
-import * as Speech from 'expo-speech'
 import { Audio, InterruptionModeIOS } from 'expo-av'
 import { api } from '../../lib/api'
-import { useVoiceStore, getSpeakOptions } from '../../stores/voiceStore'
+import { useVoiceStore } from '../../stores/voiceStore'
 import { NAVY, GOLD, GREY, GREEN, RED, BG } from '../../constants/colors'
 
 // ─── Speech recognition (graceful fallback if not in native build) ────────────
@@ -100,28 +99,45 @@ export default function EntertainmentQuizScreen() {
 
   const pulseAnim = useRef(new Animated.Value(1)).current
   const pulseLoop = useRef<Animated.CompositeAnimation | null>(null)
+  const currentSound = useRef<Audio.Sound | null>(null)
+
+  const stopAudio = async () => {
+    if (currentSound.current) {
+      await currentSound.current.stopAsync().catch(() => {})
+      await currentSound.current.unloadAsync().catch(() => {})
+      currentSound.current = null
+    }
+  }
 
   useEffect(() => {
-    return () => { Speech.stop() }
+    return () => { stopAudio() }
   }, [])
 
   const speakText = useCallback(async (text: string) => {
-    Speech.stop()
+    await stopAudio()
     if (Platform.OS === 'ios') {
       try {
-        await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true })
-        await new Promise<void>((r) => setTimeout(r, 80))
         await Audio.setAudioModeAsync({
           allowsRecordingIOS: false,
           playsInSilentModeIOS: true,
           interruptionModeIOS: InterruptionModeIOS.DoNotMix,
           staysActiveInBackground: false,
         })
-        await new Promise<void>((r) => setTimeout(r, 200))
-      } catch { /* non-fatal */ }
+      } catch {}
     }
     const clean = text.replace(/\p{Emoji}/gu, '').replace(/\s{2,}/g, ' ').trim()
-    Speech.speak(clean, getSpeakOptions(voiceGender))
+    try {
+      const { data } = await api.post('/api/tts', { text: clean, gender: voiceGender })
+      const { sound } = await Audio.Sound.createAsync({ uri: data.audioUrl })
+      currentSound.current = sound
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          sound.unloadAsync().catch(() => {})
+          currentSound.current = null
+        }
+      })
+      await sound.playAsync()
+    } catch {}
   }, [voiceGender])
 
   // STT events
@@ -210,7 +226,7 @@ export default function EntertainmentQuizScreen() {
   const handleMicPress = useCallback(async () => {
     if (submitting) return
 
-    Speech.stop()
+    stopAudio()
 
     if (!IS_NATIVE) {
       Alert.alert('Voice Not Available', 'Voice input requires a development build.')

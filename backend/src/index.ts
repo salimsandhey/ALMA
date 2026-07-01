@@ -32,6 +32,7 @@ import musicRouter from './routes/music'
 import challengesRouter from './routes/challenges'
 import entertainmentRouter from './routes/entertainment'
 import referenceRouter from './routes/reference'
+import ttsRouter from './routes/tts'
 import devRouter from './routes/dev'
 
 const app = express()
@@ -69,6 +70,7 @@ app.use('/api/music', musicRouter)
 app.use('/api/challenges', challengesRouter)
 app.use('/api/entertainment', entertainmentRouter)
 app.use('/api', referenceRouter)
+app.use('/api/tts', ttsRouter)
 if (process.env.NODE_ENV !== 'production') {
   app.use('/api/dev', devRouter)
 }

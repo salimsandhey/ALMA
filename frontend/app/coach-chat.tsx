@@ -7,12 +7,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import * as Speech from 'expo-speech'
 import { Audio, InterruptionModeIOS } from 'expo-av'
 import { api } from '../lib/api'
 import TTSButton from '../components/TTSButton'
 import { useAuthStore } from '../stores/authStore'
-import { useVoiceStore, getSpeakOptions } from '../stores/voiceStore'
+import { useVoiceStore } from '../stores/voiceStore'
 import { NAVY, GOLD, GREEN, GREY, BG } from '../constants/colors'
 import Constants from 'expo-constants'
 
@@ -74,28 +73,45 @@ export default function CoachChat() {
   const pulseOpacity = useRef(new Animated.Value(1)).current
   const pulseLoop = useRef<Animated.CompositeAnimation | null>(null)
   const didMount = useRef(false)
+  const currentSound = useRef<Audio.Sound | null>(null)
+
+  const stopCurrentAudio = useCallback(async () => {
+    if (currentSound.current) {
+      await currentSound.current.stopAsync().catch(() => {})
+      await currentSound.current.unloadAsync().catch(() => {})
+      currentSound.current = null
+    }
+  }, [])
 
   useEffect(() => {
-    return () => { Speech.stop() }
+    return () => { stopCurrentAudio() }
   }, [])
 
   const speakText = useCallback(async (text: string) => {
-    Speech.stop()
+    await stopCurrentAudio()
     if (Platform.OS === 'ios') {
       try {
-        await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true })
-        await new Promise<void>((r) => setTimeout(r, 80))
         await Audio.setAudioModeAsync({
           allowsRecordingIOS: false,
           playsInSilentModeIOS: true,
           interruptionModeIOS: InterruptionModeIOS.DoNotMix,
           staysActiveInBackground: false,
         })
-        await new Promise<void>((r) => setTimeout(r, 200))
-      } catch { /* non-fatal */ }
+      } catch {}
     }
     const clean = text.replace(/\p{Emoji}/gu, '').replace(/\s{2,}/g, ' ').trim()
-    Speech.speak(clean, getSpeakOptions(voiceGender))
+    try {
+      const { data } = await api.post('/api/tts', { text: clean, gender: voiceGender })
+      const { sound } = await Audio.Sound.createAsync({ uri: data.audioUrl })
+      currentSound.current = sound
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          sound.unloadAsync().catch(() => {})
+          currentSound.current = null
+        }
+      })
+      await sound.playAsync()
+    } catch {}
   }, [voiceGender])
 
   // STT events
@@ -227,7 +243,7 @@ export default function CoachChat() {
     if (isLoading) return
 
     // Stop any ongoing TTS before recording
-    Speech.stop()
+    stopCurrentAudio()
 
     if (!IS_NATIVE) {
       // Web/Expo Go fallback: just focus input

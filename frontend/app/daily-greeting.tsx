@@ -6,11 +6,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import * as Speech from 'expo-speech'
 import { Audio, InterruptionModeIOS } from 'expo-av'
 import { api } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
-import { useVoiceStore, getSpeakOptions } from '../stores/voiceStore'
+import { useVoiceStore } from '../stores/voiceStore'
 import { NAVY, GOLD } from '../constants/colors'
 
 const SESSION_SECONDS = 60
@@ -52,11 +51,20 @@ export default function DailyGreeting() {
   const pulseOpacity = useRef(new Animated.Value(1)).current
   const pulseLoop = useRef<Animated.CompositeAnimation | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const currentSound = useRef<Audio.Sound | null>(null)
+
+  const stopAudio = async () => {
+    if (currentSound.current) {
+      await currentSound.current.stopAsync().catch(() => {})
+      await currentSound.current.unloadAsync().catch(() => {})
+      currentSound.current = null
+    }
+  }
 
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
-      Speech.stop()
+      stopAudio()
     }
   }, [])
 
@@ -113,33 +121,34 @@ export default function DailyGreeting() {
   useSpeechHook('error', () => { setListening(false); setInterimText('') })
 
   const speakText = useCallback(async (text: string) => {
-    Speech.stop()
+    await stopAudio()
     setSpeaking(true)
-    // On iOS, expo-speech-recognition leaves the audio session in record mode.
-    // Reclaim the playback session so TTS comes through the speaker at full volume.
     if (Platform.OS === 'ios') {
       try {
-        // Two-step handoff: take ownership of the recording session first,
-        // then switch within expo-av's control to playback. This is more
-        // reliable than switching from speech-recognition's session directly.
-        await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true })
-        await new Promise<void>((r) => setTimeout(r, 80))
         await Audio.setAudioModeAsync({
           allowsRecordingIOS: false,
           playsInSilentModeIOS: true,
           interruptionModeIOS: InterruptionModeIOS.DoNotMix,
           staysActiveInBackground: false,
         })
-        await new Promise<void>((r) => setTimeout(r, 200))
-      } catch { /* non-fatal — proceed anyway */ }
+      } catch {}
     }
     const clean = text.replace(/\p{Emoji}/gu, '').replace(/\s{2,}/g, ' ').trim()
-    Speech.speak(clean, {
-      ...getSpeakOptions(voiceGender),
-      onDone: () => setSpeaking(false),
-      onStopped: () => setSpeaking(false),
-      onError: () => setSpeaking(false),
-    })
+    try {
+      const { data } = await api.post('/api/tts', { text: clean, gender: voiceGender })
+      const { sound } = await Audio.Sound.createAsync({ uri: data.audioUrl })
+      currentSound.current = sound
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setSpeaking(false)
+          sound.unloadAsync().catch(() => {})
+          currentSound.current = null
+        }
+      })
+      await sound.playAsync()
+    } catch {
+      setSpeaking(false)
+    }
   }, [voiceGender])
 
   const fetchAlmaReply = useCallback(async (msgs: Msg[]) => {
@@ -195,7 +204,7 @@ export default function DailyGreeting() {
     if (loading || timeUp) return
 
     // Stop TTS so the user can speak
-    Speech.stop()
+    stopAudio()
     setSpeaking(false)
 
     if (!IS_NATIVE) return
@@ -220,7 +229,7 @@ export default function DailyGreeting() {
   }
 
   const markDoneAndGoHome = useCallback(async () => {
-    Speech.stop()
+    stopAudio()
     try {
       await api.post('/api/ai/greeting-done', {})
     } catch { /* non-blocking — proceed anyway */ }

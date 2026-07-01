@@ -18,7 +18,9 @@ function formatTokens(n: number): string {
 
 const BASE_STYLES = `
   <style>
+    @page { margin: 0; }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    html, body { margin: 0; padding: 0; }
     body { font-family: -apple-system, Helvetica, Arial, sans-serif; color: #1F2937; background: #F8FAFC; font-size: 14px; line-height: 1.6; }
 
     /* ── Header ── */
@@ -42,7 +44,7 @@ const BASE_STYLES = `
     .badge-inactive { background: #F3F4F6; color: #6B7280; }
 
     /* ── Page body ── */
-    .body-wrap { padding: 32px 40px 48px; }
+    .body-wrap { padding: 32px 40px 24px; }
 
     /* ── Section ── */
     .section { margin-bottom: 32px; }
@@ -100,7 +102,7 @@ const BASE_STYLES = `
 
     /* ── Footer ── */
     .footer {
-      margin-top: 48px; text-align: center; color: #093373;
+      margin-top: 24px; text-align: center; color: #093373;
       font-size: 11px; padding-top: 16px; border-top: 2px solid #F6B80D;
       font-weight: 600;
     }

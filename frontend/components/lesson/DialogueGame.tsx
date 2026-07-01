@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import * as Speech from 'expo-speech'
-import { useVoiceStore, getSpeakOptions } from '../../stores/voiceStore'
+import { Audio } from 'expo-av'
+import { api } from '../../lib/api'
+import { useVoiceStore } from '../../stores/voiceStore'
 import TTSButton from '../TTSButton'
 import MicButton from './MicButton'
 import SpeechPreview from './SpeechPreview'
@@ -46,10 +47,20 @@ export default function DialogueGame({ card, onComplete, xpReward }: any) {
   const micStartRef = useRef<number>(0)
   const helpUsed = useRef(false)
 
-  const voiceOpts = () => getSpeakOptions(useVoiceStore.getState().voiceGender)
+  const speakText = async (text: string) => {
+    try {
+      const gender = useVoiceStore.getState().voiceGender
+      const { data } = await api.post('/api/tts', { text, gender })
+      const { sound } = await Audio.Sound.createAsync({ uri: data.audioUrl })
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) sound.unloadAsync().catch(() => {})
+      })
+      await sound.playAsync()
+    } catch {}
+  }
 
   useEffect(() => {
-    if (segments[0]?.guestLines[0]) setTimeout(() => Speech.speak(segments[0].guestLines[0], voiceOpts()), 300)
+    if (segments[0]?.guestLines[0]) setTimeout(() => speakText(segments[0].guestLines[0]), 300)
   }, [])
 
   useEffect(() => {
@@ -66,7 +77,7 @@ export default function DialogueGame({ card, onComplete, xpReward }: any) {
     }
     const nextSeg = segments[nextIdx]
     setHistory(prev => [...prev, ...nextSeg.guestLines.map(t => ({ type: 'guest' as const, text: t }))])
-    if (nextSeg.guestLines[0]) setTimeout(() => Speech.speak(nextSeg.guestLines[0], voiceOpts()), 300)
+    if (nextSeg.guestLines[0]) setTimeout(() => speakText(nextSeg.guestLines[0]), 300)
     setSegIdx(nextIdx)
     setRetryCount(0)
     setSpeechState('idle')
@@ -109,7 +120,7 @@ export default function DialogueGame({ card, onComplete, xpReward }: any) {
   }
 
   const hearExample = () => {
-    if (currentSeg?.expected) Speech.speak(currentSeg.expected, voiceOpts())
+    if (currentSeg?.expected) speakText(currentSeg.expected)
   }
 
   return (
@@ -184,7 +195,7 @@ export default function DialogueGame({ card, onComplete, xpReward }: any) {
             onPress={() => {
               if (currentSeg?.expected) {
                 helpUsed.current = true
-                Speech.speak(currentSeg.expected, voiceOpts())
+                speakText(currentSeg.expected)
               }
             }}
             activeOpacity={0.7}

@@ -99,7 +99,7 @@ export default function KaraokeScreen() {
       const source = song?.bgMusicUrl ? { uri: song.bgMusicUrl } : KARAOKE_BG
       const { sound } = await Audio.Sound.createAsync(source, {
         isLooping: true,
-        volume: 0.3,
+        volume: 0.7,
         shouldPlay: true,
       })
       bgMusicRef.current = sound

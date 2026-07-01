@@ -8,7 +8,7 @@ import { NAVY, LIGHT_GREY } from '../constants/colors'
 const TABS = [
   { label: 'Home', icon: 'home-outline', route: '/(student)/home' },
   { label: 'Modules', icon: 'book-outline', route: '/(student)/modules' },
-  { label: 'Entertainment', icon: 'compass-outline', route: '/(student)/explore' },
+  { label: 'Explore', icon: 'compass-outline', route: '/(student)/explore' },
   { label: 'Music', icon: 'musical-notes-outline', route: '/(student)/music' },
   { label: 'Profile', icon: 'person-outline', route: '/(student)/profile' },
 ] as const
@@ -19,11 +19,9 @@ export default function BottomNavBar() {
   const insets = useSafeAreaInsets()
   const bottomPad = Math.max(8, insets.bottom)
   return (
-    <View style={[styles.container, { height: 40 + bottomPad, paddingBottom: bottomPad }]}>
+    <View style={[styles.container, { height: 60 + bottomPad, paddingBottom: bottomPad }]}>
       {TABS.map(tab => {
-        const active =
-          pathname.includes(tab.label.toLowerCase()) ||
-          (tab.label === 'Entertainment' && pathname.includes('explore'))
+        const active = pathname.includes(tab.label.toLowerCase())
         return (
           <TouchableOpacity
             key={tab.label}
@@ -31,7 +29,7 @@ export default function BottomNavBar() {
             onPress={() => router.push(tab.route as any)}
             activeOpacity={0.7}
           >
-            <Ionicons name={tab.icon as any} size={20} color={active ? NAVY : LIGHT_GREY} />
+            <Ionicons name={tab.icon as any} size={22} color={active ? NAVY : LIGHT_GREY} />
             <Text style={[styles.label, { color: active ? NAVY : LIGHT_GREY }]} numberOfLines={1}>{tab.label}</Text>
           </TouchableOpacity>
         )

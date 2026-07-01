@@ -442,3 +442,18 @@ model AIUsageLog {
   @@index([userId, feature, createdAt])
   @@index([createdAt])
 }
+
+// ─────────────────────────────────────────────
+// TTS AUDIO CACHE
+// ─────────────────────────────────────────────
+
+model TtsAudioCache {
+  id             String   @id @default(cuid())
+  textHash       String   @unique
+  text           String
+  audioUrlMale   String
+  audioUrlFemale String
+  createdAt      DateTime @default(now())
+
+  @@index([textHash])
+}

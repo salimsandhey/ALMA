@@ -10,9 +10,10 @@ import {
   StatusBar,
 } from 'react-native'
 import { useRouter } from 'expo-router'
-import * as Speech from 'expo-speech'
+import { Audio } from 'expo-av'
 import { useAuthStore } from '../stores/authStore'
-import { useVoiceStore, getSpeakOptions } from '../stores/voiceStore'
+import { useVoiceStore } from '../stores/voiceStore'
+import { api } from '../lib/api'
 
 const { width: W, height: H } = Dimensions.get('window')
 
@@ -56,21 +57,47 @@ export default function IntroSlidesScreen() {
     if (!token) router.replace('/(auth)')
   }, [token])
 
-  // Speak the active slide's content. Stop any in-progress speech first
-  // so switching slides never causes two voices to play at once.
+  const currentSound = useRef<Audio.Sound | null>(null)
+
+  useEffect(() => {
+    return () => {
+      currentSound.current?.stopAsync().catch(() => {})
+      currentSound.current?.unloadAsync().catch(() => {})
+    }
+  }, [])
+
   useEffect(() => {
     const slide = SLIDES[activeIndex]
     if (!slide) return
-    Speech.stop()
-    const text = `${slide.title.replace(/\n/g, ' ')}. ${slide.subtitle}`
-    Speech.speak(text, getSpeakOptions(voiceGender))
-    return () => { Speech.stop() }
-  }, [activeIndex, voiceGender])
+    let cancelled = false
 
-  // Stop speech when leaving the screen entirely.
-  useEffect(() => {
-    return () => { Speech.stop() }
-  }, [])
+    const play = async () => {
+      if (currentSound.current) {
+        await currentSound.current.stopAsync().catch(() => {})
+        await currentSound.current.unloadAsync().catch(() => {})
+        currentSound.current = null
+      }
+      if (cancelled) return
+      try {
+        const text = `${slide.title.replace(/\n/g, ' ')}. ${slide.subtitle}`
+        const { data } = await api.post('/api/tts', { text, gender: voiceGender })
+        if (cancelled) return
+        const { sound } = await Audio.Sound.createAsync({ uri: data.audioUrl })
+        if (cancelled) { sound.unloadAsync(); return }
+        currentSound.current = sound
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            sound.unloadAsync().catch(() => {})
+            currentSound.current = null
+          }
+        })
+        await sound.playAsync()
+      } catch {}
+    }
+
+    play()
+    return () => { cancelled = true }
+  }, [activeIndex, voiceGender])
 
   if (!token) return null
 

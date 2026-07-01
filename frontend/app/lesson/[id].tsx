@@ -9,12 +9,12 @@ import {
   Alert,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import * as Speech from 'expo-speech'
+import { Audio } from 'expo-av'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
-import { useVoiceStore, getSpeakOptions } from '../../stores/voiceStore'
+import { useVoiceStore } from '../../stores/voiceStore'
 import { useLessonStore } from '../../stores/lessonStore'
 import { NAVY, TEAL, GOLD, BG, WHITE, GREY } from '../../constants/colors'
 
@@ -275,12 +275,19 @@ export default function LessonScreen() {
 
         <TouchableOpacity
           style={[styles.helpBtn, helpUsed && styles.helpBtnUsed]}
-          onPress={() => {
+          onPress={async () => {
             if (!currentCard) return
             const text = getHelpText(currentCard, currentGameType)
             if (!text) return
             setHelpUsed(true)
-            Speech.speak(text, getSpeakOptions(voiceGender))
+            try {
+              const { data } = await api.post('/api/tts', { text, gender: voiceGender })
+              const { sound } = await Audio.Sound.createAsync({ uri: data.audioUrl })
+              sound.setOnPlaybackStatusUpdate((s) => {
+                if (s.isLoaded && s.didJustFinish) sound.unloadAsync().catch(() => {})
+              })
+              await sound.playAsync()
+            } catch {}
           }}
           disabled={helpUsed}
           activeOpacity={0.75}

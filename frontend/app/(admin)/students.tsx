@@ -379,15 +379,35 @@ export default function StudentsScreen() {
                     </View>
                   </View>
 
+                  {detail.countryName ? (
+                    <Text style={styles.sheetCountry}>
+                      {detail.countryName} {flagFromCode(detail.countryCode)}
+                    </Text>
+                  ) : null}
+
+                  <View style={styles.statsRow}>
+                    <View style={[styles.statPill, styles.statPillStreak]}>
+                      <Text style={styles.statPillTextStreak}>🔥 {detail.streakCount} Days</Text>
+                    </View>
+                    <View style={[styles.statPill, styles.statPillXP]}>
+                      <Text style={styles.statPillTextXP}>⭐ {detail.xpTotal} XP</Text>
+                    </View>
+                    <View style={[styles.statPill, styles.statPillComplete]}>
+                      <Text style={styles.statPillTextComplete}>✓ {detail.completionPct}% Complete</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.sheetDivider} />
+
                   <TouchableOpacity
-                    style={[styles.downloadReportBtn, { alignSelf: 'flex-end' }]}
+                    style={styles.downloadReportBtn}
                     onPress={() => handleStudentReport(detail)}
                     disabled={downloadingStudent}
                   >
                     {downloadingStudent
                       ? <ActivityIndicator size="small" color={NAVY} />
                       : <>
-                          <Ionicons name="download-outline" size={13} color={NAVY} />
+                          <Ionicons name="download-outline" size={16} color={NAVY} />
                           <Text style={styles.downloadReportText}>Download Report</Text>
                         </>
                     }
@@ -663,13 +683,24 @@ const styles = StyleSheet.create({
   },
   sheetAvatarText: { fontSize: 22, fontWeight: '700', color: NAVY },
   sheetName: { fontSize: 17, fontWeight: '700', color: '#1F2937', marginBottom: 4 },
+  sheetCountry: { fontSize: 13, color: '#6B7280' },
+
+  statPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  statPillStreak: { backgroundColor: '#E0E7FF' },
+  statPillXP: { backgroundColor: '#FEF3C7' },
+  statPillComplete: { backgroundColor: '#D1FAE5' },
+  statPillTextStreak: { fontSize: 12, color: '#4F46E5', fontWeight: '700' },
+  statPillTextXP: { fontSize: 12, color: '#D97706', fontWeight: '700' },
+  statPillTextComplete: { fontSize: 12, color: '#059669', fontWeight: '700' },
+
+  sheetDivider: { height: 1, backgroundColor: '#E5E7EB' },
 
   downloadReportBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: GOLD, borderRadius: 8,
-    paddingHorizontal: 10, paddingVertical: 6,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    borderWidth: 1.5, borderColor: NAVY, borderRadius: 12,
+    paddingVertical: 12,
   },
-  downloadReportText: { fontSize: 11, fontWeight: '600', color: NAVY },
+  downloadReportText: { fontSize: 14, fontWeight: '700', color: NAVY },
 
   sectionTitle: {
     fontSize: 11, color: '#9CA3AF', fontWeight: '700',

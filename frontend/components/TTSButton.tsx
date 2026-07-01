@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { TouchableOpacity, View, Animated, StyleSheet, StyleProp, ViewStyle, Platform } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import * as Speech from 'expo-speech'
 import { Audio, InterruptionModeIOS } from 'expo-av'
-import { useVoiceStore, getSpeakOptions } from '../stores/voiceStore'
+import { api } from '../lib/api'
+import { useVoiceStore } from '../stores/voiceStore'
 
 interface Props {
   text: string
@@ -22,10 +22,17 @@ export default function TTSButton({
 }: Props) {
   const voiceGender = useVoiceStore((s) => s.voiceGender)
   const [playing, setPlaying] = useState(false)
+  const soundRef = useRef<Audio.Sound | null>(null)
   const bar1 = useRef(new Animated.Value(0.4)).current
   const bar2 = useRef(new Animated.Value(0.4)).current
   const bar3 = useRef(new Animated.Value(0.4)).current
   const animsRef = useRef<Animated.CompositeAnimation[]>([])
+
+  useEffect(() => {
+    return () => {
+      soundRef.current?.unloadAsync().catch(() => {})
+    }
+  }, [])
 
   useEffect(() => {
     if (playing) {
@@ -50,28 +57,40 @@ export default function TTSButton({
 
   const handlePress = async () => {
     if (playing) {
-      Speech.stop()
+      await soundRef.current?.stopAsync().catch(() => {})
+      await soundRef.current?.unloadAsync().catch(() => {})
+      soundRef.current = null
       setPlaying(false)
       return
     }
-    Speech.stop()
+
     setPlaying(true)
-    if (Platform.OS === 'ios') {
-      try {
+    try {
+      if (Platform.OS === 'ios') {
         await Audio.setAudioModeAsync({
           allowsRecordingIOS: false,
           playsInSilentModeIOS: true,
           interruptionModeIOS: InterruptionModeIOS.DoNotMix,
           staysActiveInBackground: false,
         })
-        await new Promise<void>((r) => setTimeout(r, 200))
-      } catch {}
+      }
+
+      const { data } = await api.post('/api/tts', { text, gender: voiceGender })
+      const { sound } = await Audio.Sound.createAsync({ uri: data.audioUrl })
+      soundRef.current = sound
+
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setPlaying(false)
+          sound.unloadAsync().catch(() => {})
+          soundRef.current = null
+        }
+      })
+
+      await sound.playAsync()
+    } catch {
+      setPlaying(false)
     }
-    Speech.speak(text, {
-      ...getSpeakOptions(voiceGender),
-      onDone: () => setPlaying(false),
-      onError: () => setPlaying(false),
-    })
   }
 
   const barHeight = Math.round(size * 0.85)
