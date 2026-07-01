@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express'
 import { z } from 'zod'
 import { verifyJWT } from '../middleware/auth'
 import { getOrGenerateTtsAudio } from '../lib/tts'
+import { prisma } from '../lib/prisma'
 
 const router = Router()
 router.use(verifyJWT)
@@ -9,6 +10,19 @@ router.use(verifyJWT)
 const ttsSchema = z.object({
   text: z.string().min(1).max(1000),
   gender: z.enum(['male', 'female']),
+})
+
+// GET /api/tts/manifest — all cached audio entries for bulk device download
+router.get('/manifest', async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const items = await prisma.ttsAudioCache.findMany({
+      select: { textHash: true, audioUrlMale: true, audioUrlFemale: true },
+    })
+    res.json({ items })
+  } catch (err) {
+    console.error('[TTS] Manifest error:', err)
+    res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR' })
+  }
 })
 
 // POST /api/tts

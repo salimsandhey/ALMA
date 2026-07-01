@@ -26,7 +26,7 @@ export default function BottomNavBar() {
           <TouchableOpacity
             key={tab.label}
             style={styles.tab}
-            onPress={() => router.push(tab.route as any)}
+            onPress={() => router.replace(tab.route as any)}
             activeOpacity={0.7}
           >
             <Ionicons name={tab.icon as any} size={22} color={active ? NAVY : LIGHT_GREY} />

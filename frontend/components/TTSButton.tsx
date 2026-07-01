@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from 'react'
 import { TouchableOpacity, View, Animated, StyleSheet, StyleProp, ViewStyle, Platform } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { Audio, InterruptionModeIOS } from 'expo-av'
-import { api } from '../lib/api'
 import { useVoiceStore } from '../stores/voiceStore'
+import { getAudioUri } from '../lib/audioCache'
 
 interface Props {
   text: string
@@ -29,9 +29,7 @@ export default function TTSButton({
   const animsRef = useRef<Animated.CompositeAnimation[]>([])
 
   useEffect(() => {
-    return () => {
-      soundRef.current?.unloadAsync().catch(() => {})
-    }
+    return () => { soundRef.current?.unloadAsync().catch(() => {}) }
   }, [])
 
   useEffect(() => {
@@ -75,8 +73,9 @@ export default function TTSButton({
         })
       }
 
-      const { data } = await api.post('/api/tts', { text, gender: voiceGender })
-      const { sound } = await Audio.Sound.createAsync({ uri: data.audioUrl })
+      // Checks local cache first — instant if already downloaded
+      const uri = await getAudioUri(text, voiceGender)
+      const { sound } = await Audio.Sound.createAsync({ uri })
       soundRef.current = sound
 
       sound.setOnPlaybackStatusUpdate((status) => {

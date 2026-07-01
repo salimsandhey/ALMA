@@ -16,6 +16,7 @@ import { useRouter, useFocusEffect } from 'expo-router'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { NAVY, GOLD, GREY } from '../../constants/colors'
+import AudioDownloadBanner from '../../components/AudioDownloadBanner'
 
 const BG = '#FFFFFF'
 
@@ -286,6 +287,7 @@ export default function StudentHome() {
         )}
 
       </ScrollView>
+      <AudioDownloadBanner />
     </SafeAreaView>
   )
 }
@@ -302,6 +304,7 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: BG,
+    position: 'relative',
   },
   scroll: {
     flex: 1,
