@@ -9,10 +9,6 @@ import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { api } from '../../lib/api'
 
-if (!__DEV__) {
-  throw new Error('dev-tools screen must never be bundled in production')
-}
-
 const NAVY = '#093373'
 const GOLD = '#F6B80D'
 
@@ -26,7 +22,7 @@ export default function DevToolsScreen() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['dev-wm-emojis'],
-    queryFn: async () => (await api.get('/api/dev/word-match-emojis')).data,
+    queryFn: async () => (await api.get('/api/admin/word-match-emojis')).data,
   })
 
   // Seed local state from server defaults once loaded
@@ -36,14 +32,14 @@ export default function DevToolsScreen() {
     data.preview.forEach((lesson: any) => {
       map[lesson.id] = {}
       lesson.cards.forEach((card: any) => {
-        map[lesson.id][card.word] = card.newEmoji
+        map[lesson.id][card.word] = card.currentEmoji ?? card.newEmoji
       })
     })
     setEmojis(map)
   }, [data])
 
   const apply = useMutation({
-    mutationFn: () => api.post('/api/dev/word-match-emojis', { overrides: emojis }),
+    mutationFn: () => api.post('/api/admin/word-match-emojis', { overrides: emojis }),
     onSuccess: (res) => Alert.alert('✅ Done', `Updated ${res.data.updated} word match lessons.`),
     onError: () => Alert.alert('Error', 'Failed to apply emojis.'),
   })
@@ -67,8 +63,8 @@ export default function DevToolsScreen() {
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={s.headerSub}>DEV ONLY</Text>
-          <Text style={s.headerTitle}>Dev Tools</Text>
+          <Text style={s.headerSub}>ALMA PLATFORM</Text>
+          <Text style={s.headerTitle}>Word Match Emojis</Text>
         </View>
       </View>
 

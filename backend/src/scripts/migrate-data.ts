@@ -5,6 +5,7 @@
  */
 
 import { PrismaClient } from '@prisma/client'
+import { WORD_MATCH_EMOJIS } from '../data/wordMatchEmojis'
 
 const prisma = new PrismaClient()
 
@@ -121,6 +122,57 @@ const migrations: { id: string; run: () => Promise<void> }[] = [
         })
       )
       console.log(`[migrate] M003 applied to ${toUpdate.length} lessons`)
+    },
+  },
+
+  // ── M004: Word match emojis — refresh to latest curated set (2026-07-02) ───
+  {
+    id: 'M004-word-match-emojis-refresh-20260702',
+    run: async () => {
+      const EMOJIS: Record<string, Record<string, string>> = {
+        cmpxuqtao000g2679u2sajc4h: { Birthday: '🎂', Eyes: '👀', Hair: '💇', Height: '📏', Passion: '❤️', Gender: '🧍' },
+        cmpxuqtaw000r2679sx40hcrn: { Breakfast: '🍳', Lunch: '🥙', Dinner: '🍲', Snack: '🍎', Dessert: '🍰', Drink: '🧃' },
+        cmpxuqtb100122679pmuhso3w: { Dog: '🐕', Cat: '🐈', Lemur: '🐒', Dolphin: '🐬', Whale: '🐋', Parrot: '🦜' },
+        cmpxuqtb9001d2679i5rt8bbu: { Friend: '🤝', Surprise: '🎉', Argument: '😤', Music: '🎵', School: '🏫', Together: '👥' },
+        cmpxuqtbf001o2679x9unc9cd: { Dancing: '💃', Reading: '📚', Cooking: '👨‍🍳', Swimming: '🏊', Drawing: '🎨', Sports: '⚽' },
+        cmpxuqtbo001z2679iku5bb62: { Beach: '🏖️', Mountains: '⛰️', Market: '🏪', Museum: '🏛️', Temple: '⛩️', Stadium: '🏟️' },
+        cmpxuqtbt002a2679ennxsncc: { Hiking: '🥾', Swimming: '🏊', Reading: '📖', Cycling: '🚴', Camping: '⛺', Picnic: '🧺' },
+        cmpxuqtby002l26795d832uaw: { Plane: '✈️', Train: '🚂', Boat: '🚢', Car: '🚗', Bus: '🚌', Bicycle: '🚲' },
+        cmpxuqtc5002w267949u4b8a3: { Lobby: '🏛️', Elevator: '🛗', Luggage: '🧳', 'Room Key': '🗝️', Pool: '🏊', Reception: '🛎️' },
+        cmpxuqtca00372679wpyvb8n0: { Menu: '📋', Waiter: '🤵', Appetizer: '🥗', 'Main Course': '🍽️', Dessert: '🍰', Bill: '💳' },
+        cmpxuqtch003i2679bwgrbmah: { Apologize: '🙏', Complaint: '😠', Fix: '🔧', Manager: '👔', Refund: '💰', Solution: '✅' },
+        cmpxuqtcm003t267921rd8lpa: { Football: '⚽', Basketball: '🏀', Tennis: '🎾', Swimming: '🏊', Cycling: '🚴', Boxing: '🥊' },
+        cmpxuqtcs004426790u12anw1: { 'Eiffel Tower': '🗼', Pyramid: '🔺', 'Cruise Ship': '🛳️', 'National Park': '🏞️', 'Amusement Park': '🎡', Zoo: '🦁' },
+        cmpxuqtd0004f2679fqfj3vl2: { English: '🇬🇧', French: '🇫🇷', Arabic: '🇸🇦', Swahili: '🇰🇪', Malagasy: '🇲🇬', Hindi: '🇮🇳' },
+      }
+
+      const lessons = await prisma.lesson.findMany({
+        where: { id: { in: Object.keys(EMOJIS) } },
+        select: { id: true, content: true },
+      })
+
+      const toUpdate = lessons.filter((l) => {
+        const emojiMap = EMOJIS[l.id] ?? {}
+        const cards: any[] = (l.content as any)?.cards ?? []
+        return cards.some((c: any) => emojiMap[c.correctWord] && emojiMap[c.correctWord] !== c.emoji)
+      })
+
+      if (toUpdate.length === 0) return
+
+      await prisma.$transaction(
+        toUpdate.map((l) => {
+          const emojiMap = EMOJIS[l.id] ?? {}
+          const cards = ((l.content as any)?.cards ?? []).map((c: any) => ({
+            ...c,
+            emoji: emojiMap[c.correctWord] ?? c.emoji ?? '❓',
+          }))
+          return prisma.lesson.update({
+            where: { id: l.id },
+            data: { content: { ...(l.content as any), cards } },
+          })
+        })
+      )
+      console.log(`[migrate] M004 applied to ${toUpdate.length} lessons`)
     },
   },
 
