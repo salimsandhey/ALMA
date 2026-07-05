@@ -261,7 +261,7 @@ export default function StudentsScreen() {
   const isInitialLoading = isLoading && currentPage === 1
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <View>

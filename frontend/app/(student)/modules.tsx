@@ -11,6 +11,7 @@ import { useRouter, useFocusEffect } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRef, useEffect, useCallback } from 'react'
 import { api } from '../../lib/api'
+import BottomNavBar from '../../components/BottomNavBar'
 import { NAVY, TEAL, GOLD, WHITE, GREY } from '../../constants/colors'
 
 const BG = '#F2F3F7'
@@ -182,6 +183,7 @@ export default function Modules() {
           ))
         )}
       </ScrollView>
+      <BottomNavBar />
     </SafeAreaView>
   )
 }

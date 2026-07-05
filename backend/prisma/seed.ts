@@ -1555,21 +1555,6 @@ async function main() {
     })
   }
 
-  // ─── Test user ──────────────────────────────────────────────────────────────
-  const testPasswordHash = await bcrypt.hash('Admin@123', 12)
-  await prisma.user.upsert({
-    where: { email: 'test@alma.com' },
-    update: {},
-    create: {
-      email: 'test@alma.com',
-      passwordHash: testPasswordHash,
-      displayName: 'Test User',
-      role: 'STUDENT',
-      isEmailVerified: true,
-      isOnboardingComplete: true,
-    },
-  })
-
   // ─── Daily challenge questions ───────────────────────────────────────────────
   console.log('Seeding daily challenge questions...')
   const CHALLENGE_QUESTIONS = [

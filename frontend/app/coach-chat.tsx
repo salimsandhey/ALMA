@@ -97,12 +97,13 @@ export default function CoachChat() {
           interruptionModeIOS: InterruptionModeIOS.DoNotMix,
           staysActiveInBackground: false,
         })
+        await new Promise<void>(r => setTimeout(r, 80))
       } catch {}
     }
     const clean = text.replace(/\p{Emoji}/gu, '').replace(/\s{2,}/g, ' ').trim()
     try {
       const { data } = await api.post('/api/tts', { text: clean, gender: voiceGender })
-      const { sound } = await Audio.Sound.createAsync({ uri: data.audioUrl })
+      const { sound } = await Audio.Sound.createAsync({ uri: data.audioUrl }, { volume: 1.0 })
       currentSound.current = sound
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {

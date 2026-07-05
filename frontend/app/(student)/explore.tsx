@@ -13,6 +13,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { api } from '../../lib/api'
+import BottomNavBar from '../../components/BottomNavBar'
 import { NAVY, GOLD, GREY, GREEN, BG } from '../../constants/colors'
 
 type EntertainmentItem = {
@@ -155,6 +156,7 @@ export default function EntertainmentScreen() {
           </>
         )}
       </ScrollView>
+      <BottomNavBar />
     </SafeAreaView>
   )
 }

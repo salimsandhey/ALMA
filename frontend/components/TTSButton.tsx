@@ -54,9 +54,12 @@ export default function TTSButton({
   }, [playing])
 
   const handlePress = async () => {
-    if (playing) {
-      await soundRef.current?.stopAsync().catch(() => {})
-      await soundRef.current?.unloadAsync().catch(() => {})
+    // Use the actual sound ref as source of truth (not the `playing` flag) —
+    // if playback was ever interrupted without didJustFinish firing, `playing`
+    // could get stuck true with nothing left to stop, permanently blocking replay.
+    if (soundRef.current) {
+      await soundRef.current.stopAsync().catch(() => {})
+      await soundRef.current.unloadAsync().catch(() => {})
       soundRef.current = null
       setPlaying(false)
       return
@@ -71,11 +74,12 @@ export default function TTSButton({
           interruptionModeIOS: InterruptionModeIOS.DoNotMix,
           staysActiveInBackground: false,
         })
+        await new Promise<void>(r => setTimeout(r, 80))
       }
 
       // Checks local cache first — instant if already downloaded
       const uri = await getAudioUri(text, voiceGender)
-      const { sound } = await Audio.Sound.createAsync({ uri })
+      const { sound } = await Audio.Sound.createAsync({ uri }, { volume: 1.0 })
       soundRef.current = sound
 
       sound.setOnPlaybackStatusUpdate((status) => {
@@ -89,6 +93,7 @@ export default function TTSButton({
       await sound.playAsync()
     } catch {
       setPlaying(false)
+      soundRef.current = null
     }
   }
 

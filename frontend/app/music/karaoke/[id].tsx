@@ -14,6 +14,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av'
 import { ExpoSpeechRecognitionModule } from 'expo-speech-recognition'
 import { api } from '../../../lib/api'
+import { getCachedBgMusicPath } from '../../../lib/musicCache'
 import { Song } from '../../../lib/songs'
 import { useMusicStore } from '../../../stores/musicStore'
 import MicButton, { MicButtonRef } from '../../../components/lesson/MicButton'
@@ -96,7 +97,11 @@ export default function KaraokeScreen() {
   const startBgMusic = async () => {
     try {
       if (bgMusicRef.current) return
-      const source = song?.bgMusicUrl ? { uri: song.bgMusicUrl } : KARAOKE_BG
+      let source: any = KARAOKE_BG
+      if (song?.bgMusicUrl) {
+        const cachedPath = await getCachedBgMusicPath(song.bgMusicUrl)
+        source = { uri: cachedPath ?? song.bgMusicUrl }
+      }
       const { sound } = await Audio.Sound.createAsync(source, {
         isLooping: true,
         volume: 0.7,

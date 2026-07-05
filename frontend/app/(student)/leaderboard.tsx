@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { countryFlag } from '../../lib/countries'
+import BottomNavBar from '../../components/BottomNavBar'
 import { NAVY, GOLD, GREY } from '../../constants/colors'
 
 const BG = '#F0F4FF'
@@ -247,6 +248,7 @@ export default function Leaderboard() {
 
         </ScrollView>
       )}
+      <BottomNavBar />
     </SafeAreaView>
   )
 }

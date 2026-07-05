@@ -38,8 +38,8 @@ const SLIDES = [
   },
   {
     emoji: '🌍',
-    title: 'Explore',
-    body: 'The Explore tab has curated videos, articles, and songs to practise English outside of lessons. Tap any item to open it in your browser.',
+    title: 'Entertainment',
+    body: 'The Entertainment tab has curated videos, articles, and songs to practise English outside of lessons. Tap any item to open it in your browser.',
   },
   {
     emoji: '🔥',

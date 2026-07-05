@@ -47,7 +47,7 @@ const GROUPS: ScreenGroup[] = [
       { label: 'Modules', route: '/(student)/modules' },
       { label: 'Music', route: '/(student)/music' },
       { label: 'Profile', route: '/(student)/profile' },
-      { label: 'Explore', route: '/(student)/explore' },
+      { label: 'Entertainment', route: '/(student)/explore' },
     ],
   },
   {

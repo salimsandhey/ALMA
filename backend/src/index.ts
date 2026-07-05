@@ -33,7 +33,6 @@ import challengesRouter from './routes/challenges'
 import entertainmentRouter from './routes/entertainment'
 import referenceRouter from './routes/reference'
 import ttsRouter from './routes/tts'
-import adminWordMatchEmojisRouter from './routes/admin/wordMatchEmojis'
 
 const app = express()
 
@@ -65,7 +64,6 @@ app.use('/api/admin/challenges', adminChallengesRouter)
 app.use('/api/admin/songs', adminSongsRouter)
 app.use('/api/admin/ai-usage', adminAiUsageRouter)
 app.use('/api/admin/legal', adminLegalRouter)
-app.use('/api/admin/word-match-emojis', adminWordMatchEmojisRouter)
 app.use('/api/legal', legalRouter)
 app.use('/api/music', musicRouter)
 app.use('/api/challenges', challengesRouter)

@@ -17,6 +17,7 @@ import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { NAVY, GOLD, GREY } from '../../constants/colors'
 import AudioDownloadBanner from '../../components/AudioDownloadBanner'
+import BottomNavBar from '../../components/BottomNavBar'
 
 const BG = '#FFFFFF'
 
@@ -288,6 +289,7 @@ export default function StudentHome() {
 
       </ScrollView>
       <AudioDownloadBanner />
+      <BottomNavBar />
     </SafeAreaView>
   )
 }

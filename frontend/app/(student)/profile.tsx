@@ -11,6 +11,7 @@ import { deleteToken } from '../../lib/storage'
 import { useAuthStore } from '../../stores/authStore'
 import { useVoiceStore, VoiceGender } from '../../stores/voiceStore'
 import { api } from '../../lib/api'
+import BottomNavBar from '../../components/BottomNavBar'
 import { NAVY, NAVY_DARK, GOLD, BG, GREY } from '../../constants/colors'
 
 
@@ -229,6 +230,7 @@ export default function Profile() {
 
         <View style={{ height: 32 }} />
       </ScrollView>
+      <BottomNavBar />
     </SafeAreaView>
   )
 }

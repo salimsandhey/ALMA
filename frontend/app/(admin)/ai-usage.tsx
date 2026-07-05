@@ -84,7 +84,7 @@ export default function AiUsageScreen() {
   const maxTrend = Math.max(...(data?.dailyTrend.map((d) => d.totalTokens) ?? [1]), 1)
 
   return (
-    <SafeAreaView style={s.safe}>
+    <SafeAreaView style={s.safe} edges={['top']}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 12 }}>
           <Ionicons name="arrow-back" size={22} color="#FFF" />

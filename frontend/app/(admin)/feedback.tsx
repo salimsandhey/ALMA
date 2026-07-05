@@ -124,7 +124,7 @@ export default function FeedbackScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <View>
           <Text style={styles.headerSub}>ALMA PLATFORM</Text>

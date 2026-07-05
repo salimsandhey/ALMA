@@ -96,7 +96,7 @@ export default function OverviewScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.center}>
           <ActivityIndicator size="large" color={NAVY} />
         </View>
@@ -105,7 +105,7 @@ export default function OverviewScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       {/* Dark navy header */}
       <View style={styles.header}>
         <View>

@@ -133,7 +133,7 @@ function ModuleListView({ onLogout, onNew, onEdit }: {
     ])
 
   return (
-    <SafeAreaView style={s.safe}>
+    <SafeAreaView style={s.safe} edges={['top']}>
       <View style={s.header}>
         <View style={{ flex: 1 }}>
           <Text style={s.headerSub}>ALMA PLATFORM</Text>
@@ -254,7 +254,7 @@ function ModuleEditorView({ moduleId, onBack, onEditLesson, onAddLesson, onLogou
   const lessons = lessonsData?.lessons ?? []
 
   return (
-    <SafeAreaView style={s.safe}>
+    <SafeAreaView style={s.safe} edges={['top']}>
       <View style={s.header}>
         <TouchableOpacity onPress={onBack} style={{ marginRight: 12 }}>
           <Ionicons name="arrow-back" size={22} color="#FFF" />
@@ -376,7 +376,7 @@ function LessonEditorView({ moduleId, lessonId, onBack, onSaved }: {
   })
 
   if (isLoading && lessonId) {
-    return <SafeAreaView style={s.safe}><View style={s.center}><ActivityIndicator size="large" color={NAVY} /></View></SafeAreaView>
+    return <SafeAreaView style={s.safe} edges={['top']}><View style={s.center}><ActivityIndicator size="large" color={NAVY} /></View></SafeAreaView>
   }
 
   const cards = content?.cards ?? []
@@ -390,7 +390,7 @@ function LessonEditorView({ moduleId, lessonId, onBack, onSaved }: {
     : cards.length > 0
 
   return (
-    <SafeAreaView style={s.safe}>
+    <SafeAreaView style={s.safe} edges={['top']}>
       <View style={s.header}>
         <TouchableOpacity onPress={step === 'content' ? () => setStep('info') : onBack} style={{ marginRight: 12 }}>
           <Ionicons name="arrow-back" size={22} color="#FFF" />

@@ -26,6 +26,7 @@ export default function AdminLayout() {
           justifyContent: 'center',
           alignItems: 'center',
           gap: 2,
+          padding: 0,
         },
         tabBarIconStyle: { marginBottom: 0 },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '500', marginTop: 0 },
@@ -73,7 +74,6 @@ export default function AdminLayout() {
       <Tabs.Screen name="songs"      options={{ href: null }} />
       <Tabs.Screen name="ai-usage"   options={{ href: null }} />
       <Tabs.Screen name="legal"      options={{ href: null }} />
-      <Tabs.Screen name="dev-tools"  options={{ href: null }} />
     </Tabs>
   )
 }

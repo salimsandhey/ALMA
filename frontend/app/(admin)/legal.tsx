@@ -129,7 +129,7 @@ export default function LegalScreen() {
   const currentData = tab === 'terms' ? data?.terms : data?.privacy
 
   return (
-    <SafeAreaView style={s.safe}>
+    <SafeAreaView style={s.safe} edges={['top']}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 12 }}>
           <Ionicons name="arrow-back" size={22} color="#FFF" />

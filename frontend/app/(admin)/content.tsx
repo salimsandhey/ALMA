@@ -153,7 +153,7 @@ export default function ContentScreen() {
   const isFormValid = form.title.trim().length > 0 && form.url.trim().length > 0
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <View>
           <Text style={styles.headerSub}>ALMA PLATFORM</Text>

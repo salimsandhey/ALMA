@@ -4,14 +4,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useRouter, usePathname } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { NAVY, LIGHT_GREY } from '../constants/colors'
-
-const TABS = [
-  { label: 'Home', icon: 'home-outline', route: '/(student)/home' },
-  { label: 'Modules', icon: 'book-outline', route: '/(student)/modules' },
-  { label: 'Explore', icon: 'compass-outline', route: '/(student)/explore' },
-  { label: 'Music', icon: 'musical-notes-outline', route: '/(student)/music' },
-  { label: 'Profile', icon: 'person-outline', route: '/(student)/profile' },
-] as const
+import { NAV_TABS, NAV_BAR_HEIGHT_BASE, NAV_BAR_BORDER_COLOR, NAV_ICON_SIZE, NAV_LABEL_STYLE } from '../constants/tabs'
 
 export default function BottomNavBar() {
   const router = useRouter()
@@ -19,17 +12,17 @@ export default function BottomNavBar() {
   const insets = useSafeAreaInsets()
   const bottomPad = Math.max(8, insets.bottom)
   return (
-    <View style={[styles.container, { height: 60 + bottomPad, paddingBottom: bottomPad }]}>
-      {TABS.map(tab => {
-        const active = pathname.includes(tab.label.toLowerCase())
+    <View style={[styles.container, { height: NAV_BAR_HEIGHT_BASE + bottomPad, paddingBottom: bottomPad }]}>
+      {NAV_TABS.map(tab => {
+        const active = pathname.includes(tab.route.split('/').pop()!)
         return (
           <TouchableOpacity
-            key={tab.label}
+            key={tab.key}
             style={styles.tab}
             onPress={() => router.replace(tab.route as any)}
             activeOpacity={0.7}
           >
-            <Ionicons name={tab.icon as any} size={22} color={active ? NAVY : LIGHT_GREY} />
+            <Ionicons name={tab.icon as any} size={NAV_ICON_SIZE} color={active ? NAVY : LIGHT_GREY} />
             <Text style={[styles.label, { color: active ? NAVY : LIGHT_GREY }]} numberOfLines={1}>{tab.label}</Text>
           </TouchableOpacity>
         )
@@ -43,7 +36,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#fff',
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: NAV_BAR_BORDER_COLOR,
     paddingTop: 4,
   },
   tab: {
@@ -53,7 +46,6 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   label: {
-    fontSize: 11,
-    fontWeight: '500',
+    ...NAV_LABEL_STYLE,
   },
 })

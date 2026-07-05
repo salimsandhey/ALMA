@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { Song } from '../../lib/songs'
+import BottomNavBar from '../../components/BottomNavBar'
 import { Colors } from '../../constants/colors'
 
 const EMOJI_BG_COLORS = [
@@ -64,6 +65,7 @@ export default function MusicScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <FlatList
+        style={styles.list}
         data={data ?? []}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
@@ -83,12 +85,14 @@ export default function MusicScreen() {
         renderItem={({ item, index }) => <SongCard song={item} index={index} />}
         showsVerticalScrollIndicator={false}
       />
+      <BottomNavBar />
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F2F3F7' },
+  list: { flex: 1 },
   listContent: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 32 },
   heading: { fontSize: 28, fontWeight: '800', color: Colors.navy },
   subtitle: { fontSize: 14, color: Colors.textMid, marginTop: 4, marginBottom: 24 },
