@@ -6,7 +6,7 @@ import passport from 'passport'
 
 dotenv.config()
 
-import { apiLimiter, aiLimiter } from './middleware/rateLimit'
+import { apiLimiter, aiLimiter, authLimiter } from './middleware/rateLimit'
 import authRouter from './routes/auth'
 import usersRouter from './routes/users'
 import modulesRouter from './routes/modules'
@@ -44,7 +44,7 @@ app.use(passport.initialize())
 app.use(apiLimiter)
 app.use('/api/ai', aiLimiter)
 
-app.use('/api/auth', authRouter)
+app.use('/api/auth', authLimiter, authRouter)
 app.use('/api/users', usersRouter)
 app.use('/api/modules', modulesRouter)
 app.use('/api/lessons', lessonsRouter)
