@@ -2,16 +2,22 @@ import { Router, Request, Response } from 'express'
 import { z } from 'zod'
 import { prisma } from '../../lib/prisma'
 import { redis } from '../../lib/redis'
+import { verifyJWT } from '../../middleware/auth'
+import { requireAdmin } from '../../middleware/adminAuth'
 
 const router = Router()
 
+router.use(verifyJWT, requireAdmin)
+
 const settingsSchema = z.object({
-  coachDailyLimit:         z.number().int().min(1).max(500),
-  greetingDailyLimit:      z.number().int().min(1).max(500),
-  grammarDailyLimit:       z.number().int().min(1).max(500),
-  warmupDailyLimit:        z.number().int().min(1).max(100),
-  pronunciationDailyLimit: z.number().int().min(1).max(500),
-  hintDailyLimit:          z.number().int().min(1).max(100),
+  coachDailyLimit:         z.number().int().min(1).max(500).optional(),
+  greetingDailyLimit:      z.number().int().min(1).max(500).optional(),
+  grammarDailyLimit:       z.number().int().min(1).max(500).optional(),
+  warmupDailyLimit:        z.number().int().min(1).max(100).optional(),
+  pronunciationDailyLimit: z.number().int().min(1).max(500).optional(),
+  hintDailyLimit:          z.number().int().min(1).max(100).optional(),
+  iosAppUrl:               z.string().url().optional().nullable(),
+  androidAppUrl:           z.string().url().optional().nullable(),
 })
 
 // GET /api/admin/settings

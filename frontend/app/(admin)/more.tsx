@@ -48,6 +48,14 @@ const SECTIONS = [
     color: '#059669',
     bg: '#ECFDF5',
   },
+  {
+    key: 'app-links',
+    title: 'App Links',
+    subtitle: 'Set the iOS and Android store links used by Share App',
+    icon: 'link-outline' as const,
+    color: '#7C3AED',
+    bg: '#F5F3FF',
+  },
 ]
 
 export default function MoreScreen() {

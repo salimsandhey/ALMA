@@ -8,8 +8,7 @@ import { getToken, deleteToken, saveToken } from '../lib/storage'
 import { useAuthStore } from '../stores/authStore'
 import { useVoiceStore } from '../stores/voiceStore'
 import { api } from '../lib/api'
-import { downloadAllStaticAudio } from '../lib/audioCache'
-import { downloadAllSongBgMusic } from '../lib/musicCache'
+import { downloadAllOfflineContent } from '../lib/audioCache'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,8 +59,7 @@ export default function RootLayout() {
           const today = new Date().toISOString().split('T')[0]
           useAuthStore.getState().setGreetingDone(me.lastGreetingDate === today)
           // Download all static audio files and song backing tracks silently in background
-          downloadAllStaticAudio().catch(() => {})
-          downloadAllSongBgMusic().catch(() => {})
+          downloadAllOfflineContent().catch(() => {})
         } else if (lastError?.response?.status === 401) {
           // Token is expired/invalid — force logout
           await deleteToken()

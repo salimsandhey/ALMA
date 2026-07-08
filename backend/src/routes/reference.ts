@@ -25,4 +25,21 @@ router.get('/languages', async (_req: Request, res: Response): Promise<void> => 
   }
 })
 
+// GET /api/app-links
+router.get('/app-links', async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const settings = await prisma.appSettings.findUnique({
+      where: { id: 'singleton' },
+      select: { iosAppUrl: true, androidAppUrl: true },
+    })
+    res.json({
+      iosAppUrl: settings?.iosAppUrl ?? null,
+      androidAppUrl: settings?.androidAppUrl ?? null,
+    })
+  } catch (err) {
+    console.error('[GET /app-links]', err)
+    res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR' })
+  }
+})
+
 export default router

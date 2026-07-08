@@ -421,6 +421,8 @@ model AppSettings {
   warmupDailyLimit        Int      @default(3)
   pronunciationDailyLimit Int      @default(50)
   hintDailyLimit          Int      @default(5)
+  iosAppUrl               String?
+  androidAppUrl           String?
   updatedAt               DateTime @updatedAt
 }
 

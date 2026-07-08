@@ -6,8 +6,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { Audio, InterruptionModeIOS } from 'expo-av'
+import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av'
 import { api } from '../lib/api'
+import { primeAndroidAudioSession } from '../lib/audioPriming'
 import { useAuthStore } from '../stores/authStore'
 import { useVoiceStore } from '../stores/voiceStore'
 import { NAVY, GOLD } from '../constants/colors'
@@ -65,6 +66,16 @@ export default function DailyGreeting() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
       stopAudio()
+      // Restore safe defaults so other screens aren't stuck with this
+      // screen's mic-friendly audio mode after we navigate away.
+      Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: false,
+        staysActiveInBackground: false,
+        interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+        shouldDuckAndroid: true,
+        interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+      }).catch(() => {})
     }
   }, [])
 
@@ -107,15 +118,29 @@ export default function DailyGreeting() {
   useSpeechHook('end', () => {
     setListening(false)
     setInterimText('')
-    // Immediately reclaim playback session so iOS has maximum time to switch
-    // before TTS starts (which waits on a network call after this fires).
+    // Immediately reclaim full playback focus — on Android this also clears
+    // whatever ducked volume the recording session left behind, so the next
+    // TTS line plays at full volume instead of staying dim.
+    Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
+      playsInSilentModeIOS: true,
+      interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+      staysActiveInBackground: false,
+      shouldDuckAndroid: false,
+      interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
+    }).catch(() => {})
+    // expo-speech-recognition's native iOS layer force-sets the audio
+    // session mode to `.measurement` while listening (and on abort()),
+    // which suppresses normal output loudness/processing. Explicitly
+    // restore `.default` mode so the reply doesn't play back quiet.
     if (Platform.OS === 'ios') {
-      Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-        interruptionModeIOS: InterruptionModeIOS.DoNotMix,
-        staysActiveInBackground: false,
-      }).catch(() => {})
+      try {
+        SpeechModule.setCategoryIOS({
+          category: 'playAndRecord',
+          categoryOptions: ['mixWithOthers', 'defaultToSpeaker', 'allowBluetooth'],
+          mode: 'default',
+        })
+      } catch {}
     }
   })
   useSpeechHook('error', () => { setListening(false); setInterimText('') })
@@ -123,22 +148,31 @@ export default function DailyGreeting() {
   const speakText = useCallback(async (text: string) => {
     await stopAudio()
     setSpeaking(true)
-    if (Platform.OS === 'ios') {
-      try {
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: false,
-          playsInSilentModeIOS: true,
-          interruptionModeIOS: InterruptionModeIOS.DoNotMix,
-          staysActiveInBackground: false,
-        })
+    try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: false,
+        interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
+      })
+      if (Platform.OS === 'ios') {
         await new Promise<void>(r => setTimeout(r, 80))
-      } catch {}
-    }
+      } else {
+        // Android's built-in SpeechRecognizer manages audio focus internally
+        // with no signal for exactly when it releases it — priming forces
+        // the handoff to fully resolve before we play the real reply.
+        await primeAndroidAudioSession()
+        await new Promise<void>(r => setTimeout(r, 150))
+      }
+    } catch {}
     const clean = text.replace(/\p{Emoji}/gu, '').replace(/\s{2,}/g, ' ').trim()
     try {
       const { data } = await api.post('/api/tts', { text: clean, gender: voiceGender })
       const { sound } = await Audio.Sound.createAsync({ uri: data.audioUrl }, { volume: 1.0 })
       currentSound.current = sound
+      await sound.setVolumeAsync(1.0)
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
           setSpeaking(false)
@@ -204,8 +238,9 @@ export default function DailyGreeting() {
   const handleMicPress = async () => {
     if (loading || timeUp) return
 
-    // Stop TTS so the user can speak
-    stopAudio()
+    // Stop TTS so the user can speak — must fully finish before we grab the
+    // mic, otherwise the still-releasing audio session causes a brief duck.
+    await stopAudio()
     setSpeaking(false)
 
     if (!IS_NATIVE) return

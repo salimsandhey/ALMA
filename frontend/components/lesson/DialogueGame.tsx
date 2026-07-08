@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react'
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { Audio } from 'expo-av'
+import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av'
 import { api } from '../../lib/api'
+import { primeAndroidAudioSession } from '../../lib/audioPriming'
 import { useVoiceStore } from '../../stores/voiceStore'
 import TTSButton from '../TTSButton'
 import MicButton from './MicButton'
@@ -46,14 +47,49 @@ export default function DialogueGame({ card, onComplete, xpReward }: any) {
   const scrollRef = useRef<ScrollView>(null)
   const micStartRef = useRef<number>(0)
   const helpUsed = useRef(false)
+  const currentSoundRef = useRef<Audio.Sound | null>(null)
+
+  const stopSpeaking = async () => {
+    if (currentSoundRef.current) {
+      await currentSoundRef.current.stopAsync().catch(() => {})
+      await currentSoundRef.current.unloadAsync().catch(() => {})
+      currentSoundRef.current = null
+    }
+  }
 
   const speakText = async (text: string) => {
     try {
+      await stopSpeaking()
+      // Reclaim full playback focus — on Android this also clears whatever
+      // ducked volume a prior mic session left behind, so lines after the
+      // user speaks play at full volume instead of staying dim.
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: false,
+        interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
+      }).catch(() => {})
+      if (Platform.OS === 'ios') {
+        await new Promise<void>(r => setTimeout(r, 80))
+      } else {
+        // Android's built-in SpeechRecognizer manages audio focus internally
+        // with no signal for exactly when it releases it — priming forces
+        // the handoff to fully resolve before we play the real line.
+        await primeAndroidAudioSession()
+        await new Promise<void>(r => setTimeout(r, 150))
+      }
       const gender = useVoiceStore.getState().voiceGender
       const { data } = await api.post('/api/tts', { text, gender })
       const { sound } = await Audio.Sound.createAsync({ uri: data.audioUrl })
+      currentSoundRef.current = sound
+      await sound.setVolumeAsync(1.0)
       sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) sound.unloadAsync().catch(() => {})
+        if (status.isLoaded && status.didJustFinish) {
+          sound.unloadAsync().catch(() => {})
+          if (currentSoundRef.current === sound) currentSoundRef.current = null
+        }
       })
       await sound.playAsync()
     } catch {}
@@ -61,6 +97,19 @@ export default function DialogueGame({ card, onComplete, xpReward }: any) {
 
   useEffect(() => {
     if (segments[0]?.guestLines[0]) setTimeout(() => speakText(segments[0].guestLines[0]), 300)
+    return () => {
+      stopSpeaking()
+      // Restore safe defaults so other screens aren't stuck with this
+      // screen's mic-friendly audio mode after we navigate away.
+      Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: false,
+        staysActiveInBackground: false,
+        interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+        shouldDuckAndroid: true,
+        interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+      }).catch(() => {})
+    }
   }, [])
 
   useEffect(() => {
@@ -176,6 +225,7 @@ export default function DialogueGame({ card, onComplete, xpReward }: any) {
             onResult={handleSTTResult}
             onInterim={setInterimText}
             onStateChange={handleStateChange}
+            onBeforeStart={stopSpeaking}
             tone="yellow"
             label="Tap to speak your line"
           />

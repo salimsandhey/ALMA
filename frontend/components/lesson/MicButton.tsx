@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react'
 import {
   View, Text, TouchableOpacity, Animated, StyleSheet,
-  TextInput, Modal,
+  TextInput, Modal, Platform,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { SpeechState, stateLabel } from '../../lib/speech'
@@ -26,6 +26,10 @@ interface MicButtonProps {
   onResult: (texts: string[]) => void
   onInterim?: (text: string) => void
   onStateChange?: (state: SpeechState) => void
+  /** Awaited right before recognition starts — use this to stop any playing
+   * TTS/audio first, so it fully releases the audio session instead of just
+   * ducking under the mic. */
+  onBeforeStart?: () => Promise<void> | void
   disabled?: boolean
   label?: string
   tone?: 'teal' | 'yellow'
@@ -35,6 +39,7 @@ const MicButton = forwardRef<MicButtonRef, MicButtonProps>(function MicButton({
   onResult,
   onInterim,
   onStateChange,
+  onBeforeStart,
   disabled,
   label = 'Tap mic to pronounce',
   tone = 'teal',
@@ -64,6 +69,19 @@ const MicButton = forwardRef<MicButtonRef, MicButtonProps>(function MicButton({
   useSpeechHook('end', () => {
     setListening(false)
     onInterim?.('')
+    // expo-speech-recognition's native iOS layer force-sets the audio
+    // session mode to `.measurement` while listening, which suppresses
+    // normal output loudness/processing. Explicitly restore `.default` mode
+    // here so playback right after speaking isn't left sounding quiet.
+    if (Platform.OS === 'ios') {
+      try {
+        SpeechModule.setCategoryIOS({
+          category: 'playAndRecord',
+          categoryOptions: ['mixWithOthers', 'defaultToSpeaker', 'allowBluetooth'],
+          mode: 'default',
+        })
+      } catch {}
+    }
   })
 
   useSpeechHook('error', (e: any) => {
@@ -115,6 +133,8 @@ const MicButton = forwardRef<MicButtonRef, MicButtonProps>(function MicButton({
     } catch {
       // continue — permission already granted
     }
+
+    await onBeforeStart?.()
 
     setListening(true)
     onStateChange?.('listening')

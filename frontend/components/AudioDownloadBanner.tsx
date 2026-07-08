@@ -11,12 +11,17 @@ export default function AudioDownloadBanner() {
     if (status === 'downloading') {
       Animated.timing(opacity, { toValue: 1, duration: 300, useNativeDriver: true }).start()
     } else if (status === 'done') {
-      // Stay visible briefly then fade out
+      // Stay visible briefly then fade out, then reset — otherwise `status`
+      // stays 'done' forever in the global store, and remounting this
+      // component later (e.g. navigating back to this screen) would replay
+      // the whole appear/disappear animation again for no reason.
       Animated.sequence([
         Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
         Animated.delay(1500),
         Animated.timing(opacity, { toValue: 0, duration: 400, useNativeDriver: true }),
-      ]).start()
+      ]).start(() => {
+        useAudioDownloadStore.getState().reset()
+      })
     }
   }, [status])
 
@@ -31,7 +36,7 @@ export default function AudioDownloadBanner() {
         <Text style={styles.icon}>{isDone ? '✓' : '⬇'}</Text>
         <View style={styles.textCol}>
           <Text style={styles.label}>
-            {isDone ? 'Voice audio ready' : `Downloading voice audio…`}
+            {isDone ? 'Offline content ready' : `Downloading offline content…`}
           </Text>
           {!isDone && (
             <Text style={styles.sub}>{downloaded} / {total} files</Text>

@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Share, Image, useWindowDimensions,
+  Share, Image, useWindowDimensions, Platform, Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter, useFocusEffect } from 'expo-router'
@@ -114,13 +114,42 @@ export default function Profile() {
     router.replace('/(auth)/login')
   }
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your account, including all progress, XP, and badges. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete('/api/users/me')
+            } catch {
+              // Proceed to log out regardless — if this failed the account
+              // likely doesn't exist anymore or the token is already dead.
+            }
+            await deleteToken()
+            useAuthStore.getState().clearAuth()
+            router.replace('/(auth)/login')
+          },
+        },
+      ]
+    )
+  }
+
   const handleShareApp = useCallback(async () => {
     try {
-      await Share.share({
-        title: 'ALMA English App',
-        message: 'Learn hospitality English with ALMA! Download the app at alma-english-app.com',
-      })
-    } catch { /* cancelled */ }
+      const { data } = await api.get('/api/app-links')
+      const url = Platform.OS === 'ios' ? data.iosAppUrl : data.androidAppUrl
+
+      const message = url
+        ? `Learn hospitality English with ALMA! Download the app: ${url}`
+        : 'Learn hospitality English with ALMA! Ask a team member how to get the app.'
+
+      await Share.share({ title: 'ALMA English App', message })
+    } catch { /* cancelled or network error */ }
   }, [])
 
   return (
@@ -223,6 +252,13 @@ export default function Profile() {
           </View>
         </View>
 
+        {/* ── Danger zone ── */}
+        <View style={styles.section}>
+          <View style={styles.card}>
+            <MenuItem icon="trash-outline" label="Delete Account" onPress={handleDeleteAccount} danger />
+          </View>
+        </View>
+
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.85}>
           <Ionicons name="log-out-outline" size={18} color="#FFFFFF" />
           <Text style={styles.logoutText}>Log out</Text>
@@ -288,14 +324,15 @@ function StatBox({ icon, value, label, hexW, hexH, triW, triH, rectW }: StatBoxP
 
 // ── Menu item ─────────────────────────────────────────────────────────────────
 
-function MenuItem({ icon, label, onPress }: { icon: any; label: string; onPress: () => void }) {
+function MenuItem({ icon, label, onPress, danger }: { icon: any; label: string; onPress: () => void; danger?: boolean }) {
+  const color = danger ? '#EF4444' : NAVY
   return (
     <TouchableOpacity style={styles.menuRow} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.menuLeft}>
-        <View style={styles.menuIconBox}>
-          <Ionicons name={icon} size={17} color={NAVY} />
+        <View style={[styles.menuIconBox, danger && { backgroundColor: '#FEE2E2' }]}>
+          <Ionicons name={icon} size={17} color={color} />
         </View>
-        <Text style={styles.menuLabel}>{label}</Text>
+        <Text style={[styles.menuLabel, danger && { color }]}>{label}</Text>
       </View>
       <Ionicons name="chevron-forward" size={15} color="#C7CBCF" />
     </TouchableOpacity>

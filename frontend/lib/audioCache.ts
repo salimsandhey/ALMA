@@ -2,6 +2,7 @@ import * as FileSystem from 'expo-file-system/legacy'
 import * as Crypto from 'expo-crypto'
 import { create } from 'zustand'
 import { api } from './api'
+import { getMissingSongBgMusicFiles } from './musicCache'
 
 const AUDIO_DIR = FileSystem.cacheDirectory + 'alma_tts/'
 
@@ -59,16 +60,14 @@ export async function getAudioUri(text: string, gender: 'male' | 'female'): Prom
   return path
 }
 
-// Downloads all static audio files in the background, reporting progress
-export async function downloadAllStaticAudio(): Promise<void> {
-  const store = useAudioDownloadStore.getState()
+// Returns static (voice-line) audio files that aren't cached locally yet.
+async function getMissingStaticAudioFiles(): Promise<Array<{ url: string; path: string }>> {
   await ensureDir()
 
   const { data } = await api.get('/api/tts/manifest')
   const items: Array<{ textHash: string; audioUrlMale: string; audioUrlFemale: string }> =
     data.items ?? []
 
-  // Build list of missing files only
   const toDownload: Array<{ url: string; path: string }> = []
   for (const item of items) {
     for (const gender of ['male', 'female'] as const) {
@@ -82,9 +81,23 @@ export async function downloadAllStaticAudio(): Promise<void> {
       }
     }
   }
+  return toDownload
+}
+
+// Downloads all static voice-line audio and song backing tracks in the
+// background, reporting combined progress. Safe to call on every app boot —
+// only shows/updates progress when there's actually something to fetch.
+export async function downloadAllOfflineContent(): Promise<void> {
+  const store = useAudioDownloadStore.getState()
+
+  const [staticAudio, songBgMusic] = await Promise.all([
+    getMissingStaticAudioFiles(),
+    getMissingSongBgMusicFiles(),
+  ])
+  const toDownload = [...staticAudio, ...songBgMusic]
 
   if (toDownload.length === 0) {
-    store.setDone()
+    store.reset()
     return
   }
 

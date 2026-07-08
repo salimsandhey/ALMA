@@ -27,9 +27,8 @@ export async function getCachedBgMusicPath(url: string): Promise<string | null> 
   return info.exists ? path : null
 }
 
-// Downloads all songs' background music in the background, skipping files
-// already cached. Safe to call on every app boot.
-export async function downloadAllSongBgMusic(): Promise<void> {
+// Returns songs' background music files that aren't cached locally yet.
+export async function getMissingSongBgMusicFiles(): Promise<Array<{ url: string; path: string }>> {
   await ensureDir()
 
   const { data } = await api.get('/api/music/songs')
@@ -43,13 +42,5 @@ export async function downloadAllSongBgMusic(): Promise<void> {
     const info = await FileSystem.getInfoAsync(path)
     if (!info.exists) toDownload.push({ url, path })
   }
-
-  const BATCH = 4
-  for (let i = 0; i < toDownload.length; i += BATCH) {
-    await Promise.all(
-      toDownload
-        .slice(i, i + BATCH)
-        .map(({ url, path }) => FileSystem.downloadAsync(url, path).catch(() => {}))
-    )
-  }
+  return toDownload
 }
