@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   TextInput, ActivityIndicator, ScrollView, Alert, Switch, Image,
-  useWindowDimensions,
+  useWindowDimensions, BackHandler,
 } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -26,7 +26,7 @@ type LessonItem = {
   id: string; title: string; gameType: GameType; orderIndex: number; xpReward: number; content: any
 }
 type FlashCard      = { id: string; word: string; translation: string; imageUrl: string; targetWord: string }
-type WordMatchCard  = { id: string; emoji: string; correctWord: string; distractors: string[] }
+type WordMatchCard  = { id: string; imageUrl?: string; emoji?: string; correctWord: string; distractors: string[] }
 type FillBlankCard  = { id: string; sentenceTemplate: string; correctAnswer: string; hint: string; distractors: string[] }
 type TrueFalseCard  = { id: string; statement: string; isTrue: boolean; explanation: string }
 type DialogueTurn   = { speaker: 'GUEST' | 'USER'; text: string; expectedResponse: string }
@@ -63,6 +63,15 @@ export default function ModulesScreen() {
   const handleLogout = async () => {
     await deleteToken(); clearAuth(); router.replace('/(auth)/login')
   }
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (view === 'lesson') { setCurrentLessonId(null); setView('module'); return true }
+      if (view === 'module') { setCurrentModuleId(null); setView('list'); return true }
+      return false
+    })
+    return () => sub.remove()
+  }, [view])
 
   if (view === 'lesson') {
     return (
@@ -344,7 +353,7 @@ function LessonEditorView({ moduleId, lessonId, onBack, onSaved }: {
   moduleId: string; lessonId: string | null; onBack: () => void; onSaved: () => void
 }) {
   const queryClient = useQueryClient()
-  const [step, setStep]         = useState<'info' | 'content'>('info')
+  const [step, setStep]         = useState<'info' | 'content'>(lessonId ? 'content' : 'info')
   const [title, setTitle]       = useState('')
   const [gameType, setGameType] = useState<GameType>('FLASHCARD')
   const [xpReward, setXpReward] = useState('20')
@@ -389,6 +398,67 @@ function LessonEditorView({ moduleId, lessonId, onBack, onSaved }: {
     ? (content?.cards?.[0]?.turns?.length ?? 0) > 0
     : cards.length > 0
 
+  const isEditing = !!lessonId
+  const activeGameInfo = GAME_TYPE_INFO.find((g) => g.key === gameType)
+
+  const contentForm = (
+    <>
+      {gameType === 'FLASHCARD'   && <FlashcardForm   cards={cards} addCard={addCard} updateCard={updateCard} removeCard={removeCard} />}
+      {gameType === 'WORD_MATCH'  && <WordMatchForm   cards={cards} addCard={addCard} updateCard={updateCard} removeCard={removeCard} />}
+      {gameType === 'FILL_BLANK'  && <FillBlankForm   cards={cards} addCard={addCard} updateCard={updateCard} removeCard={removeCard} />}
+      {gameType === 'TRUE_FALSE'  && <TrueFalseForm   cards={cards} addCard={addCard} updateCard={updateCard} removeCard={removeCard} />}
+      {gameType === 'DIALOGUE'    && <DialogueForm    content={content} onChange={setContent} />}
+      {gameType === 'IMAGE_SPEAK' && <ImageSpeakForm  cards={cards} addCard={addCard} updateCard={updateCard} removeCard={removeCard} />}
+
+      <TouchableOpacity
+        style={[s.navyBtn, { borderRadius: 10, paddingVertical: 14, marginTop: 16 }, !canSave && s.btnDisabled]}
+        disabled={!canSave || save.isPending}
+        onPress={() => save.mutate()}
+      >
+        {save.isPending
+          ? <ActivityIndicator size="small" color="#FFF" />
+          : <Text style={[s.navyBtnText, { fontSize: 14 }]}>Save Lesson</Text>
+        }
+      </TouchableOpacity>
+    </>
+  )
+
+  // ─── Editing an existing lesson: single screen, game type is fixed ──────────
+  if (isEditing) {
+    return (
+      <SafeAreaView style={s.safe} edges={['top']}>
+        <View style={s.header}>
+          <TouchableOpacity onPress={onBack} style={{ marginRight: 12 }}>
+            <Ionicons name="arrow-back" size={22} color="#FFF" />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={s.headerSub}>ALMA PLATFORM</Text>
+            <Text style={s.headerTitle}>Edit Lesson</Text>
+          </View>
+        </View>
+
+        <ScrollView contentContainerStyle={[s.list, { paddingBottom: 40, gap: 12 }]}>
+          <View style={s.card}>
+            <Text style={s.cardLabel}>LESSON INFO</Text>
+            <TextInput style={s.input} placeholder="Lesson title" placeholderTextColor="#9CA3AF" value={title} onChangeText={setTitle} />
+            <TextInput style={s.input} placeholder="XP Reward (default 20)" placeholderTextColor="#9CA3AF" value={xpReward} onChangeText={setXpReward} keyboardType="number-pad" />
+            <View style={s.lockedTypeRow}>
+              <Text style={{ fontSize: 20, width: 28 }}>{activeGameInfo?.emoji ?? '📝'}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={s.lockedTypeLabel}>{activeGameInfo?.label ?? gameType}</Text>
+                <Text style={s.lockedTypeSub}>Game type can't be changed after a lesson is created</Text>
+              </View>
+              <Ionicons name="lock-closed-outline" size={15} color="#9CA3AF" />
+            </View>
+          </View>
+
+          {contentForm}
+        </ScrollView>
+      </SafeAreaView>
+    )
+  }
+
+  // ─── Creating a new lesson: pick a game type first, then add content ────────
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <View style={s.header}>
@@ -397,7 +467,7 @@ function LessonEditorView({ moduleId, lessonId, onBack, onSaved }: {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={s.headerSub}>ALMA PLATFORM</Text>
-          <Text style={s.headerTitle}>{lessonId ? 'Edit Lesson' : 'New Lesson'}</Text>
+          <Text style={s.headerTitle}>New Lesson</Text>
         </View>
       </View>
 
@@ -444,23 +514,7 @@ function LessonEditorView({ moduleId, lessonId, onBack, onSaved }: {
         </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={[s.list, { paddingBottom: 40 }]}>
-          {gameType === 'FLASHCARD'   && <FlashcardForm   cards={cards} addCard={addCard} updateCard={updateCard} removeCard={removeCard} />}
-          {gameType === 'WORD_MATCH'  && <WordMatchForm   cards={cards} addCard={addCard} updateCard={updateCard} removeCard={removeCard} />}
-          {gameType === 'FILL_BLANK'  && <FillBlankForm   cards={cards} addCard={addCard} updateCard={updateCard} removeCard={removeCard} />}
-          {gameType === 'TRUE_FALSE'  && <TrueFalseForm   cards={cards} addCard={addCard} updateCard={updateCard} removeCard={removeCard} />}
-          {gameType === 'DIALOGUE'    && <DialogueForm    content={content} onChange={setContent} />}
-          {gameType === 'IMAGE_SPEAK' && <ImageSpeakForm  cards={cards} addCard={addCard} updateCard={updateCard} removeCard={removeCard} />}
-
-          <TouchableOpacity
-            style={[s.navyBtn, { borderRadius: 10, paddingVertical: 14, marginTop: 16 }, !canSave && s.btnDisabled]}
-            disabled={!canSave || save.isPending}
-            onPress={() => save.mutate()}
-          >
-            {save.isPending
-              ? <ActivityIndicator size="small" color="#FFF" />
-              : <Text style={[s.navyBtnText, { fontSize: 14 }]}>Save Lesson</Text>
-            }
-          </TouchableOpacity>
+          {contentForm}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -496,7 +550,7 @@ function WordMatchForm({ cards, addCard, updateCard, removeCard }: any) {
       {cards.map((c: WordMatchCard, i: number) => (
         <View key={c.id} style={[s.cardBlock, i < cards.length - 1 && s.blockBorder]}>
           <CardHeader num={i + 1} onRemove={() => removeCard(c.id)} />
-          <TextInput style={s.input} placeholder="Emoji (e.g. 🎂)" placeholderTextColor="#9CA3AF" value={c.emoji} onChangeText={(v) => updateCard(c.id, { emoji: v })} />
+          <ImageEmojiPicker value={c.imageUrl ?? c.emoji ?? ''} onChange={(v) => updateCard(c.id, { imageUrl: v })} />
           <TextInput style={s.input} placeholder="Correct word (e.g. Birthday)" placeholderTextColor="#9CA3AF" value={c.correctWord} onChangeText={(v) => updateCard(c.id, { correctWord: v })} />
           {[0, 1, 2].map((di) => (
             <TextInput key={di} style={s.input} placeholder={`Wrong option ${di + 1}`} placeholderTextColor="#9CA3AF"
@@ -506,7 +560,7 @@ function WordMatchForm({ cards, addCard, updateCard, removeCard }: any) {
           ))}
         </View>
       ))}
-      <AddCardBtn label="Add Word Match Card" onPress={() => addCard({ emoji: '', correctWord: '', distractors: ['', '', ''] })} />
+      <AddCardBtn label="Add Word Match Card" onPress={() => addCard({ imageUrl: '', correctWord: '', distractors: ['', '', ''] })} />
     </View>
   )
 }
@@ -870,6 +924,10 @@ const s = StyleSheet.create({
   card:       { backgroundColor: CARD, borderRadius: 14, padding: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 },
   cardLabel:  { fontSize: 11, color: '#9CA3AF', fontWeight: '700', letterSpacing: 0.5, marginBottom: 12 },
   input:      { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#1F2937', marginBottom: 10, backgroundColor: '#FAFAFA' },
+
+  lockedTypeRow:   { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, padding: 10 },
+  lockedTypeLabel: { fontSize: 13, fontWeight: '600', color: '#374151' },
+  lockedTypeSub:   { fontSize: 11, color: '#9CA3AF', marginTop: 1 },
 
   cardBlock:  { paddingVertical: 12 },
   blockBorder:{ borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },

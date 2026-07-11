@@ -26,6 +26,7 @@ export default function TrueFalseGame({ card, onComplete, xpReward, currentIndex
   const [bannerCorrect, setBannerCorrect] = useState(true)
   const [speechState, setSpeechState] = useState<SpeechState>('idle')
   const [lastSpoken, setLastSpoken] = useState('')
+  const [interimText, setInterimText] = useState('')
   const bannerOpacity = useRef(new Animated.Value(0)).current
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const micStartRef = useRef<number>(0)
@@ -85,15 +86,24 @@ export default function TrueFalseGame({ card, onComplete, xpReward, currentIndex
     }
   }
 
+  // Speech recognition sometimes mishears these single-word answers as a
+  // phonetically similar word (e.g. "true" -> "through"). Match whole words
+  // against a small list of known near-homophones instead of a plain
+  // substring check, which both avoids false positives (e.g. "false" inside
+  // "workforce") and catches these common mishearings.
+  const TRUE_WORDS = ['true', 'through', 'threw']
+  const FALSE_WORDS = ['false', 'force']
+
   const handleSTT = (transcripts: string[]) => {
     if (answered) return
     const durationMs = micStartRef.current ? Date.now() - micStartRef.current : undefined
     const combined = transcripts.join(' ')
     setLastSpoken(combined)
+    setInterimText('')
     trackSpeech('speech_captured', { cardId: card.id, gameType: 'TRUE_FALSE', attempt: 1, durationMs })
-    const lower = combined.toLowerCase()
-    if (lower.includes('true')) handleAnswer(true)
-    else if (lower.includes('false')) handleAnswer(false)
+    const words = combined.toLowerCase().split(/\W+/).filter(Boolean)
+    if (words.some((w) => TRUE_WORDS.includes(w))) handleAnswer(true)
+    else if (words.some((w) => FALSE_WORDS.includes(w))) handleAnswer(false)
   }
 
   const trueColors = () => trueState === 'correct' ? { bg: '#16A34A', border: '#16A34A', text: '#FFFFFF' } : trueState === 'wrong' ? { bg: '#FEE2E2', border: '#DC2626', text: '#DC2626' } : { bg: '#FFFFFF', border: '#16A34A', text: '#16A34A' }
@@ -107,8 +117,8 @@ export default function TrueFalseGame({ card, onComplete, xpReward, currentIndex
       <View style={styles.card}><Text style={styles.label}>True or False?</Text><Text style={styles.statement}>{card.statement}</Text></View>
       <View style={styles.micWrapper}>
         <Text style={styles.stateText}>{stateLabel(speechState)}</Text>
-        <SpeechPreview interimText="" lastSpoken={answered ? '' : lastSpoken} />
-        <MicButton onResult={handleSTT} onStateChange={handleStateChange} disabled={answered} tone="yellow" label="Tap mic to answer" />
+        <SpeechPreview interimText={interimText} lastSpoken={lastSpoken} />
+        <MicButton onResult={handleSTT} onInterim={setInterimText} onStateChange={handleStateChange} disabled={answered} tone="yellow" label="Tap mic to answer" />
       </View>
       <View style={styles.buttonsRow}>
         <View style={[styles.answerButton, { backgroundColor: tc.bg, borderColor: tc.border }]}><Text style={[styles.answerButtonText, { color: tc.text }]}>True</Text></View>

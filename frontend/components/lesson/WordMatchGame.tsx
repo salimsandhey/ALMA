@@ -105,14 +105,21 @@ export default function WordMatchGame({ card, onComplete, xpReward }: GameCardPr
     return { bg: WHITE, border: '#E5E7EB', text: NAVY }
   }
 
+  const visual = card.imageUrl ?? card.emoji ?? ''
+  const localImage = resolveLessonImage(visual)
+  const isRemoteUrl = !!visual && (visual.startsWith('http://') || visual.startsWith('https://'))
+  const isEmoji = !!visual && !visual.startsWith('local:') && !isRemoteUrl && visual.trim().length > 0
+
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        {card.imageUrl ? (
-          <Image source={resolveLessonImage(card.imageUrl) ?? { uri: card.imageUrl }} style={styles.image} resizeMode="cover" />
-        ) : card.emoji ? (
+        {localImage ? (
+          <Image source={localImage} style={styles.image} resizeMode="cover" />
+        ) : isRemoteUrl ? (
+          <Image source={{ uri: visual }} style={styles.image} resizeMode="cover" />
+        ) : isEmoji ? (
           <View style={styles.imagePlaceholder}>
-            <Text style={styles.emojiIcon}>{card.emoji}</Text>
+            <Text style={styles.emojiIcon}>{visual}</Text>
           </View>
         ) : (
           <View style={styles.imagePlaceholder}><Text style={styles.imagePlaceholderIcon}>IMG</Text></View>

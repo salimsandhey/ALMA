@@ -32,7 +32,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "app.alma.learn",
       "appleTeamId": "M6FXN66SFA",
-      "buildNumber": "11",
+      "buildNumber": "12",
       "entitlements": {
         "com.apple.developer.applesignin": [
           "Default"
