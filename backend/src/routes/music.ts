@@ -7,21 +7,25 @@ router.use(verifyJWT)
 
 router.get('/songs', async (_req: Request, res: Response): Promise<void> => {
   try {
-    const songs = await prisma.song.findMany({
-      where: { isPublished: true },
-      orderBy: { orderIndex: 'asc' },
-      select: {
-        id: true,
-        title: true,
-        artist: true,
-        genre: true,
-        emoji: true,
-        youtubeUrl: true,
-        lyrics: true,
-        orderIndex: true,
-      },
-    })
-    res.json({ songs })
+    const [songs, settings] = await Promise.all([
+      prisma.song.findMany({
+        where: { isPublished: true },
+        orderBy: { orderIndex: 'asc' },
+        select: {
+          id: true,
+          title: true,
+          artist: true,
+          genre: true,
+          emoji: true,
+          youtubeUrl: true,
+          bgMusicUrl: true,
+          lyrics: true,
+          orderIndex: true,
+        },
+      }),
+      prisma.appSettings.findUnique({ where: { id: 'singleton' }, select: { defaultBgMusicUrl: true } }),
+    ])
+    res.json({ songs, defaultBgMusicUrl: settings?.defaultBgMusicUrl ?? null })
   } catch {
     res.status(500).json({ error: 'Failed to fetch songs', code: 'INTERNAL_ERROR' })
   }
@@ -38,6 +42,7 @@ router.get('/songs/:id', async (req: Request, res: Response): Promise<void> => {
         genre: true,
         emoji: true,
         youtubeUrl: true,
+        bgMusicUrl: true,
         lyrics: true,
         orderIndex: true,
       },

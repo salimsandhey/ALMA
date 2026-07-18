@@ -6,6 +6,7 @@
 
 import { PrismaClient } from '@prisma/client'
 import { WORD_MATCH_EMOJIS } from '../data/wordMatchEmojis'
+import { DEFAULT_TERMS, DEFAULT_PRIVACY } from '../routes/legal'
 
 const prisma = new PrismaClient()
 
@@ -173,6 +174,34 @@ const migrations: { id: string; run: () => Promise<void> }[] = [
         })
       )
       console.log(`[migrate] M004 applied to ${toUpdate.length} lessons`)
+    },
+  },
+
+  // ── M005: Seed real Terms/Privacy content — only if never customized ────────
+  // Does NOT overwrite content an admin has already saved via the Legal editor;
+  // it only fills in the LegalContent rows the first time they're missing, so
+  // production gets the real copy instead of relying purely on code fallback.
+  {
+    id: 'M005-legal-content-defaults',
+    run: async () => {
+      const [terms, privacy] = await Promise.all([
+        prisma.legalContent.findUnique({ where: { type: 'terms' } }),
+        prisma.legalContent.findUnique({ where: { type: 'privacy' } }),
+      ])
+
+      if (!terms) {
+        await prisma.legalContent.create({
+          data: { type: 'terms', sections: DEFAULT_TERMS },
+        })
+        console.log('[migrate] M005 seeded default Terms of Use')
+      }
+
+      if (!privacy) {
+        await prisma.legalContent.create({
+          data: { type: 'privacy', sections: DEFAULT_PRIVACY },
+        })
+        console.log('[migrate] M005 seeded default Privacy Policy')
+      }
     },
   },
 

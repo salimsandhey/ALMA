@@ -8,6 +8,7 @@ interface MusicState {
   isComplete: boolean
   xpAwarded: boolean
   startKaraoke: (song: Song) => void
+  updateSongData: (song: Song) => void
   recordLineResult: (result: LineResult) => void
   nextLine: () => void
   setXpAwarded: (awarded: boolean) => void
@@ -28,6 +29,12 @@ export const useMusicStore = create<MusicState>((set, get) => ({
     isComplete: false,
     xpAwarded: false,
   }),
+
+  // Refreshes the current song's content (e.g. a newly uploaded bgMusicUrl)
+  // without touching in-progress karaoke state (line index, results so far).
+  updateSongData: (song) => set((s) =>
+    s.currentSong?.id === song.id ? { currentSong: song } : s
+  ),
 
   recordLineResult: (result) => set((s) => ({
     lineResults: [...s.lineResults, result],

@@ -4,13 +4,16 @@ import { Ionicons } from '@expo/vector-icons'
 import { useRouter, usePathname } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { NAVY, LIGHT_GREY } from '../constants/colors'
-import { NAV_TABS, NAV_BAR_HEIGHT_BASE, NAV_BAR_BORDER_COLOR, NAV_ICON_SIZE, NAV_LABEL_STYLE } from '../constants/tabs'
+import {
+  NAV_TABS, NAV_BAR_HEIGHT_BASE, NAV_BAR_BORDER_COLOR, NAV_ICON_SIZE, NAV_LABEL_STYLE,
+  NAV_BAR_MIN_TOTAL_HEIGHT,
+} from '../constants/tabs'
 
 export default function BottomNavBar() {
   const router = useRouter()
   const pathname = usePathname()
   const insets = useSafeAreaInsets()
-  const bottomPad = Math.max(8, insets.bottom)
+  const bottomPad = Math.max(NAV_BAR_MIN_TOTAL_HEIGHT - NAV_BAR_HEIGHT_BASE, insets.bottom)
   return (
     <View style={[styles.container, { height: NAV_BAR_HEIGHT_BASE + bottomPad, paddingBottom: bottomPad }]}>
       {NAV_TABS.map(tab => {
@@ -23,7 +26,7 @@ export default function BottomNavBar() {
             activeOpacity={0.7}
           >
             <Ionicons name={tab.icon as any} size={NAV_ICON_SIZE} color={active ? NAVY : LIGHT_GREY} />
-            <Text style={[styles.label, { color: active ? NAVY : LIGHT_GREY }]} numberOfLines={1}>{tab.label}</Text>
+            <Text style={[styles.label, { color: active ? NAVY : LIGHT_GREY }]} numberOfLines={1} ellipsizeMode="tail">{tab.label}</Text>
           </TouchableOpacity>
         )
       })}
@@ -44,8 +47,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
+    paddingHorizontal: 2,
   },
   label: {
     ...NAV_LABEL_STYLE,
+    maxWidth: '85%',
+    textAlign: 'center',
   },
 })

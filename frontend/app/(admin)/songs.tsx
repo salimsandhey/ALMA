@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
+import * as DocumentPicker from 'expo-document-picker'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { deleteToken } from '../../lib/storage'
@@ -47,11 +48,57 @@ export default function SongsScreen() {
   const [bgMusicUrl, setBgMusicUrl] = useState<string | null>(null)
   const [bgMusicInput, setBgMusicInput] = useState('')
   const [showBgMusicInput, setShowBgMusicInput] = useState(false)
+  const [defaultTrackUploading, setDefaultTrackUploading] = useState(false)
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-songs'],
     queryFn: async () => (await api.get('/api/admin/songs')).data as { total: number; songs: Song[] },
   })
+
+  const { data: settingsData } = useQuery({
+    queryKey: ['admin-settings'],
+    queryFn: async () => (await api.get('/api/admin/settings')).data as { defaultBgMusicUrl: string | null },
+  })
+
+  const pickAndUploadDefaultTrack = async () => {
+    const result = await DocumentPicker.getDocumentAsync({ type: 'audio/*', copyToCacheDirectory: true })
+    if (result.canceled || !result.assets?.[0]) return
+    const asset = result.assets[0]
+
+    setDefaultTrackUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('audio', {
+        uri: asset.uri,
+        name: asset.name || 'default-bg-music.mp3',
+        type: asset.mimeType || 'audio/mpeg',
+      } as any)
+      await api.post('/api/admin/settings/default-bg-music', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      queryClient.invalidateQueries({ queryKey: ['admin-settings'] })
+    } catch {
+      Alert.alert('Error', 'Failed to upload default track.')
+    } finally {
+      setDefaultTrackUploading(false)
+    }
+  }
+
+  const removeDefaultTrack = () => {
+    Alert.alert('Reset Default Track', 'Revert to the built-in lo-fi track shipped with the app?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Reset', style: 'destructive', onPress: async () => {
+          try {
+            await api.delete('/api/admin/settings/default-bg-music')
+            queryClient.invalidateQueries({ queryKey: ['admin-settings'] })
+          } catch {
+            Alert.alert('Error', 'Failed to reset default track.')
+          }
+        }
+      }
+    ])
+  }
 
   const resetForm = () => {
     setTitle(''); setArtist(''); setGenre(''); setEmoji('🎵')
@@ -71,6 +118,32 @@ export default function SongsScreen() {
     setBgMusicInput('')
     setShowBgMusicInput(false)
     setModalVisible(true)
+  }
+
+  const pickAndUploadBgMusic = async () => {
+    if (!editing) return
+    const result = await DocumentPicker.getDocumentAsync({ type: 'audio/*', copyToCacheDirectory: true })
+    if (result.canceled || !result.assets?.[0]) return
+    const asset = result.assets[0]
+
+    setBgMusicUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('audio', {
+        uri: asset.uri,
+        name: asset.name || 'bg-music.mp3',
+        type: asset.mimeType || 'audio/mpeg',
+      } as any)
+      const { data } = await api.post(`/api/admin/songs/${editing.id}/bg-music`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      setBgMusicUrl(data.url)
+      queryClient.invalidateQueries({ queryKey: ['admin-songs'] })
+    } catch {
+      Alert.alert('Error', 'Failed to upload background music.')
+    } finally {
+      setBgMusicUploading(false)
+    }
   }
 
   const saveBgMusicUrl = async () => {
@@ -224,6 +297,30 @@ export default function SongsScreen() {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.defaultTrackCard}>
+        <Ionicons name="musical-notes-outline" size={18} color={NAVY} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.defaultTrackTitle}>Default Karaoke Track</Text>
+          <Text style={styles.defaultTrackSub} numberOfLines={1}>
+            {settingsData?.defaultBgMusicUrl ? 'Custom track set — used by all songs without their own track' : 'Using the built-in lo-fi track — applies to all songs without a custom track'}
+          </Text>
+        </View>
+        {defaultTrackUploading ? (
+          <ActivityIndicator size="small" color={NAVY} />
+        ) : (
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            <TouchableOpacity style={styles.defaultTrackBtn} onPress={pickAndUploadDefaultTrack}>
+              <Ionicons name="cloud-upload-outline" size={14} color={NAVY} />
+            </TouchableOpacity>
+            {settingsData?.defaultBgMusicUrl && (
+              <TouchableOpacity style={styles.defaultTrackBtn} onPress={removeDefaultTrack}>
+                <Ionicons name="trash-outline" size={14} color={RED} />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+      </View>
+
       <View style={styles.toolbar}>
         <Text style={styles.toolbarText}>{data?.total ?? 0} songs</Text>
         <TouchableOpacity style={styles.addBtn} onPress={openCreate}>
@@ -312,16 +409,21 @@ export default function SongsScreen() {
 
                 <Text style={styles.fieldLabel}>KARAOKE BACKGROUND MUSIC</Text>
                 <Text style={styles.fieldHint}>
-                  Paste a direct audio URL (e.g. from Cloudinary). Leave empty to use the default lo-fi track.
+                  Upload an audio file for this song's backing track. Leave empty to use the default lo-fi track.
                 </Text>
 
                 {bgMusicUrl ? (
                   <View style={styles.bgMusicRow}>
                     <Ionicons name="musical-notes" size={16} color="#10B981" />
                     <Text style={styles.bgMusicSet} numberOfLines={1}>Custom track set</Text>
-                    <TouchableOpacity onPress={() => setShowBgMusicInput(true)} style={styles.bgMusicEditBtn}>
-                      <Ionicons name="pencil-outline" size={13} color={NAVY} />
-                    </TouchableOpacity>
+                    {editing && (
+                      <TouchableOpacity onPress={pickAndUploadBgMusic} style={styles.bgMusicEditBtn} disabled={bgMusicUploading}>
+                        {bgMusicUploading
+                          ? <ActivityIndicator size="small" color={NAVY} />
+                          : <Ionicons name="refresh-outline" size={15} color={NAVY} />
+                        }
+                      </TouchableOpacity>
+                    )}
                     <TouchableOpacity onPress={removeBgMusic} style={styles.bgMusicRemove}>
                       <Ionicons name="trash-outline" size={15} color={RED} />
                     </TouchableOpacity>
@@ -331,39 +433,50 @@ export default function SongsScreen() {
                     <Ionicons name="musical-note-outline" size={16} color="#9CA3AF" />
                     <Text style={styles.bgMusicDefault}>Using default lo-fi track</Text>
                     {editing && (
-                      <TouchableOpacity style={styles.uploadBtn} onPress={() => setShowBgMusicInput(true)}>
-                        <Ionicons name="link-outline" size={13} color={NAVY} />
-                        <Text style={styles.uploadBtnText}>Set URL</Text>
+                      <TouchableOpacity style={styles.uploadBtn} onPress={pickAndUploadBgMusic} disabled={bgMusicUploading}>
+                        {bgMusicUploading
+                          ? <ActivityIndicator size="small" color={NAVY} />
+                          : (<>
+                              <Ionicons name="cloud-upload-outline" size={13} color={NAVY} />
+                              <Text style={styles.uploadBtnText}>Upload</Text>
+                            </>)
+                        }
                       </TouchableOpacity>
                     )}
                   </View>
                 )}
 
                 {!editing && (
-                  <Text style={styles.bgMusicHint}>Save the song first, then you can set a custom track.</Text>
+                  <Text style={styles.bgMusicHint}>Save the song first, then you can upload a custom track.</Text>
                 )}
 
-                {showBgMusicInput && (
-                  <View style={styles.bgMusicInputRow}>
-                    <TextInput
-                      style={[styles.input, { flex: 1, marginBottom: 0 }]}
-                      placeholder="https://res.cloudinary.com/..."
-                      placeholderTextColor="#9CA3AF"
-                      value={bgMusicInput}
-                      onChangeText={setBgMusicInput}
-                      autoCapitalize="none"
-                      keyboardType="url"
-                    />
-                    <TouchableOpacity style={styles.uploadBtn} onPress={saveBgMusicUrl} disabled={bgMusicUploading}>
-                      {bgMusicUploading
-                        ? <ActivityIndicator size="small" color={NAVY} />
-                        : <Text style={styles.uploadBtnText}>Save</Text>
-                      }
+                {editing && (
+                  showBgMusicInput ? (
+                    <View style={styles.bgMusicInputRow}>
+                      <TextInput
+                        style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                        placeholder="https://res.cloudinary.com/..."
+                        placeholderTextColor="#9CA3AF"
+                        value={bgMusicInput}
+                        onChangeText={setBgMusicInput}
+                        autoCapitalize="none"
+                        keyboardType="url"
+                      />
+                      <TouchableOpacity style={styles.uploadBtn} onPress={saveBgMusicUrl} disabled={bgMusicUploading}>
+                        {bgMusicUploading
+                          ? <ActivityIndicator size="small" color={NAVY} />
+                          : <Text style={styles.uploadBtnText}>Save</Text>
+                        }
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => { setShowBgMusicInput(false); setBgMusicInput('') }}>
+                        <Ionicons name="close" size={18} color="#9CA3AF" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity onPress={() => setShowBgMusicInput(true)}>
+                      <Text style={styles.bgMusicAdvancedLink}>Or paste a direct URL instead</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => { setShowBgMusicInput(false); setBgMusicInput('') }}>
-                      <Ionicons name="close" size={18} color="#9CA3AF" />
-                    </TouchableOpacity>
-                  </View>
+                  )
                 )}
 
                 <View style={styles.publishRow}>
@@ -402,6 +515,15 @@ const styles = StyleSheet.create({
   headerSub: { color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: '500', letterSpacing: 1 },
   headerTitle: { color: '#FFF', fontSize: 22, fontWeight: '700' },
   logoutBtn: { backgroundColor: 'rgba(255,255,255,0.15)', padding: 8, borderRadius: 8 },
+  defaultTrackCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: CARD, borderRadius: 14, padding: 12,
+    marginHorizontal: 16, marginTop: 12,
+    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 2,
+  },
+  defaultTrackTitle: { fontSize: 13, fontWeight: '700', color: '#1F2937' },
+  defaultTrackSub: { fontSize: 11, color: '#9CA3AF', marginTop: 1 },
+  defaultTrackBtn: { backgroundColor: '#F3F4F6', padding: 8, borderRadius: 8 },
   toolbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   toolbarText: { fontSize: 14, color: '#6B7280', fontWeight: '500' },
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: NAVY, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
@@ -443,6 +565,7 @@ const styles = StyleSheet.create({
   bgMusicRemove: { padding: 2 },
   bgMusicEditBtn: { padding: 2 },
   bgMusicHint: { fontSize: 11, color: '#9CA3AF', marginBottom: 8 },
+  bgMusicAdvancedLink: { fontSize: 12, color: NAVY, textDecorationLine: 'underline', marginBottom: 8 },
   bgMusicInputRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
   uploadBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EFF6FF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
   uploadBtnText: { fontSize: 12, fontWeight: '600', color: NAVY },

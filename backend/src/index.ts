@@ -29,6 +29,7 @@ import adminAiUsageRouter from './routes/admin/ai-usage'
 import adminLegalRouter from './routes/admin/legal'
 import adminSettingsRouter from './routes/admin/settings'
 import legalRouter from './routes/legal'
+import legalPagesRouter from './routes/legalPages'
 import musicRouter from './routes/music'
 import challengesRouter from './routes/challenges'
 import entertainmentRouter from './routes/entertainment'
@@ -67,6 +68,7 @@ app.use('/api/admin/ai-usage', adminAiUsageRouter)
 app.use('/api/admin/legal', adminLegalRouter)
 app.use('/api/admin/settings', adminSettingsRouter)
 app.use('/api/legal', legalRouter)
+app.use('/legal', legalPagesRouter)
 app.use('/api/music', musicRouter)
 app.use('/api/challenges', challengesRouter)
 app.use('/api/entertainment', entertainmentRouter)

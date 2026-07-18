@@ -14,7 +14,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av'
 import { ExpoSpeechRecognitionModule } from 'expo-speech-recognition'
 import { api } from '../../../lib/api'
-import { getCachedBgMusicPath } from '../../../lib/musicCache'
+import { getCachedBgMusicPath, getCachedDefaultBgMusicPath } from '../../../lib/musicCache'
 import { Song } from '../../../lib/songs'
 import { useMusicStore } from '../../../stores/musicStore'
 import MicButton, { MicButtonRef } from '../../../components/lesson/MicButton'
@@ -29,18 +29,20 @@ export default function KaraokeScreen() {
   const router = useRouter()
   const { id } = useLocalSearchParams<{ id: string }>()
 
-  const { currentSong, currentLineIndex, recordLineResult, nextLine, startKaraoke } = useMusicStore()
+  const { currentSong, currentLineIndex, recordLineResult, nextLine, startKaraoke, updateSongData } = useMusicStore()
 
+  // Always refetch on mount so admin edits (e.g. a newly uploaded bg track)
+  // are picked up even if this song was already loaded earlier this session.
   const { data: fetchedSong, isLoading } = useQuery({
     queryKey: ['song', id],
     queryFn: async () => {
       const res = await api.get(`/api/music/songs/${id}`)
       return res.data.song as Song
     },
-    enabled: !!id && currentSong?.id !== id,
+    enabled: !!id,
   })
 
-  const song = currentSong?.id === id ? currentSong : fetchedSong ?? null
+  const song = fetchedSong ?? (currentSong?.id === id ? currentSong : null)
 
   const [speechState, setSpeechState] = useState<SpeechState>('idle')
   const [interimText, setInterimText] = useState('')
@@ -101,6 +103,9 @@ export default function KaraokeScreen() {
       if (song?.bgMusicUrl) {
         const cachedPath = await getCachedBgMusicPath(song.bgMusicUrl)
         source = { uri: cachedPath ?? song.bgMusicUrl }
+      } else {
+        const cachedDefault = await getCachedDefaultBgMusicPath()
+        if (cachedDefault) source = { uri: cachedDefault }
       }
       const { sound } = await Audio.Sound.createAsync(source, {
         isLooping: true,
@@ -122,10 +127,13 @@ export default function KaraokeScreen() {
   }
 
   useEffect(() => {
-    if (song && currentSong?.id !== song.id) {
-      startKaraoke(song)
+    if (!fetchedSong) return
+    if (currentSong?.id !== fetchedSong.id) {
+      startKaraoke(fetchedSong)
+    } else {
+      updateSongData(fetchedSong)
     }
-  }, [song?.id])
+  }, [fetchedSong])
 
   if (isLoading || !song) {
     return (

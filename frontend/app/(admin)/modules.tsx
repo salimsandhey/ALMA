@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   TextInput, ActivityIndicator, ScrollView, Alert, Switch, Image,
-  useWindowDimensions, BackHandler,
+  useWindowDimensions, BackHandler, KeyboardAvoidingView, Platform,
 } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -277,7 +277,8 @@ function ModuleEditorView({ moduleId, onBack, onEditLesson, onAddLesson, onLogou
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={[s.list, { gap: 12 }]}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView contentContainerStyle={[s.list, { gap: 12, paddingBottom: 64 }]} keyboardShouldPersistTaps="handled">
         {/* Module info card */}
         <View style={s.card}>
           <Text style={s.cardLabel}>MODULE INFO</Text>
@@ -343,6 +344,7 @@ function ModuleEditorView({ moduleId, onBack, onEditLesson, onAddLesson, onLogou
           </View>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   )
 }
@@ -437,7 +439,8 @@ function LessonEditorView({ moduleId, lessonId, onBack, onSaved }: {
           </View>
         </View>
 
-        <ScrollView contentContainerStyle={[s.list, { paddingBottom: 40, gap: 12 }]}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={[s.list, { paddingBottom: 64, gap: 12 }]} keyboardShouldPersistTaps="handled">
           <View style={s.card}>
             <Text style={s.cardLabel}>LESSON INFO</Text>
             <TextInput style={s.input} placeholder="Lesson title" placeholderTextColor="#9CA3AF" value={title} onChangeText={setTitle} />
@@ -454,6 +457,7 @@ function LessonEditorView({ moduleId, lessonId, onBack, onSaved }: {
 
           {contentForm}
         </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     )
   }
@@ -478,8 +482,9 @@ function LessonEditorView({ moduleId, lessonId, onBack, onSaved }: {
         <View style={[s.dot, step === 'content' && s.dotActive]} />
       </View>
 
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       {step === 'info' ? (
-        <ScrollView contentContainerStyle={s.list}>
+        <ScrollView contentContainerStyle={[s.list, { paddingBottom: 64 }]} keyboardShouldPersistTaps="handled">
           <View style={s.card}>
             <Text style={s.cardLabel}>LESSON INFO</Text>
             <TextInput style={s.input} placeholder="Lesson title" placeholderTextColor="#9CA3AF" value={title} onChangeText={setTitle} />
@@ -513,10 +518,11 @@ function LessonEditorView({ moduleId, lessonId, onBack, onSaved }: {
           </TouchableOpacity>
         </ScrollView>
       ) : (
-        <ScrollView contentContainerStyle={[s.list, { paddingBottom: 40 }]}>
+        <ScrollView contentContainerStyle={[s.list, { paddingBottom: 64 }]} keyboardShouldPersistTaps="handled">
           {contentForm}
         </ScrollView>
       )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   )
 }

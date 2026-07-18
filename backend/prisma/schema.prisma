@@ -423,6 +423,7 @@ model AppSettings {
   hintDailyLimit          Int      @default(5)
   iosAppUrl               String?
   androidAppUrl           String?
+  defaultBgMusicUrl       String?
   updatedAt               DateTime @updatedAt
 }
 

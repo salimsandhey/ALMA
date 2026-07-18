@@ -27,13 +27,27 @@ export async function getCachedBgMusicPath(url: string): Promise<string | null> 
   return info.exists ? path : null
 }
 
-// Returns songs' background music files that aren't cached locally yet.
+// Returns the cached path for the app-wide default karaoke track, or null if
+// no admin-uploaded default exists or it hasn't been downloaded yet.
+export async function getCachedDefaultBgMusicPath(): Promise<string | null> {
+  const { data } = await api.get('/api/music/songs')
+  const url: string | null = data.defaultBgMusicUrl ?? null
+  if (!url) return null
+  return getCachedBgMusicPath(url)
+}
+
+// Returns songs' background music files (including the app-wide default
+// track, if an admin has uploaded one) that aren't cached locally yet.
 export async function getMissingSongBgMusicFiles(): Promise<Array<{ url: string; path: string }>> {
   await ensureDir()
 
   const { data } = await api.get('/api/music/songs')
   const songs: Array<{ bgMusicUrl?: string | null }> = data.songs ?? []
-  const urls = [...new Set(songs.map((s) => s.bgMusicUrl).filter((u): u is string => !!u))]
+  const defaultUrl: string | null = data.defaultBgMusicUrl ?? null
+  const urls = [...new Set([
+    ...songs.map((s) => s.bgMusicUrl).filter((u): u is string => !!u),
+    ...(defaultUrl ? [defaultUrl] : []),
+  ])]
 
   const toDownload: Array<{ url: string; path: string }> = []
   for (const url of urls) {

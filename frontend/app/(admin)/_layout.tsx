@@ -2,10 +2,11 @@ import { Tabs } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { NAVY, GREY } from '../../constants/colors'
+import { ADMIN_NAV_BAR_HEIGHT_BASE, NAV_BAR_MIN_TOTAL_HEIGHT } from '../../constants/tabs'
 
 export default function AdminLayout() {
   const insets = useSafeAreaInsets()
-  const bottomPad = insets.bottom
+  const bottomPad = Math.max(NAV_BAR_MIN_TOTAL_HEIGHT - ADMIN_NAV_BAR_HEIGHT_BASE, insets.bottom)
 
   return (
     <Tabs
@@ -17,7 +18,7 @@ export default function AdminLayout() {
           backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: '#E5E7EB',
-          height: 40 + bottomPad,
+          height: ADMIN_NAV_BAR_HEIGHT_BASE + bottomPad,
           paddingBottom: bottomPad,
           elevation: 0,
           shadowOpacity: 0,

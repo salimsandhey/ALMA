@@ -1,5 +1,6 @@
 import { PrismaClient, GameType, ContentCategory } from '@prisma/client'
 import bcrypt from 'bcrypt'
+import { DEFAULT_TERMS, DEFAULT_PRIVACY } from '../src/routes/legal'
 
 const prisma = new PrismaClient()
 
@@ -2023,6 +2024,21 @@ async function main() {
     langIdx++
   }
   console.log(`✓ ${seenLangs.size} languages seeded`)
+
+  // ─── Legal content (Terms of Use / Privacy Policy) ────────────────────────
+  // Only fills in the row if it doesn't exist yet, so this never overwrites
+  // content an admin has already customized via the Legal editor.
+  const [existingTerms, existingPrivacy] = await Promise.all([
+    prisma.legalContent.findUnique({ where: { type: 'terms' } }),
+    prisma.legalContent.findUnique({ where: { type: 'privacy' } }),
+  ])
+  if (!existingTerms) {
+    await prisma.legalContent.create({ data: { type: 'terms', sections: DEFAULT_TERMS } })
+  }
+  if (!existingPrivacy) {
+    await prisma.legalContent.create({ data: { type: 'privacy', sections: DEFAULT_PRIVACY } })
+  }
+  console.log('✓ Legal content (Terms/Privacy) seeded')
 
   console.log('Seed complete.')
 }

@@ -32,7 +32,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "app.alma.learn",
       "appleTeamId": "M6FXN66SFA",
-      "buildNumber": "12",
+      "buildNumber": "14",
       "entitlements": {
         "com.apple.developer.applesignin": [
           "Default"
@@ -62,7 +62,7 @@
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.alma.app",
+      "package": "app.alma.learn",
       "intentFilters": [
         {
           "action": "VIEW",
