@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "ALMA: Speak English Fluently",
-    "owner": "techsalim",
+    "owner": "salimsandhey",
     "slug": "alma-app",
     "scheme": "alma",
     "version": "1.0.0",
@@ -32,7 +32,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "app.alma.learn",
       "appleTeamId": "M6FXN66SFA",
-      "buildNumber": "14",
+      "buildNumber": "15",
       "entitlements": {
         "com.apple.developer.applesignin": [
           "Default"
@@ -50,6 +50,7 @@
       "backgroundColor": "#0B1F4B"
     },
     "android": {
+      "versionCode": 15,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0B1F4B"
@@ -84,14 +85,14 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "a7caf0bf-019b-4ec0-9270-a9496f43873b"
+        "projectId": "c6864962-35c9-46a6-a087-93c0b4da353a"
       }
     },
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/a7caf0bf-019b-4ec0-9270-a9496f43873b"
+      "url": "https://u.expo.dev/c6864962-35c9-46a6-a087-93c0b4da353a"
     }
   }
 }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert,
+  TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -161,7 +161,8 @@ export default function LegalScreen() {
       {isLoading ? (
         <View style={s.center}><ActivityIndicator size="large" color={NAVY} /></View>
       ) : (
-        <ScrollView contentContainerStyle={s.scroll}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
           {/* Meta info */}
           <View style={s.metaRow}>
             <View style={s.metaLeft}>
@@ -238,6 +239,7 @@ export default function LegalScreen() {
             }
           </TouchableOpacity>
         </ScrollView>
+        </KeyboardAvoidingView>
       )}
     </SafeAreaView>
   )
