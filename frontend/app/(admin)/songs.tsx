@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
   ActivityIndicator, Modal, ScrollView, Alert, Switch,
@@ -9,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import * as DocumentPicker from 'expo-document-picker'
+import { Audio } from 'expo-av'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { deleteToken } from '../../lib/storage'
@@ -22,11 +23,14 @@ type Song = {
   emoji: string
   youtubeUrl: string
   bgMusicUrl?: string | null
+  bgMusicName?: string | null
   lyrics: string[]
   isPublished: boolean
   orderIndex: number
   createdAt: string
 }
+
+type PendingAsset = { uri: string; name: string; mimeType?: string }
 
 export default function SongsScreen() {
   const router = useRouter()
@@ -46,9 +50,43 @@ export default function SongsScreen() {
   const [isPublished, setIsPublished] = useState(true)
   const [bgMusicUploading, setBgMusicUploading] = useState(false)
   const [bgMusicUrl, setBgMusicUrl] = useState<string | null>(null)
+  const [bgMusicName, setBgMusicName] = useState<string | null>(null)
+  const [pendingBgMusicAsset, setPendingBgMusicAsset] = useState<PendingAsset | null>(null)
   const [bgMusicInput, setBgMusicInput] = useState('')
   const [showBgMusicInput, setShowBgMusicInput] = useState(false)
   const [defaultTrackUploading, setDefaultTrackUploading] = useState(false)
+
+  // ─── Audio preview (play/pause any track by a key: 'default' | 'song' | 'pending') ──
+  const [previewingKey, setPreviewingKey] = useState<string | null>(null)
+  const previewSoundRef = useRef<Audio.Sound | null>(null)
+
+  useEffect(() => () => { previewSoundRef.current?.unloadAsync() }, [])
+
+  const stopPreview = async () => {
+    if (previewSoundRef.current) {
+      await previewSoundRef.current.unloadAsync()
+      previewSoundRef.current = null
+    }
+    setPreviewingKey(null)
+  }
+
+  const togglePreview = async (key: string, uri: string) => {
+    if (previewingKey === key) {
+      await stopPreview()
+      return
+    }
+    await stopPreview()
+    try {
+      const { sound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: true })
+      previewSoundRef.current = sound
+      setPreviewingKey(key)
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) stopPreview()
+      })
+    } catch {
+      Alert.alert('Error', 'Could not play this track.')
+    }
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-songs'],
@@ -57,7 +95,10 @@ export default function SongsScreen() {
 
   const { data: settingsData } = useQuery({
     queryKey: ['admin-settings'],
-    queryFn: async () => (await api.get('/api/admin/settings')).data as { defaultBgMusicUrl: string | null },
+    queryFn: async () => (await api.get('/api/admin/settings')).data as {
+      defaultBgMusicUrl: string | null
+      defaultBgMusicName: string | null
+    },
   })
 
   const pickAndUploadDefaultTrack = async () => {
@@ -104,6 +145,8 @@ export default function SongsScreen() {
     setTitle(''); setArtist(''); setGenre(''); setEmoji('🎵')
     setYoutubeUrl(''); setLyricsText(''); setIsPublished(true); setEditing(null)
     setBgMusicUrl(null)
+    setBgMusicName(null)
+    setPendingBgMusicAsset(null)
     setBgMusicInput('')
     setShowBgMusicInput(false)
   }
@@ -115,29 +158,43 @@ export default function SongsScreen() {
     setTitle(s.title); setArtist(s.artist); setGenre(s.genre); setEmoji(s.emoji)
     setYoutubeUrl(s.youtubeUrl); setLyricsText(s.lyrics.join('\n')); setIsPublished(s.isPublished)
     setBgMusicUrl(s.bgMusicUrl ?? null)
+    setBgMusicName(s.bgMusicName ?? null)
+    setPendingBgMusicAsset(null)
     setBgMusicInput('')
     setShowBgMusicInput(false)
     setModalVisible(true)
   }
 
-  const pickAndUploadBgMusic = async () => {
-    if (!editing) return
+  const uploadBgMusicForSong = async (songId: string, asset: PendingAsset) => {
+    const formData = new FormData()
+    formData.append('audio', {
+      uri: asset.uri,
+      name: asset.name || 'bg-music.mp3',
+      type: asset.mimeType || 'audio/mpeg',
+    } as any)
+    const { data } = await api.post(`/api/admin/songs/${songId}/bg-music`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return data as { url: string; name: string }
+  }
+
+  const pickBgMusic = async () => {
     const result = await DocumentPicker.getDocumentAsync({ type: 'audio/*', copyToCacheDirectory: true })
     if (result.canceled || !result.assets?.[0]) return
     const asset = result.assets[0]
+    const picked: PendingAsset = { uri: asset.uri, name: asset.name || 'bg-music.mp3', mimeType: asset.mimeType ?? undefined }
+
+    if (!editing) {
+      // No song id yet — upload happens right after the song is created.
+      setPendingBgMusicAsset(picked)
+      return
+    }
 
     setBgMusicUploading(true)
     try {
-      const formData = new FormData()
-      formData.append('audio', {
-        uri: asset.uri,
-        name: asset.name || 'bg-music.mp3',
-        type: asset.mimeType || 'audio/mpeg',
-      } as any)
-      const { data } = await api.post(`/api/admin/songs/${editing.id}/bg-music`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      setBgMusicUrl(data.url)
+      const { url, name } = await uploadBgMusicForSong(editing.id, picked)
+      setBgMusicUrl(url)
+      setBgMusicName(name)
       queryClient.invalidateQueries({ queryKey: ['admin-songs'] })
     } catch {
       Alert.alert('Error', 'Failed to upload background music.')
@@ -147,16 +204,25 @@ export default function SongsScreen() {
   }
 
   const saveBgMusicUrl = async () => {
-    if (!editing) return
     const url = bgMusicInput.trim()
     if (!url.startsWith('http')) {
       Alert.alert('Invalid URL', 'Please enter a valid audio URL starting with http.')
       return
     }
+    if (!editing) {
+      // No song id yet — just hold it locally, it goes out with the create request.
+      setBgMusicUrl(url)
+      setBgMusicName(null)
+      setPendingBgMusicAsset(null)
+      setBgMusicInput('')
+      setShowBgMusicInput(false)
+      return
+    }
     setBgMusicUploading(true)
     try {
-      await api.patch(`/api/admin/songs/${editing.id}`, { bgMusicUrl: url })
+      await api.patch(`/api/admin/songs/${editing.id}`, { bgMusicUrl: url, bgMusicName: null })
       setBgMusicUrl(url)
+      setBgMusicName(null)
       setBgMusicInput('')
       setShowBgMusicInput(false)
       queryClient.invalidateQueries({ queryKey: ['admin-songs'] })
@@ -168,7 +234,12 @@ export default function SongsScreen() {
   }
 
   const removeBgMusic = async () => {
-    if (!editing) return
+    if (!editing) {
+      setBgMusicUrl(null)
+      setBgMusicName(null)
+      setPendingBgMusicAsset(null)
+      return
+    }
     Alert.alert('Remove Music', 'Remove custom background music? The default track will be used.', [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -176,6 +247,7 @@ export default function SongsScreen() {
           try {
             await api.delete(`/api/admin/songs/${editing.id}/bg-music`)
             setBgMusicUrl(null)
+            setBgMusicName(null)
             queryClient.invalidateQueries({ queryKey: ['admin-songs'] })
           } catch {
             Alert.alert('Error', 'Failed to remove background music.')
@@ -188,9 +260,18 @@ export default function SongsScreen() {
   const save = useMutation({
     mutationFn: async () => {
       const lyrics = lyricsText.split('\n').map((l) => l.trim()).filter(Boolean)
-      const payload = { title: title.trim(), artist: artist.trim(), genre: genre.trim(), emoji, youtubeUrl: youtubeUrl.trim(), lyrics, isPublished }
-      if (editing) await api.patch(`/api/admin/songs/${editing.id}`, payload)
-      else await api.post('/api/admin/songs', payload)
+      const payload: Record<string, unknown> = { title: title.trim(), artist: artist.trim(), genre: genre.trim(), emoji, youtubeUrl: youtubeUrl.trim(), lyrics, isPublished }
+
+      if (editing) {
+        await api.patch(`/api/admin/songs/${editing.id}`, payload)
+        return
+      }
+
+      if (bgMusicUrl) { payload.bgMusicUrl = bgMusicUrl; payload.bgMusicName = bgMusicName }
+      const { data } = await api.post('/api/admin/songs', payload)
+      if (pendingBgMusicAsset) {
+        await uploadBgMusicForSong(data.song.id, pendingBgMusicAsset)
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-songs'] })
@@ -302,13 +383,21 @@ export default function SongsScreen() {
         <View style={{ flex: 1 }}>
           <Text style={styles.defaultTrackTitle}>Default Karaoke Track</Text>
           <Text style={styles.defaultTrackSub} numberOfLines={1}>
-            {settingsData?.defaultBgMusicUrl ? 'Custom track set — used by all songs without their own track' : 'Using the built-in lo-fi track — applies to all songs without a custom track'}
+            {settingsData?.defaultBgMusicUrl ? (settingsData.defaultBgMusicName ?? 'Custom track set') : 'Built-in lo-fi track (bundled with the app)'}
           </Text>
         </View>
         {defaultTrackUploading ? (
           <ActivityIndicator size="small" color={NAVY} />
         ) : (
           <View style={{ flexDirection: 'row', gap: 6 }}>
+            {settingsData?.defaultBgMusicUrl && (
+              <TouchableOpacity
+                style={styles.defaultTrackBtn}
+                onPress={() => togglePreview('default', settingsData.defaultBgMusicUrl!)}
+              >
+                <Ionicons name={previewingKey === 'default' ? 'pause' : 'play'} size={14} color={NAVY} />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity style={styles.defaultTrackBtn} onPress={pickAndUploadDefaultTrack}>
               <Ionicons name="cloud-upload-outline" size={14} color={NAVY} />
             </TouchableOpacity>
@@ -410,20 +499,33 @@ export default function SongsScreen() {
                 <Text style={styles.fieldLabel}>KARAOKE BACKGROUND MUSIC</Text>
                 <Text style={styles.fieldHint}>
                   Upload an audio file for this song's backing track. Leave empty to use the default lo-fi track.
+                  {!editing && ' If you upload here, the track uploads right after you save.'}
                 </Text>
 
-                {bgMusicUrl ? (
+                {pendingBgMusicAsset ? (
                   <View style={styles.bgMusicRow}>
                     <Ionicons name="musical-notes" size={16} color="#10B981" />
-                    <Text style={styles.bgMusicSet} numberOfLines={1}>Custom track set</Text>
-                    {editing && (
-                      <TouchableOpacity onPress={pickAndUploadBgMusic} style={styles.bgMusicEditBtn} disabled={bgMusicUploading}>
-                        {bgMusicUploading
-                          ? <ActivityIndicator size="small" color={NAVY} />
-                          : <Ionicons name="refresh-outline" size={15} color={NAVY} />
-                        }
-                      </TouchableOpacity>
-                    )}
+                    <Text style={styles.bgMusicSet} numberOfLines={1}>{pendingBgMusicAsset.name}</Text>
+                    <TouchableOpacity onPress={() => togglePreview('pending', pendingBgMusicAsset.uri)} style={styles.bgMusicPlayBtn}>
+                      <Ionicons name={previewingKey === 'pending' ? 'pause-circle' : 'play-circle'} size={20} color={NAVY} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={removeBgMusic} style={styles.bgMusicRemove}>
+                      <Ionicons name="trash-outline" size={15} color={RED} />
+                    </TouchableOpacity>
+                  </View>
+                ) : bgMusicUrl ? (
+                  <View style={styles.bgMusicRow}>
+                    <Ionicons name="musical-notes" size={16} color="#10B981" />
+                    <Text style={styles.bgMusicSet} numberOfLines={1}>{bgMusicName ?? 'Custom track set'}</Text>
+                    <TouchableOpacity onPress={() => togglePreview('song', bgMusicUrl)} style={styles.bgMusicPlayBtn}>
+                      <Ionicons name={previewingKey === 'song' ? 'pause-circle' : 'play-circle'} size={20} color={NAVY} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={pickBgMusic} style={styles.bgMusicEditBtn} disabled={bgMusicUploading}>
+                      {bgMusicUploading
+                        ? <ActivityIndicator size="small" color={NAVY} />
+                        : <Ionicons name="refresh-outline" size={15} color={NAVY} />
+                      }
+                    </TouchableOpacity>
                     <TouchableOpacity onPress={removeBgMusic} style={styles.bgMusicRemove}>
                       <Ionicons name="trash-outline" size={15} color={RED} />
                     </TouchableOpacity>
@@ -432,25 +534,19 @@ export default function SongsScreen() {
                   <View style={styles.bgMusicRow}>
                     <Ionicons name="musical-note-outline" size={16} color="#9CA3AF" />
                     <Text style={styles.bgMusicDefault}>Using default lo-fi track</Text>
-                    {editing && (
-                      <TouchableOpacity style={styles.uploadBtn} onPress={pickAndUploadBgMusic} disabled={bgMusicUploading}>
-                        {bgMusicUploading
-                          ? <ActivityIndicator size="small" color={NAVY} />
-                          : (<>
-                              <Ionicons name="cloud-upload-outline" size={13} color={NAVY} />
-                              <Text style={styles.uploadBtnText}>Upload</Text>
-                            </>)
-                        }
-                      </TouchableOpacity>
-                    )}
+                    <TouchableOpacity style={styles.uploadBtn} onPress={pickBgMusic} disabled={bgMusicUploading}>
+                      {bgMusicUploading
+                        ? <ActivityIndicator size="small" color={NAVY} />
+                        : (<>
+                            <Ionicons name="cloud-upload-outline" size={13} color={NAVY} />
+                            <Text style={styles.uploadBtnText}>Upload</Text>
+                          </>)
+                      }
+                    </TouchableOpacity>
                   </View>
                 )}
 
-                {!editing && (
-                  <Text style={styles.bgMusicHint}>Save the song first, then you can upload a custom track.</Text>
-                )}
-
-                {editing && (
+                {!pendingBgMusicAsset && (
                   showBgMusicInput ? (
                     <View style={styles.bgMusicInputRow}>
                       <TextInput
@@ -564,6 +660,7 @@ const styles = StyleSheet.create({
   bgMusicDefault: { flex: 1, fontSize: 13, color: '#9CA3AF' },
   bgMusicRemove: { padding: 2 },
   bgMusicEditBtn: { padding: 2 },
+  bgMusicPlayBtn: { padding: 2 },
   bgMusicHint: { fontSize: 11, color: '#9CA3AF', marginBottom: 8 },
   bgMusicAdvancedLink: { fontSize: 12, color: NAVY, textDecorationLine: 'underline', marginBottom: 8 },
   bgMusicInputRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },

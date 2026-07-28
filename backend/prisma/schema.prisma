@@ -269,6 +269,7 @@ model Song {
   emoji       String
   youtubeUrl  String
   bgMusicUrl  String?
+  bgMusicName String?
   lyrics      String[]
   isPublished Boolean  @default(true)
   orderIndex  Int      @default(0)
@@ -424,6 +425,7 @@ model AppSettings {
   iosAppUrl               String?
   androidAppUrl           String?
   defaultBgMusicUrl       String?
+  defaultBgMusicName      String?
   updatedAt               DateTime @updatedAt
 }
 

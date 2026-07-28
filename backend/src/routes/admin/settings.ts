@@ -84,13 +84,14 @@ router.post('/default-bg-music', upload.single('audio'), async (req: Request, re
   }
   try {
     const url = await uploadDefaultBgMusic(req.file.buffer)
+    const name = req.file.originalname
     const row = await prisma.appSettings.upsert({
       where: { id: 'singleton' },
-      update: { defaultBgMusicUrl: url },
-      create: { id: 'singleton', defaultBgMusicUrl: url },
+      update: { defaultBgMusicUrl: url, defaultBgMusicName: name },
+      create: { id: 'singleton', defaultBgMusicUrl: url, defaultBgMusicName: name },
     })
     await redis.del('app:settings')
-    res.json({ defaultBgMusicUrl: row.defaultBgMusicUrl })
+    res.json({ defaultBgMusicUrl: row.defaultBgMusicUrl, defaultBgMusicName: row.defaultBgMusicName })
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR' })
@@ -102,8 +103,8 @@ router.delete('/default-bg-music', async (_req: Request, res: Response): Promise
   try {
     await prisma.appSettings.upsert({
       where: { id: 'singleton' },
-      update: { defaultBgMusicUrl: null },
-      create: { id: 'singleton', defaultBgMusicUrl: null },
+      update: { defaultBgMusicUrl: null, defaultBgMusicName: null },
+      create: { id: 'singleton', defaultBgMusicUrl: null, defaultBgMusicName: null },
     })
     await redis.del('app:settings')
     res.json({ message: 'Default background music reset.' })

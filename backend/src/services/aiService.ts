@@ -46,7 +46,7 @@ Your role:
 - Answer questions about English grammar, vocabulary, and pronunciation
 - Focus on hospitality-specific language and module topics when possible
 - Be warm, patient, and positive
-- Keep responses concise (2-4 sentences for conversational replies)
+- Keep responses concise (1-2 sentences for conversational replies)
 - Use simple, clear English appropriate for intermediate learners
 - Never speak in the student's native language
 - Only discuss English learning, hospitality, tourism, and the student's work or daily life
@@ -91,7 +91,7 @@ const DAILY_GREETING_SYSTEM_PROMPT = `You are ALMA, a warm and friendly daily ch
 Your role:
 - Start with a warm, casual greeting
 - Ask simple daily questions (e.g. "How are you feeling today?", "How was your morning?", "What are your plans for today?")
-- Keep every response to 1-2 sentences maximum
+- Keep every response to exactly 1 sentence
 - Be very warm, positive, and encouraging
 - Address the student by name
 - Do NOT correct grammar — this is a friendly daily check-in, not a lesson
@@ -252,7 +252,7 @@ export async function streamCoachResponse(userId: string, messages: Array<{ role
 
     const stream = await model.generateContentStream({
       contents,
-      generationConfig: { maxOutputTokens: 400 },
+      generationConfig: { maxOutputTokens: 180 },
     })
 
     let fullText = ''
@@ -334,7 +334,7 @@ export async function dailyGreetingChat(
     const result = await model.generateContent({
       contents,
       generationConfig: {
-        maxOutputTokens: 300,
+        maxOutputTokens: 60,
         // @ts-ignore — thinkingConfig supported in gemini-2.5-flash
         thinkingConfig: { thinkingBudget: 0 },
       },
@@ -365,7 +365,7 @@ export async function coachChat(
 
     const result = await model.generateContent({
       contents,
-      generationConfig: { maxOutputTokens: 400 },
+      generationConfig: { maxOutputTokens: 180 },
     })
     const fullText = result.response.text()
 

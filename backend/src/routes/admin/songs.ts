@@ -19,8 +19,19 @@ const upload = multer({
   },
 })
 
-const youtubeUrl = z.string().url()
-  .refine((u) => /^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(u), { message: 'Must be a YouTube URL' })
+// Accepts YouTube links loosely: with/without protocol, with/without www,
+// mobile (m.), music.youtube.com, youtu.be, shorts, embed — anything whose
+// host is actually a YouTube domain, regardless of path/query shape.
+const youtubeUrl = z.string().trim().min(1, 'YouTube URL is required')
+  .transform((u) => (/^https?:\/\//i.test(u) ? u : `https://${u}`))
+  .refine((u) => {
+    try {
+      const { hostname } = new URL(u)
+      return /(^|\.)youtube\.com$/i.test(hostname) || /(^|\.)youtu\.be$/i.test(hostname)
+    } catch {
+      return false
+    }
+  }, { message: 'Must be a valid YouTube URL' })
 
 const songSchema = z.object({
   title:       z.string().min(1).max(200),
@@ -29,6 +40,7 @@ const songSchema = z.object({
   emoji:       z.string().min(1).max(10),
   youtubeUrl,
   bgMusicUrl:  z.string().url().optional().nullable(),
+  bgMusicName: z.string().max(200).optional().nullable(),
   lyrics:      z.array(z.string().max(500)).max(500),
   isPublished: z.boolean().optional(),
   orderIndex:  z.number().int().optional(),
@@ -94,8 +106,9 @@ router.post('/:id/bg-music', upload.single('audio'), async (req: Request, res: R
   }
   try {
     const url = await uploadBgMusic(req.file.buffer, req.params.id)
-    await prisma.song.update({ where: { id: req.params.id }, data: { bgMusicUrl: url } })
-    res.json({ url })
+    const name = req.file.originalname
+    await prisma.song.update({ where: { id: req.params.id }, data: { bgMusicUrl: url, bgMusicName: name } })
+    res.json({ url, name })
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
       res.status(404).json({ error: 'Song not found', code: 'NOT_FOUND' })
@@ -109,7 +122,7 @@ router.post('/:id/bg-music', upload.single('audio'), async (req: Request, res: R
 // DELETE /api/admin/songs/:id/bg-music — remove custom bg music, revert to default
 router.delete('/:id/bg-music', async (req: Request, res: Response): Promise<void> => {
   try {
-    await prisma.song.update({ where: { id: req.params.id }, data: { bgMusicUrl: null } })
+    await prisma.song.update({ where: { id: req.params.id }, data: { bgMusicUrl: null, bgMusicName: null } })
     res.json({ message: 'Background music removed.' })
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
