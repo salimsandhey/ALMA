@@ -365,7 +365,7 @@ export async function coachChat(
 
     const result = await model.generateContent({
       contents,
-      generationConfig: { maxOutputTokens: 180 },
+      generationConfig: { maxOutputTokens: 320 },
     })
     const fullText = result.response.text()
 
@@ -375,8 +375,9 @@ export async function coachChat(
     const feedback = feedbackMatch?.[1]?.trim() ?? null
     const correction = correctionMatch?.[1]?.trim() ?? null
     const reply = fullText
-      .replace(/\[FEEDBACK:[^\]]*\]/gi, '')
-      .replace(/\[Correction:[^\]]*\]/gi, '')
+      .replace(/\[FEEDBACK:[^\]]*\]?/gi, '')
+      .replace(/\[Correction:[^\]]*\]?/gi, '')
+      .replace(/\[[^\]]*$/, '')
       .trim()
 
     const { inputTokens, outputTokens } = extractTokens(result.response)
